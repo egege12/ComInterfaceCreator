@@ -16,11 +16,13 @@ class dataContainer : public QObject
     bool isExtended;
     QList<signal*> message;
 
+
 public:
     explicit dataContainer(QObject *parent = nullptr, QString Name = "Null",QString messageID = "0X00000000", unsigned int dlc = 8, bool isExtended = true);
     bool addSignal(signal newSignal);
     void printAll();
     ~dataContainer();
+     bool isSelected;
 signals:
 
 };
