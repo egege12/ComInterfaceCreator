@@ -25,8 +25,10 @@ public:
     void setName(QString Name);
     void setmessageID(QString messageID);
     void setDLC(unsigned short DLC);
+    void dataTypeAss(signal *signalPtr);
+    bool isSelected;
     ~dataContainer();
-     bool isSelected;
+
 signals:
 
 };
@@ -43,7 +45,6 @@ struct dataContainer::signal{
     QString comment;
     QString appDataType;
     QString comDataType;
-    QString convDataType;
     bool isJ1939;
 
 };

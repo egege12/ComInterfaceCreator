@@ -24,6 +24,8 @@ class ASCHandler : public QObject
     double parseOffset(QString  splitedPart);
     double parseMaxValue(QString  splitedPart);
     double parseMinValue(QString  splitedPart);
+    QString parseComment(QString splitedPart);
+
 public:
     explicit ASCHandler(QObject *parent = nullptr, QString fileLocation = " ");
 

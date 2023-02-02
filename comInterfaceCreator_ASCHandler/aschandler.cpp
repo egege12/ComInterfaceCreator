@@ -33,47 +33,51 @@ bool ASCHandler::parseMessages(QFile *ascFile)
 {
     QTextStream lines(ascFile);
     bool inlineOfMessage=false;
+
+    QString *messageID = nullptr;
+    QString *messageName = nullptr;
+    unsigned short * messageDLC = nullptr;
+
     while (!lines.atEnd()) {
          QString curLine = lines.readLine();
 
-         QString *messageID = nullptr;
-         QString *messageName = nullptr;
-         unsigned short * messageDLC = nullptr;
 //Message parse - split message line to items and rise message block flasg (inlineOfMessage)
-        if(curLine.contains("BO_") && curLine.indexOf("BO_") < 2){
+        if(curLine.contains("BO_ ") && curLine.indexOf("BO_") < 2){
             inlineOfMessage = true;
 
             QStringList messageList = curLine.split(" ");
 
-            messageID = new QString(messageList.at(1));
+            messageID = new QString(QString::number(messageList.at(1).toUInt(),16).toUpper());
             messageName= new QString(messageList.at(2));
             messageName->remove(QChar(':'),Qt::CaseInsensitive);
             messageDLC = new unsigned short(messageList.at(3).toUShort());
             generateNewMessage(*messageID,*messageName,*messageDLC);
             // Release pointer locations
-            delete messageName;
-            delete messageDLC;
+
         //Signal parse - split signal lines to items
         }else if(inlineOfMessage && curLine.contains("SG_")){
             QStringList signalList = curLine.split(" ");
             dataContainer::signal curSignal;
-            curSignal.name = signalList.at(1);
-            curSignal.startBit = parseStartBit(signalList.at(3));
-            curSignal.length = parseLength(signalList.at(3));
-            curSignal.resolution = parseResolution(signalList.at(4));
-            curSignal.offset = parseOffset(signalList.at(4));
-            curSignal.minValue = parseMinValue(signalList.at(5));
-            curSignal.maxValue = parseMaxValue(signalList.at(5));
-            curSignal.comment = signalList.at(6);
+            curSignal.name = signalList.at(2);
+            curSignal.startBit = parseStartBit(signalList.at(4));
+            curSignal.length = parseLength(signalList.at(4));
+            curSignal.resolution = parseResolution(signalList.at(5));
+            curSignal.offset = parseOffset(signalList.at(5));
+            curSignal.minValue = parseMinValue(signalList.at(6));
+            curSignal.maxValue = parseMaxValue(signalList.at(6));
+            QString commentContainer = parseComment(signalList.at(7));
+            curSignal.comment = commentContainer;
+            curSignal.isJ1939 = commentContainer.contains(QString("j1939"),Qt::CaseInsensitive);
             addSignalToMessage (*messageID,curSignal);
 
         }else
             inlineOfMessage = false;
 
-        delete messageID;
+
     }
-
-
+    delete messageID;
+    delete messageName;
+    delete messageDLC;
 
     return true;
 }
@@ -100,7 +104,7 @@ unsigned short ASCHandler::parseLength(QString splitedPart)
     splitedPart.remove("@1+");
     splitedPart.remove("@1-");
     QStringList container = splitedPart.trimmed().split("|");
-    return container.at(2).toUShort();
+    return container.at(1).toUShort();
 }
 
 unsigned short ASCHandler::parseStartBit(QString  splitedPart)
@@ -108,7 +112,7 @@ unsigned short ASCHandler::parseStartBit(QString  splitedPart)
     splitedPart.remove("@1+");
     splitedPart.remove("@1-");
     QStringList container = splitedPart.trimmed().split("|");
-    return container.at(1).toUShort();
+    return container.at(0).toUShort();
 }
 
 double ASCHandler::parseResolution(QString  splitedPart)
@@ -116,7 +120,7 @@ double ASCHandler::parseResolution(QString  splitedPart)
     splitedPart.remove("(");
     splitedPart.remove(")");
     QStringList container = splitedPart.trimmed().split(",");
-    return container.at(1).toDouble();
+    return container.at(0).toDouble();
 }
 
 double ASCHandler::parseOffset(QString  splitedPart)
@@ -124,7 +128,7 @@ double ASCHandler::parseOffset(QString  splitedPart)
     splitedPart.remove("(");
     splitedPart.remove(")");
     QStringList container = splitedPart.trimmed().split(",");
-    return container.at(2).toDouble();
+    return container.at(1).toDouble();
 }
 
 double ASCHandler::parseMaxValue(QString  splitedPart)
@@ -140,6 +144,15 @@ double ASCHandler::parseMinValue(QString  splitedPart)
     splitedPart.remove("[");
     splitedPart.remove("]");
     QStringList container = splitedPart.trimmed().split("|");
-    return container.at(1).toDouble();
+    return container.at(0).toDouble();
+}
+
+QString ASCHandler::parseComment(QString splitedPart)
+{
+    splitedPart.remove("\\");
+    splitedPart.remove("//");
+    splitedPart.remove("\"");
+
+    return splitedPart.trimmed();
 }
 
