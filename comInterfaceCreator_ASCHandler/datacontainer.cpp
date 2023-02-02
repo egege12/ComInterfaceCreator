@@ -1,29 +1,11 @@
 #include "datacontainer.h"
 #include <QDebug>
 
-struct dataContainer::signal{
-    //Datas can be impoerted from DBC file
-    QString name;
-    unsigned int length;
-    unsigned int startBit;
-    double resolution;
-    double offset;
-    double maxValue;
-    double minValue;
-    QString appDataType;
-    QString comDataType;
-    QString convDataType;
-    bool isJ1939;
 
-};
 
-dataContainer::dataContainer(QObject *parent, QString Name, QString messageID, unsigned int dlc, bool isExtended)
-    : QObject{parent}
+dataContainer::dataContainer(QObject *parent)
 {
-    this->Name = Name;
-    this->messageID = messageID;
-    this->dlc= dlc;
-    this->isExtended=isExtended;
+
 }
 
 bool dataContainer::addSignal(signal newSignal)
@@ -37,10 +19,30 @@ bool dataContainer::addSignal(signal newSignal)
 void dataContainer::printAll()
 {
     qInfo()<<"_Message Name:"<<this->Name<<"ID"<<this->messageID<<" DLC:"<<this->dlc<< (isExtended ? "extended":"standard");
-    qInfo()<<"Signal Name: \t"<< "Length:\t"<< "Start Bit\t"<<"Resolution:\t"<<"Offset:\t"<<"Max Value\t"<<"Min Value"<<"Com Type"<<"App Type"<<"Conv Type";
+    qInfo()<<"Signal Name:\t"<< "Length:\t"<< "Start Bit\t"<<"Resolution:\t"<<"Offset:\t"<<"Max Value\t"<<"Min Value\t"<<"Com Type\t"<<"App Type\t"<<"Conv Type\t"<<"Comment\t";
     for(signal * curSignal : message){
-         qInfo()<< curSignal->name <<"\t"<< curSignal->length <<"\t"<< curSignal->startBit<<"\t"<<curSignal->resolution<<"\t"<<curSignal->offset<<"\t"<<curSignal->maxValue<<"\t"<<curSignal->minValue<<"\t"<<curSignal->comDataType<<"\t"<<curSignal->appDataType<<"\t"<<curSignal->convDataType;
+         qInfo()<< curSignal->name <<"\t"<< curSignal->length <<"\t"<< curSignal->startBit<<"\t"<<curSignal->resolution<<"\t"<<curSignal->offset<<"\t"<<curSignal->maxValue<<"\t"<<curSignal->minValue<<"\t"<<curSignal->comDataType<<"\t"<<curSignal->appDataType<<"\t"<<curSignal->convDataType<<"\t"<<curSignal->comment;
     }
+}
+
+void dataContainer::setName(QString Name)
+{
+    this->Name = Name;
+
+}
+
+void dataContainer::setmessageID(QString messageID)
+{
+
+    bool isExtended = (messageID.toULong()> 1000);
+    this->messageID = messageID;
+    this->isExtended = isExtended;
+
+}
+
+void dataContainer::setDLC(unsigned short DLC)
+{
+    this->dlc= DLC;
 }
 
 dataContainer::~dataContainer()
