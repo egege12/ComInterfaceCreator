@@ -10,23 +10,43 @@ class dataContainer : public QObject
 {
     Q_OBJECT
 
+
     QString Name;
     QString messageID;
     unsigned short dlc;
     bool isExtended;
+    bool isSelected;
+
 
 
 public:
+
+    explicit dataContainer(QObject *parent = nullptr);
+
+    //Total counters
+    static unsigned int messageCounter;
+    static unsigned int signalCounter;
+
+    //Struct List
     struct signal;
     QList<signal*> message;
-    explicit dataContainer(QObject *parent = nullptr);
-    bool addSignal(signal newSignal);
+    //Data type assigner
+    void dataTypeAss(signal *signalPtr);
+    //Printers
     void printAll();
+    //Getters
+    QString getMessageInfo();
+    bool getIfSelected();
+    //Setters
     void setName(QString Name);
     void setmessageID(QString messageID);
     void setDLC(unsigned short DLC);
-    void dataTypeAss(signal *signalPtr);
-    bool isSelected;
+    bool setSelected();
+    //Signal adder
+    bool addSignal(signal newSignal);
+
+
+
     ~dataContainer();
 
 signals:

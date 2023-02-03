@@ -24,6 +24,35 @@ ASCHandler::ASCHandler(QObject *parent, QString fileLocation)
         qInfo()<<text;
     }
 }
+
+void ASCHandler::printMessages()
+{
+    foreach(dataContainer *const curValue , comInterface){
+        qInfo()<< curValue->getMessageInfo();
+    }
+    qInfo()<<"Total message number :"<< dataContainer::messageCounter;
+    qInfo()<<"Total signal number :"<< dataContainer::signalCounter;
+}
+
+void ASCHandler::printSelectedMessages()
+{
+    foreach(dataContainer *const curValue , comInterface){
+        if(curValue->getIfSelected()){
+            qInfo()<< curValue->getMessageInfo();
+        }
+    }
+
+}
+
+bool ASCHandler::selectMessage(QString messageID)
+{
+    return comInterface.value(messageID)->setSelected();
+}
+
+const dataContainer *ASCHandler::getMessage(QString messageID)
+{
+    return comInterface.value(messageID);
+}
 //BO_ <ID> <Message_name>: <DLC> Vector__XXX
 // 3. ADRESTEN BOŞLUĞA KADAR ID DECİMAL
 // Boşluktan ":"'e kadar mesaj ismi
@@ -33,10 +62,10 @@ bool ASCHandler::parseMessages(QFile *ascFile)
 {
     QTextStream lines(ascFile);
     bool inlineOfMessage=false;
-
-    QString *messageID = nullptr;
-    QString *messageName = nullptr;
-    unsigned short * messageDLC = nullptr;
+    bool inlineOfMessageOld=false;
+    QString messageID;
+    QString messageName ;
+    unsigned short  messageDLC ;
 
     while (!lines.atEnd()) {
          QString curLine = lines.readLine();
@@ -47,11 +76,11 @@ bool ASCHandler::parseMessages(QFile *ascFile)
 
             QStringList messageList = curLine.split(" ");
 
-            messageID = new QString(QString::number(messageList.at(1).toUInt(),16).toUpper());
-            messageName= new QString(messageList.at(2));
-            messageName->remove(QChar(':'),Qt::CaseInsensitive);
-            messageDLC = new unsigned short(messageList.at(3).toUShort());
-            generateNewMessage(*messageID,*messageName,*messageDLC);
+            messageID = QString::number(messageList.at(1).toUInt(),16).toUpper();
+            messageName= messageList.at(2);
+            messageName.remove(QChar(':'),Qt::CaseInsensitive);
+            messageDLC = messageList.at(3).toUShort();
+            generateNewMessage(messageID,messageName,messageDLC);
             // Release pointer locations
 
         //Signal parse - split signal lines to items
@@ -65,19 +94,20 @@ bool ASCHandler::parseMessages(QFile *ascFile)
             curSignal.offset = parseOffset(signalList.at(5));
             curSignal.minValue = parseMinValue(signalList.at(6));
             curSignal.maxValue = parseMaxValue(signalList.at(6));
-            QString commentContainer = parseComment(signalList.at(7));
+            QString commentContainer = parseComment(curLine);
             curSignal.comment = commentContainer;
             curSignal.isJ1939 = commentContainer.contains(QString("j1939"),Qt::CaseInsensitive);
-            addSignalToMessage (*messageID,curSignal);
+            addSignalToMessage (messageID,curSignal);
 
-        }else
+        }else{
             inlineOfMessage = false;
-
-
+           }
+        if (inlineOfMessageOld && !inlineOfMessage){
+            comInterface.value(messageID)->printAll();
+        }
+        inlineOfMessageOld = inlineOfMessage;
     }
-    delete messageID;
-    delete messageName;
-    delete messageDLC;
+
 
     return true;
 }
@@ -95,7 +125,7 @@ bool ASCHandler::generateNewMessage(QString messageID, QString messageName , uns
 bool ASCHandler::addSignalToMessage(QString messageID,dataContainer::signal curSignal)
 {
     comInterface.value(messageID)->addSignal(curSignal);
-    comInterface.value(messageID)->printAll();
+
     return true;
 }
 
@@ -149,10 +179,10 @@ double ASCHandler::parseMinValue(QString  splitedPart)
 
 QString ASCHandler::parseComment(QString splitedPart)
 {
-    splitedPart.remove("\\");
-    splitedPart.remove("//");
-    splitedPart.remove("\"");
-
-    return splitedPart.trimmed();
+    QString comment = splitedPart.mid(splitedPart.indexOf("]")+1,(splitedPart.indexOf("Vector__XXX")));
+    comment.remove("\"");
+    comment.remove("Vector__XXX");
+    return comment.trimmed();
 }
+
 

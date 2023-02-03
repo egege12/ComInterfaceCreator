@@ -29,9 +29,12 @@ class ASCHandler : public QObject
 public:
     explicit ASCHandler(QObject *parent = nullptr, QString fileLocation = " ");
 
+    void printMessages();
+    void printSelectedMessages();
 
-
-
+public slots:
+    bool selectMessage(QString messageID);
+    dataContainer const* getMessage(QString messageID);
 signals:
 
 };

@@ -1,15 +1,17 @@
 #include "datacontainer.h"
 #include <QDebug>
 
-
-
+unsigned int dataContainer::messageCounter = 0;
+unsigned int dataContainer::signalCounter = 0;
 dataContainer::dataContainer(QObject *parent)
 {
+    ++dataContainer::messageCounter;
     this->isSelected = false;
 }
 
 bool dataContainer::addSignal(signal newSignal)
 {
+    ++signalCounter;
     signal *Ptr = new signal;
     *Ptr = newSignal;
     dataTypeAss(Ptr);
@@ -24,6 +26,16 @@ void dataContainer::printAll()
     for(signal * curSignal : message){
          qInfo()<< curSignal->name <<"\t"<< curSignal->length <<"\t"<< curSignal->startBit<<"\t"<<curSignal->resolution<<"\t"<<curSignal->offset<<"\t"<<curSignal->maxValue<<"\t"<<curSignal->minValue<<"\t"<<curSignal->comDataType<<"\t"<<curSignal->appDataType<<"\t"<<curSignal->comment;
     }
+}
+
+QString dataContainer::getMessageInfo()
+{
+    return QString("NAME:"+this->Name+"ID:"+this->messageID);
+}
+
+bool dataContainer::getIfSelected()
+{
+    return this->isSelected;
 }
 
 void dataContainer::setName(QString Name)
@@ -46,6 +58,17 @@ void dataContainer::setDLC(unsigned short DLC)
     this->dlc= DLC;
 }
 
+bool dataContainer::setSelected()
+{
+    if (isSelected)
+        return false;
+    else{
+        this->isSelected = true;
+        return true;
+    }
+
+}
+
 void dataContainer::dataTypeAss(signal *signalPtr)
 {
     if(signalPtr->length == 1 ){
@@ -53,7 +76,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
         signalPtr->comDataType = "BOOL";
     }else if (signalPtr->length == 2){
         signalPtr->comDataType = "BOOL";
-        if((signalPtr->isJ1939) || signalPtr->name.contains("S_")){
+        if((signalPtr->isJ1939) || signalPtr->name.contains("C_") || signalPtr->name.contains("S_")){
             signalPtr->appDataType = "BOOL";
         }else{
             signalPtr->appDataType = "BYTE";
@@ -140,6 +163,8 @@ void dataContainer::dataTypeAss(signal *signalPtr)
 
 dataContainer::~dataContainer()
 {
+    --dataContainer::messageCounter;
+    signalCounter = 0;
     for(signal * curSignal : message){
         delete curSignal;
     }
