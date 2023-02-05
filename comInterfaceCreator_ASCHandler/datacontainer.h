@@ -10,14 +10,11 @@ class dataContainer : public QObject
 {
     Q_OBJECT
 
-
     QString Name;
     QString messageID;
     unsigned short dlc;
     bool isExtended;
     bool isSelected;
-
-
 
 public:
 
@@ -35,7 +32,9 @@ public:
     //Printers
     void printAll();
     //Getters
-    QString getMessageInfo();
+    QVector<QString> getMessageVector();
+    QVector<QVector<QString>> getSignalVector();
+
     bool getIfSelected();
     //Setters
     void setName(QString Name);
@@ -44,8 +43,6 @@ public:
     bool setSelected();
     //Signal adder
     bool addSignal(signal newSignal);
-
-
 
     ~dataContainer();
 

@@ -16,8 +16,8 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
 
 add_executable(comInterfaceCreator_ASCHandler
   main.cpp
-  ASCHandler.cpp
-  ASCHandler.h
+  DBCHandler.cpp
+  DBCHandler.h
   dataContainer.h
   dataContainer.cpp
 

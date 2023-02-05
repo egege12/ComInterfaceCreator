@@ -10,7 +10,7 @@
 #include <QStringList>
 typedef QMap<QString,dataContainer*>  interface;
 
-class ASCHandler : public QObject
+class DBCHandler : public QObject
 {
     Q_OBJECT
 
@@ -27,11 +27,13 @@ class ASCHandler : public QObject
     QString parseComment(QString splitedPart);
 
 public:
-    explicit ASCHandler(QObject *parent = nullptr, QString fileLocation = " ");
+    explicit DBCHandler(QObject *parent = nullptr, QString fileLocation = " ");
 
     void printMessages();
     void printSelectedMessages();
-
+//Tableview format nested vectors
+    QList<QList<QString>> messagesVector();
+    QList<QList<QString>> signalsVector(QString messageID);
 public slots:
     bool selectMessage(QString messageID);
     dataContainer const* getMessage(QString messageID);

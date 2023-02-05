@@ -28,9 +28,23 @@ void dataContainer::printAll()
     }
 }
 
-QString dataContainer::getMessageInfo()
+QVector<QString> dataContainer::getMessageVector()
 {
-    return QString("NAME:"+this->Name+"ID:"+this->messageID);
+    QVector<QString> dataMessage;
+    dataMessage.append(this->Name);
+    dataMessage.append(this->messageID);
+    dataMessage.append(QString::number(this->dlc));
+    return dataMessage;
+}
+
+QVector<QVector<QString>> dataContainer::getSignalVector()
+{
+    QVector<QVector<QString>> dataSignal;
+
+   for(signal * curSignal : message){
+        dataSignal.append({curSignal->name,QString::number(curSignal->startBit),QString::number(curSignal->length),QString::number(curSignal->resolution),QString::number(curSignal->offset),QString::number(curSignal->minValue),QString::number(curSignal->maxValue),curSignal->appDataType});
+   }
+   return dataSignal;
 }
 
 bool dataContainer::getIfSelected()

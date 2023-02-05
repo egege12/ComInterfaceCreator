@@ -1,6 +1,6 @@
-#include "aschandler.h"
+#include "DBChandler.h"
 
-ASCHandler::ASCHandler(QObject *parent, QString fileLocation)
+DBCHandler::DBCHandler(QObject *parent, QString fileLocation)
     : QObject{parent}
 {
     try {
@@ -25,40 +25,50 @@ ASCHandler::ASCHandler(QObject *parent, QString fileLocation)
     }
 }
 
-void ASCHandler::printMessages()
+void DBCHandler::printMessages()
 {
     foreach(dataContainer *const curValue , comInterface){
-        qInfo()<< curValue->getMessageInfo();
+        qInfo()<< curValue->getMessageVector();
     }
     qInfo()<<"Total message number :"<< dataContainer::messageCounter;
     qInfo()<<"Total signal number :"<< dataContainer::signalCounter;
 }
 
-void ASCHandler::printSelectedMessages()
+void DBCHandler::printSelectedMessages()
 {
     foreach(dataContainer *const curValue , comInterface){
         if(curValue->getIfSelected()){
-            qInfo()<< curValue->getMessageInfo();
+            qInfo()<< curValue->getMessageVector();
         }
     }
 
 }
 
-bool ASCHandler::selectMessage(QString messageID)
+QList<QList<QString>> DBCHandler::messagesVector()
+{
+    QList<QList<QString>> data;
+    foreach(dataContainer *const curValue , comInterface){
+            data.append(curValue->getMessageVector());
+    }
+    return data;
+}
+
+QList<QList<QString> > DBCHandler::signalsVector(QString messageID)
+{
+    return comInterface.value(messageID)->getSignalVector();
+}
+
+bool DBCHandler::selectMessage(QString messageID)
 {
     return comInterface.value(messageID)->setSelected();
 }
 
-const dataContainer *ASCHandler::getMessage(QString messageID)
+const dataContainer *DBCHandler::getMessage(QString messageID)
 {
     return comInterface.value(messageID);
 }
-//BO_ <ID> <Message_name>: <DLC> Vector__XXX
-// 3. ADRESTEN BOŞLUĞA KADAR ID DECİMAL
-// Boşluktan ":"'e kadar mesaj ismi
-// Boşluktan boşluğa kadar DLC numarası
-//SG_ <Name> : <Bit order> | <Bit length>@1+ (<resolution>,<offset>) [<min_value>|max_value] "comment"
-bool ASCHandler::parseMessages(QFile *ascFile)
+
+bool DBCHandler::parseMessages(QFile *ascFile)
 {
     QTextStream lines(ascFile);
     bool inlineOfMessage=false;
@@ -111,8 +121,10 @@ bool ASCHandler::parseMessages(QFile *ascFile)
 
     return true;
 }
+//BO_ <ID> <Message_name>: <DLC> Vector__XXX -> for messages
+//SG_ <Name> : <Bit order> | <Bit length>@1+ (<resolution>,<offset>) [<min_value>|max_value] "comment" -> for signals
 
-bool ASCHandler::generateNewMessage(QString messageID, QString messageName , unsigned short messageDLC)
+bool DBCHandler::generateNewMessage(QString messageID, QString messageName , unsigned short messageDLC)
 {
     dataContainer* newMessage = new dataContainer();
     newMessage->setName(messageName);
@@ -122,14 +134,14 @@ bool ASCHandler::generateNewMessage(QString messageID, QString messageName , uns
     return true;
 }
 
-bool ASCHandler::addSignalToMessage(QString messageID,dataContainer::signal curSignal)
+bool DBCHandler::addSignalToMessage(QString messageID,dataContainer::signal curSignal)
 {
     comInterface.value(messageID)->addSignal(curSignal);
 
     return true;
 }
 
-unsigned short ASCHandler::parseLength(QString splitedPart)
+unsigned short DBCHandler::parseLength(QString splitedPart)
 {
     splitedPart.remove("@1+");
     splitedPart.remove("@1-");
@@ -137,7 +149,7 @@ unsigned short ASCHandler::parseLength(QString splitedPart)
     return container.at(1).toUShort();
 }
 
-unsigned short ASCHandler::parseStartBit(QString  splitedPart)
+unsigned short DBCHandler::parseStartBit(QString  splitedPart)
 {
     splitedPart.remove("@1+");
     splitedPart.remove("@1-");
@@ -145,7 +157,7 @@ unsigned short ASCHandler::parseStartBit(QString  splitedPart)
     return container.at(0).toUShort();
 }
 
-double ASCHandler::parseResolution(QString  splitedPart)
+double DBCHandler::parseResolution(QString  splitedPart)
 {
     splitedPart.remove("(");
     splitedPart.remove(")");
@@ -153,7 +165,7 @@ double ASCHandler::parseResolution(QString  splitedPart)
     return container.at(0).toDouble();
 }
 
-double ASCHandler::parseOffset(QString  splitedPart)
+double DBCHandler::parseOffset(QString  splitedPart)
 {
     splitedPart.remove("(");
     splitedPart.remove(")");
@@ -161,7 +173,7 @@ double ASCHandler::parseOffset(QString  splitedPart)
     return container.at(1).toDouble();
 }
 
-double ASCHandler::parseMaxValue(QString  splitedPart)
+double DBCHandler::parseMaxValue(QString  splitedPart)
 {
     splitedPart.remove("[");
     splitedPart.remove("]");
@@ -169,7 +181,7 @@ double ASCHandler::parseMaxValue(QString  splitedPart)
     return container.at(1).toDouble();
 }
 
-double ASCHandler::parseMinValue(QString  splitedPart)
+double DBCHandler::parseMinValue(QString  splitedPart)
 {
     splitedPart.remove("[");
     splitedPart.remove("]");
@@ -177,7 +189,7 @@ double ASCHandler::parseMinValue(QString  splitedPart)
     return container.at(0).toDouble();
 }
 
-QString ASCHandler::parseComment(QString splitedPart)
+QString DBCHandler::parseComment(QString splitedPart)
 {
     QString comment = splitedPart.mid(splitedPart.indexOf("]")+1,(splitedPart.indexOf("Vector__XXX")));
     comment.remove("\"");
