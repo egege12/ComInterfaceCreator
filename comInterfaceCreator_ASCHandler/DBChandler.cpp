@@ -1,22 +1,83 @@
 #include "DBChandler.h"
+#include "datacontainer.h"
 
-DBCHandler::DBCHandler(QObject *parent, QString fileLocation)
+
+DBCHandler::DBCHandler(QObject *parent)
     : QObject{parent}
 {
+
+}
+
+
+QList<QList<QString>> DBCHandler::messagesVector()
+{   if (isAllInserted){
+        QList<QList<QString>> data;
+        data.append({"Name","ID","DLC","Status"});
+        foreach(dataContainer *const curValue , comInterface){
+            data.append({curValue->getName(),curValue->getID(),QString::number(curValue->getDLC()),curValue->getIfSelected() ? "X" : "O" });
+        }
+        return data;
+    }
+}
+
+QList<QList<QString> > DBCHandler::signalsVector(QString messageID)
+{
+    if (isAllInserted){
+
+        QList<QList<QString>> dataSignal;
+
+        for ( const dataContainer::signal *data : *comInterface.value(messageID)->getSignalList()){
+            dataSignal.append({data->name,QString::number(data->startBit),QString::number(data->length),QString::number(data->resolution),QString::number(data->offset),QString::number(data->minValue),QString::number(data->maxValue),data->appDataType});
+        }
+        return dataSignal;
+    }
+}
+
+bool DBCHandler::selectMessage(QString messageID)
+{
+    comInterface.value(messageID)->setSelected();
+
+    return comInterface.value(messageID)->getIfSelected();
+}
+
+void DBCHandler::update()
+{
+    isAllInserted = false;
+    foreach(dataContainer * curValue , comInterface){
+        delete curValue;
+    }
+    comInterface.clear();
+        qInfo()<<"Updating";
+        openFile();
+}
+
+void DBCHandler::readFile(QString fileLocation)
+{
+    dbcPath = fileLocation;
+    openFile();
+}
+
+void DBCHandler::openFile()
+{
     try {
-        if (fileLocation.isEmpty()){
+        if (dbcPath.isEmpty()){
             throw QString("File location cant be empty");
-        }else if(!fileLocation.contains(".dbc")){
+        }else if(!dbcPath.contains(".dbc")){
             throw QString("Please select \".dbc\" file to parse messages and signals");
         }
-         else{
-            QFile *ascFile = new QFile(fileLocation);
+        else{
+            QFile *ascFile = new QFile(dbcPath);
             if(!ascFile->open(QIODevice::ReadOnly | QIODevice::Text)){
                 throw QString("File can not be opened, please check if the path or name is correct");
             }
             else{
                 if (!parseMessages(ascFile)){
-                throw QString("something goes wrong about asc file");
+                    throw QString("something goes wrong about asc file");
+                }else{
+                    QObject::connect(&watcher, SIGNAL(fileChanged(dbcPath)), this, SLOT(DBCHandler::update()));
+                    qInfo()<< "watcher:" << watcher.addPath(dbcPath);
+
+
                 }
             }
         }
@@ -25,46 +86,9 @@ DBCHandler::DBCHandler(QObject *parent, QString fileLocation)
     }
 }
 
-void DBCHandler::printMessages()
-{
-    foreach(dataContainer *const curValue , comInterface){
-        qInfo()<< curValue->getMessageVector();
-    }
-    qInfo()<<"Total message number :"<< dataContainer::messageCounter;
-    qInfo()<<"Total signal number :"<< dataContainer::signalCounter;
-}
-
-void DBCHandler::printSelectedMessages()
-{
-    foreach(dataContainer *const curValue , comInterface){
-        if(curValue->getIfSelected()){
-            qInfo()<< curValue->getMessageVector();
-        }
-    }
-
-}
-
-QList<QList<QString>> DBCHandler::messagesVector()
-{
-    QList<QList<QString>> data;
-    foreach(dataContainer *const curValue , comInterface){
-            data.append(curValue->getMessageVector());
-    }
-    return data;
-}
-
-QList<QList<QString> > DBCHandler::signalsVector(QString messageID)
-{
-    return comInterface.value(messageID)->getSignalVector();
-}
-
-bool DBCHandler::selectMessage(QString messageID)
-{
-    return comInterface.value(messageID)->setSelected();
-}
-
 const dataContainer *DBCHandler::getMessage(QString messageID)
 {
+
     return comInterface.value(messageID);
 }
 
@@ -78,9 +102,9 @@ bool DBCHandler::parseMessages(QFile *ascFile)
     unsigned short  messageDLC ;
 
     while (!lines.atEnd()) {
-         QString curLine = lines.readLine();
+        QString curLine = lines.readLine();
 
-//Message parse - split message line to items and rise message block flasg (inlineOfMessage)
+        //Message parse - split message line to items and rise message block flasg (inlineOfMessage)
         if(curLine.contains("BO_ ") && curLine.indexOf("BO_") < 2){
             inlineOfMessage = true;
 
@@ -90,10 +114,12 @@ bool DBCHandler::parseMessages(QFile *ascFile)
             messageName= messageList.at(2);
             messageName.remove(QChar(':'),Qt::CaseInsensitive);
             messageDLC = messageList.at(3).toUShort();
-            generateNewMessage(messageID,messageName,messageDLC);
+            if (!comInterface.contains(messageID)){
+                generateNewMessage(messageID,messageName,messageDLC);
+            }
             // Release pointer locations
 
-        //Signal parse - split signal lines to items
+            //Signal parse - split signal lines to items
         }else if(inlineOfMessage && curLine.contains("SG_")){
             QStringList signalList = curLine.split(" ");
             dataContainer::signal curSignal;
@@ -111,13 +137,13 @@ bool DBCHandler::parseMessages(QFile *ascFile)
 
         }else{
             inlineOfMessage = false;
-           }
+        }
         if (inlineOfMessageOld && !inlineOfMessage){
-            comInterface.value(messageID)->printAll();
+            comInterface.value(messageID)->setInserted();
         }
         inlineOfMessageOld = inlineOfMessage;
     }
-
+    this->isAllInserted = true;
 
     return true;
 }
@@ -137,7 +163,6 @@ bool DBCHandler::generateNewMessage(QString messageID, QString messageName , uns
 bool DBCHandler::addSignalToMessage(QString messageID,dataContainer::signal curSignal)
 {
     comInterface.value(messageID)->addSignal(curSignal);
-
     return true;
 }
 

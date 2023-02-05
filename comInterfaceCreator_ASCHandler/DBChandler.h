@@ -8,13 +8,36 @@
 #include <QFile>
 #include <QTextStream>
 #include <QStringList>
+#include <QFileSystemWatcher>
+#include <QTimer>
 typedef QMap<QString,dataContainer*>  interface;
 
 class DBCHandler : public QObject
 {
     Q_OBJECT
 
+public:
+    explicit DBCHandler(QObject *parent = nullptr);
+    void readFile(QString fileLocation);
+//Tableview format nested vectors
+    QList<QList<QString>> messagesVector();
+    QList<QList<QString>> signalsVector(QString messageID);
+
+    const dataContainer *getMessage(QString messageID);
+
+
+public slots:
+    bool selectMessage(QString messageID);
+    void update();
+signals:
+
+private:
     interface comInterface;
+    QFileSystemWatcher watcher;
+    QTimer timer;
+    // Reading Process from asc file
+
+    void openFile();
     bool parseMessages(QFile *ascFile);
     bool generateNewMessage(QString messageID, QString messageName , unsigned short messageDLC);
     bool addSignalToMessage(QString messageID, dataContainer::signal curSignal);
@@ -25,20 +48,10 @@ class DBCHandler : public QObject
     double parseMaxValue(QString  splitedPart);
     double parseMinValue(QString  splitedPart);
     QString parseComment(QString splitedPart);
+    // Reading Process from asc file
 
-public:
-    explicit DBCHandler(QObject *parent = nullptr, QString fileLocation = " ");
-
-    void printMessages();
-    void printSelectedMessages();
-//Tableview format nested vectors
-    QList<QList<QString>> messagesVector();
-    QList<QList<QString>> signalsVector(QString messageID);
-public slots:
-    bool selectMessage(QString messageID);
-    dataContainer const* getMessage(QString messageID);
-signals:
-
+    bool isAllInserted;
+    QString dbcPath;
 };
 
 #endif // ASCHANDLER_H

@@ -3,49 +3,50 @@
 
 #include <QObject>
 
-
-
-
 class dataContainer : public QObject
 {
     Q_OBJECT
+public:
+    struct signal;
+    //Total counters
+    static unsigned int messageCounter;
+    static unsigned int signalCounter;
 
+    explicit dataContainer(QObject *parent = nullptr);
+
+    //Struct List
+
+    //Data type assigner
+    void dataTypeAss(signal *signalPtr);
+
+    //Signal adder
+    bool addSignal(signal newSignal);
+
+    //Getters
+    const QList<signal*> * getSignalList();
+    QString getName();
+    QString getID();
+    bool getIfSelected();
+    unsigned short getDLC();
+
+    //Setters
+    void setName(QString Name);
+    void setmessageID(QString messageID);
+    void setDLC(unsigned short DLC);
+    void setSelected();
+    void setInserted();
+
+
+    ~dataContainer();
+private:
     QString Name;
     QString messageID;
     unsigned short dlc;
     bool isExtended;
     bool isSelected;
+    bool isInserted;
 
-public:
-
-    explicit dataContainer(QObject *parent = nullptr);
-
-    //Total counters
-    static unsigned int messageCounter;
-    static unsigned int signalCounter;
-
-    //Struct List
-    struct signal;
-    QList<signal*> message;
-    //Data type assigner
-    void dataTypeAss(signal *signalPtr);
-    //Printers
-    void printAll();
-    //Getters
-    QVector<QString> getMessageVector();
-    QVector<QVector<QString>> getSignalVector();
-
-    bool getIfSelected();
-    //Setters
-    void setName(QString Name);
-    void setmessageID(QString messageID);
-    void setDLC(unsigned short DLC);
-    bool setSelected();
-    //Signal adder
-    bool addSignal(signal newSignal);
-
-    ~dataContainer();
-
+    QList<signal*> signalList;
 signals:
 
 };
