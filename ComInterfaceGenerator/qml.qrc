@@ -1,0 +1,25 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.qml</file>
+        <file>fileDialogPage.qml</file>
+        <file>MenuButton.qml</file>
+        <file>MessageSelectPage.qml</file>
+        <file>DesignTestPAth.qml</file>
+        <file>PopupWindow.qml</file>
+        <file>ButtonBar.qml</file>
+    </qresource>
+    <qresource prefix="/img">
+        <file>img/iconSearchFile.png</file>
+        <file>img/arrowLeft.png</file>
+        <file>img/arrowRight.png</file>
+        <file>img/imgLogo.png</file>
+        <file>img/600600.png</file>
+        <file>img/iconEscapeButton.png</file>
+        <file>img/iconFullscreenButton.png</file>
+        <file>img/iconIconSizeButton.png</file>
+        <file>img/headerIcon.png</file>
+        <file>img/sortDnEnabled.png</file>
+        <file>img/sortNotEnable.png</file>
+        <file>img/sortUpEnabled.png</file>
+    </qresource>
+</RCC>

@@ -11,7 +11,7 @@ public:
     //Total counters
     static unsigned int messageCounter;
     static unsigned int signalCounter;
-
+    static QList<QString> warningMessages;
     explicit dataContainer(QObject *parent = nullptr);
 
     //Struct List
@@ -26,8 +26,13 @@ public:
     const QList<signal*> * getSignalList();
     QString getName();
     QString getID();
+    QString getMsTimeOut();
+    QString getMsCycleTime();
+    QString getComment();
     bool getIfSelected();
+    bool getIfExtended();
     unsigned short getDLC();
+    static const QList<QString> *getWarningList();
 
     //Setters
     void setName(QString Name);
@@ -35,17 +40,23 @@ public:
     void setDLC(unsigned short DLC);
     void setSelected();
     void setInserted();
+    void setMsTimeOut(QString msTimeout);
+    void setMsCycleTime(QString msCycleTime);
+    void setComment(QString comment);
+    static void setWarning(QString const& warningCode);
 
 
     ~dataContainer();
 private:
     QString Name;
     QString messageID;
+    QString msTimeout;
+    QString msCycleTime;
+    QString comment;
     unsigned short dlc;
     bool isExtended;
     bool isSelected;
     bool isInserted;
-
     QList<signal*> signalList;
 signals:
 
@@ -60,9 +71,11 @@ struct dataContainer::signal{
     double offset;
     double maxValue;
     double minValue;
+    double defValue;
     QString comment;
     QString appDataType;
     QString comDataType;
+    QString convMethod;
     bool isJ1939;
 
 };

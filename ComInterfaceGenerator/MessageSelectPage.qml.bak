@@ -1,0 +1,192 @@
+import QtQuick 2.15
+import TableModel 0.1
+import TableModel2 0.1
+import QtQuick.Controls 2.2
+import QtQuick.Layouts 1.0
+
+Rectangle {
+    width : parent
+    height: parent
+    anchors.fill: parent
+    ColumnLayout{
+        height: parent
+        width: parent
+        Rectangle{
+            spacing : 2
+            RowLayout{
+                id:rowLayout
+                Layout.alignment: {Qt.AlignTop}
+                property string selectedMessage : "";
+
+                spacing : 2
+                Rectangle {
+
+                    Layout.preferredHeight: 400
+                    Layout.preferredWidth: 500
+                    border.width: 1
+                    Layout.alignment: Qt.AlignLeft
+                    TableView {
+                        id:tableViewMessages
+                        anchors.fill: parent
+                        columnSpacing: 1
+                        rowSpacing: 1
+                        clip: true
+
+
+
+                        model: TableModel{
+                            id: tableMessages}
+                        Connections{
+                            target: comObj
+                            onInterfaceReady :tableMessages.setTable(comObj.messagesList())
+                        }
+                        Connections{
+                            target: comObj
+                            onSelectedStatChanged : tableMessages.setTable(comObj.messagesList())
+                        }
+                        property bool enableScrollbar: true
+                        ScrollBar.vertical: ScrollBar{
+                            visible:  tableViewMessages.enableScrollbar  // not sure if you need to use enable or not
+                        }
+                        property var columnWidths: [220, 100, 80, 80]
+                        columnWidthProvider: function (column) { return columnWidths[column] }
+                        Timer {
+                            running: true
+                            interval: 2000
+                            onTriggered: {
+                                tableViewMessages.columnWidths[0] = 220
+                                tableViewMessages.forceLayout();
+                            }
+                        }
+
+                        delegate: Rectangle {
+
+                            implicitHeight: text.implicitHeight + 2
+                            implicitWidth: text.implicitWidth +2
+                            border.width: 1
+                            border.color: "white"
+                            color: (heading==true)?"#2d2d2d": (rowLayout.selectedMessage == messageid )? "#EDEDE0":"#EDEDF0"
+
+                            Text {
+                                id:text
+                                text: tabledata
+                                width:tableMessages.width
+                                padding: 1
+                                font.pointSize: 10
+                                //anchors.centerIn:parent
+                                elide: Text.ElideRight
+                                font.preferShaping: false
+                                color: "#838383"
+                                Layout.alignment: (heading==true)? Qt.AlignCenter: (columnidx)? Qt.AlignLeft :  Qt.AlignCenter
+                            }
+                            MouseArea{
+                                anchors.fill: parent
+                                onClicked: {
+                                    var sst = tabledata ;
+                                    comObj.setDisplayReqSignal(messageid)
+                                    rowLayout.selectedMessage = messageid}
+                                onDoubleClicked: {
+                                    comObj.setSelected(messageid)
+                                }
+                            }
+
+
+                        }
+
+
+                    }
+                }
+                Rectangle {
+                    id:midArea
+                    Layout.preferredHeight: 400
+                    Layout.preferredWidth: 70
+                    Layout.alignment: Qt.AlignCenter
+
+                }
+                Rectangle {
+                    Layout.preferredHeight: 400
+                    Layout.preferredWidth: 500
+                    border.width: 1
+                    Layout.alignment: Qt.AlignRight
+                    TableView {
+                        id:tableViewSignals
+                        anchors.fill: parent
+                        columnSpacing: 1
+                        rowSpacing: 1
+                        clip: true
+
+
+
+                        model: TableModelSignal{
+                            id: tableSignals}
+                        Connections{
+                            target: comObj
+                            onSelectedViewChanged :tableSignals.setTable(comObj.signalsList())
+                        }
+
+
+                        property bool enableVScrollbar: true
+                        ScrollBar.vertical: ScrollBar{
+                            visible:  tableViewSignals.enableVScrollbar  // not sure if you need to use enable or not
+                        }
+                        property bool enableHScrollbar: (tableSignals.columnCount()>4)
+                        ScrollBar.horizontal: ScrollBar{
+                            visible:  tableViewSignals.enableHScrollbar  // not sure if you need to use enable or not
+                        }
+                        property var columnWidths: [220, 100, 80, 80,80,80,80,80]
+                        columnWidthProvider: function (column) { return columnWidths[column] }
+                        Timer {
+                            running: true
+                            interval: 2000
+                            onTriggered: {
+                                tableViewSignals.columnWidths[0] = 220
+                                tableViewSignals.forceLayout();
+                            }
+                        }
+
+                        delegate: Rectangle {
+
+                            implicitHeight: textSignal.implicitHeight + 2
+                            implicitWidth: textSignal.implicitWidth +2
+                            border.width: 1
+                            border.color: "white"
+                            color: (heading==true)?"#2d2d2d": "#EDEDF0"
+
+                            Text {
+                                id:textSignal
+                                text: tabledata
+                                width:tableSignals.width
+                                padding: 1
+                                font.pointSize: 10
+                                //anchors.centerIn:parent
+                                //elide: Text.ElideRight
+                                font.preferShaping: false
+                                color: "#838383"
+                                Layout.alignment: (heading==true)? Qt.AlignCenter : (columnidx == true)? Qt.AlignLeft :  Qt.AlignCenter
+                            }
+
+
+
+                        }
+
+
+                    }
+                }
+            }
+        }
+        Rectangle{
+            Layout.alignment: {Qt.AlignBottom}
+            RowLayout{
+
+                Rectangle{
+
+
+                }
+            }
+
+
+
+        }
+    }
+}
+
