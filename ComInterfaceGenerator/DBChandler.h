@@ -22,7 +22,6 @@ class DBCHandler : public QObject
 public:
 
     static unsigned int selectedMessageCounter;
-
     static QList<QList<QString>> pouHolder;
     static unsigned counterfbBYTETOWORD;
     static unsigned counterfbBYTETODWORD;
@@ -72,6 +71,8 @@ private:
     //Private Variables starts
     //***********************************
     interface comInterface;
+    struct structFbdBlock;
+    QList<structFbdBlock*> fbdBlocks;
     QString folderLoc;
     QString dbcPath;
     QString displayReqSignalID;
@@ -119,6 +120,7 @@ private:
                    dataContainer *&curMessage);
     void generateIOPous(QDomElement *pous, QDomDocument &doc);
     void generateHandlers(QDomElement *pous, QDomDocument &doc);
+    void generatePouFpd(QDomElement *pous, QDomDocument &doc);
     //***********************************
     //Generate XML file end
     //***********************************
@@ -129,5 +131,10 @@ private:
     QString convTypeApptoCom(QString  signalName, unsigned short  startbit, unsigned short length, QString converType);
 
 };
-
+struct DBCHandler::structFbdBlock{
+    //Datas can be impoerted from DBC file
+    QString name;
+    QList<QList<QString>> inputVars;// List of {name}
+    QList<QList<QString>> outputVars;// List of {name}
+};
 #endif // ASCHANDLER_H

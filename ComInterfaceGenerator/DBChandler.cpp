@@ -789,15 +789,21 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
 
     foreach (dataContainer * curMessage , comInterface){
         if(curMessage->getIfSelected()){
+
+            /*generate block struct type new block*/
+
+            structFbdBlock* newBlock = new structFbdBlock;
             QDomElement pou = doc.createElement("pou");
             /*set pou name*/
             attr=doc.createAttribute("name");
             attr.setValue("_FB_"+this->dutHeader+"_"+curMessage->getName()+"_0X"+curMessage->getID());
+            newBlock->name="_FB_"+this->dutHeader+"_"+curMessage->getName()+"_0X"+curMessage->getID();
             pou.setAttributeNode(attr);
             /*set pouType*/
             attr=doc.createAttribute("pouType");
             attr.setValue("functionBlock");
             pou.setAttributeNode(attr);
+
             /*Interface*/
             QDomElement interface = doc.createElement("interface");
             {
@@ -815,8 +821,9 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                     type.appendChild(BOOL);
                     variable.appendChild(type);
                     inputVars.appendChild(variable);
+                    newBlock->inputVars.append({"C_Init_Can","BOOL",NULL});
                 }
-                /*C_Ptr_Obj_Can*/
+                /*Ptr_Obj_Can*/
                 {
                     QDomElement variable = doc.createElement("variable");
                     attr=doc.createAttribute("name");
@@ -827,13 +834,15 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                     QDomElement baseType = doc.createElement("baseType");
                     QDomElement derived =doc.createElement("derived");
                     attr=doc.createAttribute("name");
-                    attr.setValue("tCan");
+                    attr.setValue("POINTER TO tCan");
                     derived.setAttributeNode(attr);
                     baseType.appendChild(derived);
                     pointer.appendChild(baseType);
                     type.appendChild(pointer);
                     variable.appendChild(type);
                     inputVars.appendChild(variable);
+                    newBlock->inputVars.append({"Ptr_Obj_Can","POINTER TO tCan",NULL});
+
                 }
                 /*Start to generate variables*/
                 for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
@@ -849,6 +858,7 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
+                        newBlock->inputVars.append({"FrcEn_"+curSignal->name,"BOOL",NULL});
                         /*Create FrcVal */
                         variable = doc.createElement("variable");
                         attr=doc.createAttribute("name");
@@ -859,7 +869,7 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                         type.appendChild(signalDataType);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-
+                        newBlock->inputVars.append({"FrcVal_"+curSignal->name,curSignal->comDataType,NULL});
                     }
                     else {
                         /*Create FrcHi */
@@ -872,6 +882,7 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
+                        newBlock->inputVars.append({"FrcHi_"+curSignal->name,"BOOL",NULL});
                         /*Create FrcLo */
                         variable = doc.createElement("variable");
                         attr=doc.createAttribute("name");
@@ -882,6 +893,7 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
+                        newBlock->inputVars.append({"FrcLo_"+curSignal->name,"BOOL",NULL});
                     }
 
                 }
@@ -900,6 +912,7 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                     type.appendChild(BOOL);
                     variable.appendChild(type);
                     outputVars.appendChild(variable);
+                    newBlock->outputVars.append({"S_Msg_TmOut","BOOL",NULL});
                 }
                 interface.appendChild(outputVars);
             }
@@ -1294,9 +1307,14 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
             addData.appendChild(data);
             pou.appendChild(addData);
             pous->appendChild(pou);
+
+
+           fbdBlocks.append(newBlock);
         }
 
     }
+
+
 
 }
 void DBCHandler::generateIIST(QString *const ST,dataContainer *const curMessage)
@@ -2960,6 +2978,11 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
             pous->appendChild(pou);
 
         }
+
+}
+
+void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)
+{
 
 }
 
