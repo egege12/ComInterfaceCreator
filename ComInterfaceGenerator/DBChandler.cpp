@@ -821,7 +821,7 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                     type.appendChild(BOOL);
                     variable.appendChild(type);
                     inputVars.appendChild(variable);
-                    newBlock->inputVars.append({"C_Init_Can","BOOL",NULL});
+                    newBlock->inputVars.append({"C_Init_Can","CAN_Init","BOOL"});
                 }
                 /*Ptr_Obj_Can*/
                 {
@@ -834,14 +834,14 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                     QDomElement baseType = doc.createElement("baseType");
                     QDomElement derived =doc.createElement("derived");
                     attr=doc.createAttribute("name");
-                    attr.setValue("POINTER TO tCan");
+                    attr.setValue("tCan");
                     derived.setAttributeNode(attr);
                     baseType.appendChild(derived);
                     pointer.appendChild(baseType);
                     type.appendChild(pointer);
                     variable.appendChild(type);
                     inputVars.appendChild(variable);
-                    newBlock->inputVars.append({"Ptr_Obj_Can","POINTER TO tCan",NULL});
+                    newBlock->inputVars.append({"Ptr_Obj_Can","ADR(DUMMY_ADRESS)","POINTER TO tCan"});
 
                 }
                 /*Start to generate variables*/
@@ -858,7 +858,7 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"FrcEn_"+curSignal->name,"BOOL",NULL});
+                        newBlock->inputVars.append({"FrcEn_"+curSignal->name,"FrcHi."+curSignal->name+".v","BOOL"});
                         /*Create FrcVal */
                         variable = doc.createElement("variable");
                         attr=doc.createAttribute("name");
@@ -869,7 +869,7 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                         type.appendChild(signalDataType);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"FrcVal_"+curSignal->name,curSignal->comDataType,NULL});
+                        newBlock->inputVars.append({"FrcVal_"+curSignal->name,"FrcHi."+curSignal->name+".x",curSignal->comDataType});
                     }
                     else {
                         /*Create FrcHi */
@@ -882,7 +882,7 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"FrcHi_"+curSignal->name,"BOOL",NULL});
+                        newBlock->inputVars.append({"FrcHi_"+curSignal->name,"FrcHi."+curSignal->name+".x","BOOL"});
                         /*Create FrcLo */
                         variable = doc.createElement("variable");
                         attr=doc.createAttribute("name");
@@ -893,7 +893,7 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"FrcLo_"+curSignal->name,"BOOL",NULL});
+                        newBlock->inputVars.append({"FrcLo_"+curSignal->name,"FrcLo."+curSignal->name+".x","BOOL"});
                     }
 
                 }
@@ -912,7 +912,7 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                     type.appendChild(BOOL);
                     variable.appendChild(type);
                     outputVars.appendChild(variable);
-                    newBlock->outputVars.append({"S_Msg_TmOut","BOOL",NULL});
+                    newBlock->outputVars.append({"S_Msg_TmOut","TIMEOUTVAR","BOOL",NULL});
                 }
                 interface.appendChild(outputVars);
             }
@@ -1603,9 +1603,12 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
     foreach (dataContainer * curMessage , comInterface){
         if(curMessage->getIfSelected()){
             QDomElement pou = doc.createElement("pou");
+            structFbdBlock* newBlock = new structFbdBlock;
+
             /*set pou name*/
             attr=doc.createAttribute("name");
             attr.setValue("_FB_"+this->dutHeader+"_"+curMessage->getName()+"_0X"+curMessage->getID());
+            newBlock->name="_FB_"+this->dutHeader+"_"+curMessage->getName()+"_0X"+curMessage->getID();
             pou.setAttributeNode(attr);
             /*set pouType*/
             attr=doc.createAttribute("pouType");
@@ -1628,8 +1631,9 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
                     type.appendChild(BOOL);
                     variable.appendChild(type);
                     inputVars.appendChild(variable);
+                    newBlock->inputVars.append({"C_Init_Can","CAN_Init","BOOL"});
                 }
-                /*C_Ptr_Obj_Can*/
+                /*Ptr_Obj_Can*/
                 {
                     QDomElement variable = doc.createElement("variable");
                     attr=doc.createAttribute("name");
@@ -1647,6 +1651,7 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
                     type.appendChild(pointer);
                     variable.appendChild(type);
                     inputVars.appendChild(variable);
+                    newBlock->inputVars.append({"Ptr_Obj_Can","ADR(DUMMY_ADDRESS)","POINTER to tCan"});
                 }
                 /*Start to generate variables*/
                 for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
@@ -1662,6 +1667,7 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
+                        newBlock->inputVars.append({"FrcEn_"+curSignal->name,"FrcHi."+curSignal->name+".v","BOOL"});
                         /*Create FrcVal */
                         variable = doc.createElement("variable");
                         attr=doc.createAttribute("name");
@@ -1672,7 +1678,7 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
                         type.appendChild(signalDataType);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-
+                        newBlock->inputVars.append({"FrcVal_"+curSignal->name,"FrcHi."+curSignal->name+".x",curSignal->comDataType});
                     }
                     else {
                         /*Create FrcHi */
@@ -1685,6 +1691,7 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
+                        newBlock->inputVars.append({"FrcHi_"+curSignal->name,"FrcHi."+curSignal->name+".x","BOOL"});
                         /*Create FrcLo */
                         variable = doc.createElement("variable");
                         attr=doc.createAttribute("name");
@@ -1695,6 +1702,7 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
+                        newBlock->inputVars.append({"FrcLo_"+curSignal->name,"FrcLo."+curSignal->name+".x","BOOL"});
                     }
 
                 }
@@ -1713,6 +1721,7 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
                     type.appendChild(BOOL);
                     variable.appendChild(type);
                     outputVars.appendChild(variable);
+                    newBlock->outputVars.append({"S_Msg_Snt_Ok","MESSAGESENTOK","BOOL"});
                 }
                 interface.appendChild(outputVars);
             }
@@ -2102,6 +2111,8 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
             addData.appendChild(data);
             pou.appendChild(addData);
             pous->appendChild(pou);
+
+            fbdBlocks.append(newBlock);
         }
 
     }
@@ -2671,6 +2682,8 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
 
         /*ERROR HANDLER*/
         {
+            structFbdBlock* newBlock = new structFbdBlock;
+            newBlock->name="_FB_"+this->dutHeader+"_ERR_Handler";
             QDomElement pou = doc.createElement("pou");
             /*set pou name*/
             attr=doc.createAttribute("name");
@@ -2699,7 +2712,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-
+                        newBlock->inputVars.append({"ERR_"+curSignal->name,"BOOL",NULL});
                     }
                 }
             }
@@ -2770,11 +2783,13 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
             addData.appendChild(data);
             pou.appendChild(addData);
             pous->appendChild(pou);
-
+            fbdBlocks.append(newBlock);
         }
 
         /*NA HANDLER*/
         {
+            structFbdBlock* newBlock = new structFbdBlock;
+            newBlock->name="_FB_"+this->dutHeader+"_NA_Handler";
             QDomElement pou = doc.createElement("pou");
             /*set pou name*/
             attr=doc.createAttribute("name");
@@ -2803,7 +2818,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-
+                        newBlock->inputVars.append({"NA_"+curSignal->name,"BOOL",NULL});
                     }
                 }
             }
@@ -2874,11 +2889,13 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
             addData.appendChild(data);
             pou.appendChild(addData);
             pous->appendChild(pou);
-
+            fbdBlocks.append(newBlock);
         }
         }
         /*VALITIY HANDLER*/
         {
+            structFbdBlock* newBlock = new structFbdBlock;
+            newBlock->name="_FB_"+this->dutHeader+"_Validity_Handler";
             QDomElement pou = doc.createElement("pou");
             /*set pou name*/
             attr=doc.createAttribute("name");
@@ -2907,6 +2924,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
+                        newBlock->inputVars.append({"VALID_"+curSignal->name,"BOOL",NULL});
 
 
                 }
@@ -2976,6 +2994,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
             addData.appendChild(data);
             pou.appendChild(addData);
             pous->appendChild(pou);
+            fbdBlocks.append(newBlock);
 
         }
 
@@ -2983,7 +3002,449 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
 
 void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)
 {
+    QDomAttr attr;
+    QDomText text;
+    /*set pou name*/
+    QDomElement pou = doc.createElement("pou");
+    attr=doc.createAttribute("name");
+    attr.setValue("P_"+this->dutHeader);
+    pou.setAttributeNode(attr);
+    /*set pouType*/
+    attr=doc.createAttribute("pouType");
+    attr.setValue("program");
+    pou.setAttributeNode(attr);
 
+
+
+    {/*INTERFACE*/
+
+        QDomElement interface = doc.createElement("interface");
+
+        {/*LOCAL VARS*/
+                QDomElement localVars = doc.createElement("localVars");
+            {
+
+                QDomElement variable = doc.createElement("variable");
+                attr=doc.createAttribute("name");
+                attr.setValue("C_Init_Can");
+                variable.setAttributeNode(attr);
+                QDomElement type = doc.createElement("type");
+                QDomElement BOOL = doc.createElement("BOOL");
+                QDomElement initialValue = doc.createElement("initialValue");
+                QDomElement simpleValue = doc.createElement("simpleValue");
+                attr=doc.createAttribute("value");
+                attr.setValue("TRUE");
+                simpleValue.setAttributeNode(attr);
+                initialValue.appendChild(simpleValue);
+                type.appendChild(BOOL);
+                variable.appendChild(type);
+                variable.appendChild(initialValue);
+                localVars.appendChild(variable);
+
+            }
+            for(DBCHandler::structFbdBlock * curStruct : fbdBlocks){
+                QDomElement variable=doc.createElement("variable");
+                attr=doc.createAttribute("name");
+                attr.setValue(curStruct->name+"_0");
+                variable.setAttributeNode(attr);
+                QDomElement type = doc.createElement("type");
+                QDomElement derived = doc.createElement("derived");
+                attr=doc.createAttribute("name");
+                attr.setValue(curStruct->name);
+                derived.setAttributeNode(attr);
+                type.appendChild(derived);
+                variable.appendChild(type);
+                localVars.appendChild(variable);
+            }
+
+            {
+                QDomElement variable = doc.createElement("variable");
+                attr=doc.createAttribute("name");
+                attr.setValue("FrcHi");
+                variable.setAttributeNode(attr);
+                QDomElement type = doc.createElement("type");
+                QDomElement dataVarType = doc.createElement("derived");
+                attr=doc.createAttribute("name");
+                attr.setValue(dutName);
+                dataVarType.setAttributeNode(attr);
+                type.appendChild(dataVarType);
+                variable.appendChild(type);
+                localVars.appendChild(variable);
+            }
+            {
+                QDomElement variable = doc.createElement("variable");
+                attr=doc.createAttribute("name");
+                attr.setValue("FrcLo");
+                variable.setAttributeNode(attr);
+                QDomElement type = doc.createElement("type");
+                QDomElement dataVarType = doc.createElement("derived");
+                attr=doc.createAttribute("name");
+                attr.setValue(dutName);
+                dataVarType.setAttributeNode(attr);
+                type.appendChild(dataVarType);
+                variable.appendChild(type);
+                localVars.appendChild(variable);
+            }
+            interface.appendChild(localVars);
+        }
+        pou.appendChild(interface);
+    }
+/*BODY*/
+    {
+        QDomElement body = doc.createElement("body");
+        /*FBD*/
+        {
+            QDomElement FBD = doc.createElement("FBD");
+
+            {
+                const unsigned long long  baseLocalID= 10000000000;
+                unsigned long long countLocalID = 0;
+                unsigned long long countNetworkID = 0;
+                {
+                    QDomElement vendorElement = doc.createElement("vendorElement");
+                    {
+                        QDomElement position = doc.createElement("position");
+                        attr=doc.createAttribute("x");
+                        attr.setValue("0");
+                        position.setAttributeNode(attr);
+                        attr=doc.createAttribute("y");
+                        attr.setValue("0");
+                        position.setAttributeNode(attr);
+                        vendorElement.appendChild(position);
+                    }
+                    {
+                        QDomElement alternativeText = doc.createElement("alternativeText");
+                        QDomElement xhtml = doc.createElement("xhtml");
+                        attr=doc.createAttribute("xmlns");
+                        attr.setValue("http://www.w3.org/1999/xhtml");
+                        xhtml.setAttributeNode(attr);
+                        text=doc.createTextNode("FBD Implementation Attributes");
+                        xhtml.appendChild(text);
+                        alternativeText.appendChild(xhtml);
+                        vendorElement.appendChild(alternativeText);
+                    }
+                    {
+                        QDomElement addData = doc.createElement("addData");
+                        QDomElement data = doc.createElement("data");
+                        attr= doc.createAttribute("name");
+                        attr.setValue("http://www.3s-software.com/plcopenxml/fbd/implementationattributes");
+                        data.setAttributeNode(attr);
+                        QDomElement fbdattributes=doc.createElement("fbdattributes");
+                        attr=doc.createAttribute("xmlns");
+                        attr.setValue("");
+                        fbdattributes.setAttributeNode(attr);
+                        QDomElement attribute =doc.createElement("attribute");
+                        attr=doc.createAttribute("name");
+                        attr.setValue("BoxInputFlagsSupported");
+                        attribute.setAttributeNode(attr);
+                        attr=doc.createAttribute("value");
+                        attr.setValue("true");
+                        attribute.setAttributeNode(attr);
+                        fbdattributes.appendChild(attribute);
+                        data.appendChild(fbdattributes);
+                        addData.appendChild(data);
+                        vendorElement.appendChild(addData);
+                    }
+                    attr=doc.createAttribute("localId");
+                    attr.setValue(QString::number(baseLocalID));
+                    vendorElement.setAttributeNode(attr);
+                    FBD.appendChild(vendorElement);
+                }
+
+                {
+                    QDomElement comment = doc.createElement("comment");
+
+                    {
+                        QDomElement position = doc.createElement("position");
+                        attr=doc.createAttribute("x");
+                        attr.setValue("0");
+                        position.setAttributeNode(attr);
+                        attr=doc.createAttribute("y");
+                        attr.setValue("0");
+                        position.setAttributeNode(attr);
+                        comment.appendChild(position);
+
+                    }
+
+                    {
+                        QDomElement content = doc.createElement("content");
+                        QDomElement xhtml = doc.createElement("xhtml");
+                        attr=doc.createAttribute("xmlns");
+                        attr.setValue("http://www.w3.org/1999/xhtml");
+                        xhtml.setAttributeNode(attr);
+                        text=doc.createTextNode("THIS POU AUTOMATICALLY GENERATED BY TOOL DO NOT EDIT WITHOUT IMPLEMENTING ON DBC FILE");
+                        xhtml.appendChild(text);
+                        content.appendChild(xhtml);
+                        comment.appendChild(content);
+
+                    }
+                    attr=doc.createAttribute("localId");
+                    attr.setValue(QString::number(baseLocalID+1));
+                    comment.setAttributeNode(attr);
+                    FBD.appendChild(comment);
+                }
+
+                countNetworkID++;
+
+                for(DBCHandler::structFbdBlock * curStruct : fbdBlocks){
+
+                    QString dutHeaderLocalId;
+
+                    for(QList<QString> curVar : curStruct->inputVars){
+
+
+                        QDomElement inVariable = doc.createElement("inVariable");
+                        QDomElement position = doc.createElement("position");
+                        QDomElement connectionPointOut = doc.createElement("connectionPointOut");
+                        QDomElement expression = doc.createElement("expression");
+                        attr=doc.createAttribute("x");
+                        attr.setValue("0");
+                        position.setAttributeNode(attr);
+                        attr=doc.createAttribute("y");
+                        attr.setValue("0");
+                        position.setAttributeNode(attr);
+                        inVariable.appendChild(position);
+                        inVariable.appendChild(connectionPointOut);
+                        text=doc.createTextNode(curVar.at(1));
+                        expression.appendChild(text);
+                        inVariable.appendChild(expression);
+                        attr=doc.createAttribute("localId");
+                        attr.setValue(QString::number((baseLocalID*countNetworkID)+countLocalID));
+                        inVariable.setAttributeNode(attr);
+                        FBD.appendChild(inVariable);
+                        curVar.append(QString::number((baseLocalID*countNetworkID)+countLocalID));
+                        countLocalID++;
+
+                    }
+
+                    {
+                        QDomElement inVariable = doc.createElement("inVariable");
+                        QDomElement position = doc.createElement("position");
+                        QDomElement connectionPointOut = doc.createElement("connectionPointOut");
+                        QDomElement expression = doc.createElement("expression");
+                        attr=doc.createAttribute("x");
+                        attr.setValue("0");
+                        position.setAttributeNode(attr);
+                        attr=doc.createAttribute("y");
+                        attr.setValue("0");
+                        position.setAttributeNode(attr);
+                        inVariable.appendChild(position);
+                        inVariable.appendChild(connectionPointOut);
+                        text=doc.createTextNode("GVL."+this->dutHeader);
+                        expression.appendChild(text);
+                        inVariable.appendChild(expression);
+                        attr=doc.createAttribute("localId");
+                        attr.setValue(QString::number((baseLocalID*countNetworkID)+countLocalID));
+                        dutHeaderLocalId=QString::number((baseLocalID*countNetworkID)+countLocalID);
+                        inVariable.setAttributeNode(attr);
+                        FBD.appendChild(inVariable);
+                        countLocalID++;
+                    }
+                    {
+                        QDomElement block = doc.createElement("block");
+                        attr=doc.createAttribute("localId");
+                        attr.setValue(QString::number((baseLocalID*countNetworkID)+countLocalID));
+                        block.setAttributeNode(attr);
+                        attr=doc.createAttribute("typeName");
+                        attr.setValue(curStruct->name);
+                        block.setAttributeNode(attr);
+                        attr=doc.createAttribute("instanceName");
+                        attr.setValue(curStruct->name+"_0");
+                        block.setAttributeNode(attr);
+
+
+                        QDomElement position = doc.createElement("position");
+                        attr=doc.createAttribute("x");
+                        attr.setValue("0");
+                        position.setAttributeNode(attr);
+                        attr=doc.createAttribute("y");
+                        attr.setValue("0");
+                        position.setAttributeNode(attr);
+                        block.appendChild(position);
+
+
+                        {
+
+                        QDomElement inputVariables = doc.createElement("inputVariables");
+                            for(QList<QString> curVar : curStruct->inputVars){
+
+                                QDomElement variable = doc.createElement("variable");
+                                attr=doc.createAttribute("formalParameter");
+                                attr.setValue(curVar.at(0));
+                                variable.setAttributeNode(attr);
+                                QDomElement connectionPointIn = doc.createElement("connectionPointIn");
+                                QDomElement connection = doc.createElement("connection");
+                                attr=doc.createAttribute("refLocalId");
+                                attr.setValue(curVar.at(3));
+                                connection.setAttributeNode(attr);
+                                connectionPointIn.appendChild(connection);
+                                variable.appendChild(connectionPointIn);
+                                inputVariables.appendChild(variable);
+                                block.appendChild(inputVariables);
+                            }
+
+                        QDomElement inoutVariables = doc.createElement("inOutVariables");
+                            {
+                            QDomElement variable = doc.createElement("variable");
+                            attr=doc.createAttribute("formalParameter");
+                            attr.setValue(this->dutHeader);
+                            variable.setAttributeNode(attr);
+                            QDomElement connectionPointIn = doc.createElement("connectionPointIn");
+                            QDomElement connection = doc.createElement("connection");
+                            attr=doc.createAttribute("refLocalId");
+                            attr.setValue(dutHeaderLocalId);
+                            connection.setAttributeNode(attr);
+                            connectionPointIn.appendChild(connection);
+                            variable.appendChild(connectionPointIn);
+                            inoutVariables.appendChild(variable);
+                            block.appendChild(inoutVariables);
+                            }
+                        QDomElement outputVariables = doc.createElement("outputVariables");
+                            for(QList<QString> curVar : curStruct->outputVars){
+
+                                QDomElement variable = doc.createElement("variable");
+                                attr=doc.createAttribute("formalParameter");
+                                attr.setValue(curVar.at(0));
+                                variable.setAttributeNode(attr);
+                                QDomElement connectionPointIn = doc.createElement("connectionPointIn");
+                                variable.appendChild(connectionPointIn);
+                                outputVariables.appendChild(variable);
+                                block.appendChild(outputVariables);
+                            }
+
+                        }
+                        /*ADDDATA OF Block*/
+                        QDomElement addData = doc.createElement("addData");
+
+                        {
+                            {
+                            QDomElement data = doc.createElement("data");
+                            attr=doc.createAttribute("name");
+                            attr.setValue("http://www.3s-software.com/plcopenxml/fbdcalltype");
+                            data.setAttributeNode(attr);
+                            attr=doc.createAttribute("handleUnknown");
+                            attr.setValue("implementation");
+                            data.setAttributeNode(attr);
+                            QDomElement CallType = doc.createElement("CallType");
+                            attr=doc.createAttribute("xmlns");
+                            attr.setValue("");
+                            CallType.setAttributeNode(attr);
+                            text=doc.createTextNode("functionblock");
+                            CallType.appendChild(text);
+                            data.appendChild(CallType);
+                            addData.appendChild(data);
+                            }
+                            {
+                            QDomElement data = doc.createElement("data");
+                            attr=doc.createAttribute("name");
+                            attr.setValue("http://www.3s-software.com/plcopenxml/inputparamtypes");
+                            data.setAttributeNode(attr);
+                            attr=doc.createAttribute("handleUnknown");
+                            attr.setValue("implementation");
+                            data.setAttributeNode(attr);
+                            QDomElement InputParamTypes = doc.createElement("InputParamTypes");
+                            attr=doc.createAttribute("xmlns");
+                            attr.setValue("");
+                            InputParamTypes.setAttributeNode(attr);
+                            QString dataTypes="";
+                            for(QList<QString> curVar : curStruct->inputVars){
+                            dataTypes.append(curVar.at(2)+" ");
+                            }
+                            text=doc.createTextNode(dataTypes);
+                            InputParamTypes.appendChild(text);
+                            data.appendChild(InputParamTypes);
+                            addData.appendChild(data);
+                            }
+                            {
+                            QDomElement data = doc.createElement("data");
+                            attr=doc.createAttribute("name");
+                            attr.setValue("http://www.3s-software.com/plcopenxml/outputparamtypes");
+                            data.setAttributeNode(attr);
+                            attr=doc.createAttribute("handleUnknown");
+                            attr.setValue("implementation");
+                            data.setAttributeNode(attr);
+                            QDomElement OutputParamTypes = doc.createElement("OutputParamTypes");
+                            attr=doc.createAttribute("xmlns");
+                            attr.setValue("");
+                            OutputParamTypes.setAttributeNode(attr);
+                            QString dataTypes="";
+                            for(QList<QString> curVar : curStruct->outputVars){
+                            dataTypes.append(curVar.at(2)+" ");
+                            }
+                            text=doc.createTextNode(dataTypes);
+                            OutputParamTypes.appendChild(text);
+                            data.appendChild(OutputParamTypes);
+                            addData.appendChild(data);
+                            }
+                        }
+
+
+
+                        block.appendChild(addData);
+
+                    }
+
+                    for(QList<QString> curVar : curStruct->outputVars){
+
+
+                        QDomElement inVariable = doc.createElement("outVariable");
+                        QDomElement position = doc.createElement("position");
+                        QDomElement connectionPointOut = doc.createElement("connectionPointIn");
+                        QDomElement expression = doc.createElement("expression");
+                        attr=doc.createAttribute("x");
+                        attr.setValue("0");
+                        position.setAttributeNode(attr);
+                        attr=doc.createAttribute("y");
+                        attr.setValue("0");
+                        position.setAttributeNode(attr);
+                        inVariable.appendChild(position);
+                        inVariable.appendChild(connectionPointOut);
+                        text=doc.createTextNode(curVar.at(1));
+                        expression.appendChild(text);
+                        inVariable.appendChild(expression);
+                        attr=doc.createAttribute("localId");
+                        attr.setValue(QString::number((baseLocalID*countNetworkID)+countLocalID));
+                        inVariable.setAttributeNode(attr);
+                        FBD.appendChild(inVariable);
+                        curVar.append(QString::number((baseLocalID*countNetworkID)+countLocalID));
+                        countLocalID++;
+
+                    }
+
+                    countLocalID=0;
+                    countNetworkID++;
+                }
+
+
+            }
+
+
+
+            body.appendChild(FBD);
+        }
+        pou.appendChild(body);
+    }
+
+/*ADDDATA*/
+    {
+        /*Create addData*/
+        QDomElement addData = doc.createElement("addData");
+        QDomElement data = doc.createElement("data");
+        attr=doc.createAttribute("name");
+        attr.setValue("http://www.3s-software.com/plcopenxml/objectid");
+        data.setAttributeNode(attr);
+        attr=doc.createAttribute("handleUnknown");
+        attr.setValue("discard");
+        data.setAttributeNode(attr);
+        QDomElement ObjectId = doc.createElement("ObjectId");
+        text=doc.createTextNode(pouObjID);
+        ObjectId.appendChild(text);
+        data.appendChild(ObjectId);
+        addData.appendChild(data);
+
+        pou.appendChild(addData);
+    }
+    pous->appendChild(pou);
 }
 
 
