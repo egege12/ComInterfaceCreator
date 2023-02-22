@@ -2777,6 +2777,8 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
             for(QList<QString> curVal : this->fbNameandObjId){
                 if(curVal.at(0)== ("_FB_"+this->dutHeader+"_ERR_Handler")){
                     text=doc.createTextNode(curVal.at(1));
+                }else{
+                    dataContainer::setWarning("ERR_Handler fonksiyonu klasörlenmedi/klasörlenemedi");
                 }
             }
 
@@ -2883,6 +2885,8 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
             foreach(QList<QString> curVal , this->fbNameandObjId){
                 if(curVal.at(0)== ("_FB_"+this->dutHeader+"_NA_Handler")){
                     text=doc.createTextNode(curVal.at(1));
+                }else{
+                    dataContainer::setWarning("NA_Handler fonksiyonu klasörlenmedi/klasörlenemedi");
                 }
             }
 
@@ -2893,6 +2897,8 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
             pous->appendChild(pou);
             fbdBlocks.append(newBlock);
         }
+        }else{
+        dataContainer::setWarning("J1939 mesajı bulunamadığı için NA  ve ERR Handler yerleştirilmedi");
         }
         /*VALITIY HANDLER*/
         {
@@ -2986,8 +2992,10 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
             QDomElement ObjectId = doc.createElement("ObjectId");
 
             for(QList<QString> curVal : this->fbNameandObjId){
-                if(curVal.at(0)== ("_FB_"+this->dutHeader+"_Validty_Handler")){
+                if(curVal.at(0)== ("_FB_"+this->dutHeader+"_Validity_Handler")){
                     text=doc.createTextNode(curVal.at(1));
+                }else{
+                    dataContainer::setWarning("Validity_Handler fonksiyonu klasörlenmedi/klasörlenemedi");
                 }
             }
 
