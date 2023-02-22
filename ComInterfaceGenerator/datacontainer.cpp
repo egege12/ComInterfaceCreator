@@ -3,7 +3,8 @@
 
 unsigned int dataContainer::messageCounter = 0;
 unsigned int dataContainer::signalCounter = 0;
-QList<QString> dataContainer::warningMessages ={};
+QMap<QString,QList<QString>> dataContainer::warningMessages ={};
+
 dataContainer::dataContainer(QObject *parent)
 {
     ++dataContainer::messageCounter;
@@ -55,7 +56,6 @@ QString dataContainer::getComment()
 }
 
 
-
 bool dataContainer::getIfSelected()
 {
     return this->isSelected;
@@ -73,7 +73,13 @@ unsigned short dataContainer::getDLC()
 
 const QList<QString> *dataContainer::getWarningList()
 {
-    return &dataContainer::warningMessages;
+    QList<QString> *warningMessagesAll = new QList<QString>();
+    foreach(QList <QString> warningMessages , warningMessages){
+
+        warningMessagesAll->append(warningMessages);
+
+    }
+    return warningMessagesAll;
 }
 
 void dataContainer::setName(QString Name)
@@ -121,9 +127,15 @@ void dataContainer::setComment(QString comment)
     this->comment = comment;
 }
 
-void dataContainer::setWarning(const QString &warningCode)
+void dataContainer::setWarning(QString ID,const QString &warningCode)
 {
-    dataContainer::warningMessages.append(warningCode);
+    if(warningMessages.contains(ID)){
+    dataContainer::warningMessages[ID].append("Warning: Mesaj=>"+ID+":"+warningCode);
+    }else{
+        QList<QString> temporary = {};
+        temporary.append("Warning: Mesaj=>"+ID+":"+warningCode);
+    dataContainer::warningMessages.insert(ID,temporary);
+    }
 }
 
 void dataContainer::dataTypeAss(signal *signalPtr)
@@ -145,7 +157,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             signalPtr->appDataType="BYTE";
             signalPtr->convMethod="toBYTE";
             signalPtr->comDataType = "BYTE";
-            this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali isimlendirmesinde C_ S_ Z_ işareti bulunmuyor");
+            this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde C_ S_ Z_ işareti bulunmuyor");
         }
     }else if (signalPtr->length < 8){
         signalPtr->comDataType = "BYTE";
@@ -161,7 +173,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
         }else{
             signalPtr->appDataType="BYTE";
             signalPtr->convMethod="toBYTE";
-            this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
+            this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
         }
 
     }else if (signalPtr->length == 8){
@@ -179,7 +191,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             }else{
                 signalPtr->appDataType="BYTE";
                 signalPtr->convMethod="xtoBYTE";
-                this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
             }
         }else{
             signalPtr->comDataType = "BYTE";
@@ -195,10 +207,10 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             }else{
                 signalPtr->appDataType="BYTE";
                 signalPtr->convMethod="toBYTE";
-                this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
 
             }
-            this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali başlangıç biti 8 ve katları değil, düşük performans");
+            this->setWarning(this->messageID,signalPtr->name+" sinyali başlangıç biti 8 ve katları değil, düşük performans");
         }
     }else if (signalPtr->length <  16){
         if((signalPtr->startBit == 0 )||(signalPtr->startBit == 8 )||(signalPtr->startBit == 16 )||(signalPtr->startBit == 24 )||(signalPtr->startBit == 32 )||(signalPtr->startBit == 40 )||(signalPtr->startBit == 48 )){
@@ -215,10 +227,10 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             }else{
                 signalPtr->appDataType="WORD";
                 signalPtr->convMethod="toWORD";
-                this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
 
             }
-            this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali veri boyutu 8 ve katları değil,standart olmayan veri transferi");
+            this->setWarning(this->messageID,signalPtr->name+" sinyali veri boyutu 8 ve katları değil,standart olmayan veri transferi");
         }else{
             signalPtr->comDataType = "WORD";
             if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")){
@@ -233,11 +245,11 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             }else{
                 signalPtr->appDataType="WORD";
                 signalPtr->convMethod="toWORD";
-                this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
 
             }
-            this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali veri boyutu 8 ve katları değil,standart olmayan veri transferi");
-            this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali başlangıç biti 8 ve katları değil,düşük perfomans");
+            this->setWarning(this->messageID,signalPtr->name+" sinyali veri boyutu 8 ve katları değil,standart olmayan veri transferi");
+            this->setWarning(this->messageID,signalPtr->name+" sinyali başlangıç biti 8 ve katları değil,düşük perfomans");
         }
     }else if (signalPtr->length == 16){
         if((signalPtr->startBit == 0 )||(signalPtr->startBit == 8 )||(signalPtr->startBit == 16 )||(signalPtr->startBit == 24 )||(signalPtr->startBit == 32 )||(signalPtr->startBit == 40 )||(signalPtr->startBit == 48 )){
@@ -253,7 +265,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             }else{
                 signalPtr->appDataType="WORD";
                 signalPtr->convMethod="xtoWORD";
-                this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
             }
         }else{
             signalPtr->comDataType = "WORD";
@@ -269,10 +281,10 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             }else{
                 signalPtr->appDataType="WORD";
                 signalPtr->convMethod="toWORD";
-                this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
 
             }
-            this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali başlangıç biti 16 ve katları değil, düşük performans");
+            this->setWarning(this->messageID,signalPtr->name+" sinyali başlangıç biti 16 ve katları değil, düşük performans");
         }
     }else if (signalPtr->length < 32){
         if((signalPtr->startBit == 0 )||(signalPtr->startBit == 8 )||(signalPtr->startBit == 16 )||(signalPtr->startBit == 24 )||(signalPtr->startBit == 32 )){
@@ -289,10 +301,10 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             }else{
                 signalPtr->appDataType="DWORD";
                 signalPtr->convMethod="toDWORD";
-                this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
 
             }
-            this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali veri boyutu 8 ve katları değil,standart olmayan veri transferi");
+            this->setWarning(this->messageID,signalPtr->name+" sinyali veri boyutu 8 ve katları değil,standart olmayan veri transferi");
         }else{
             signalPtr->comDataType = "DWORD";
             if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")){
@@ -307,11 +319,11 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             }else{
                 signalPtr->appDataType="DWORD";
                 signalPtr->convMethod="toDWORD";
-                this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
 
             }
-            this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali veri boyutu 8 ve katları değil,standart olmayan veri transferi");
-            this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali başlangıç biti 8 ve katları değil,düşük perfomans");
+            this->setWarning(this->messageID,signalPtr->name+" sinyali veri boyutu 8 ve katları değil,standart olmayan veri transferi");
+            this->setWarning(this->messageID,signalPtr->name+" sinyali başlangıç biti 8 ve katları değil,düşük perfomans");
         }
 
     }else if (signalPtr->length == 32){
@@ -329,7 +341,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             }else{
                 signalPtr->appDataType="DWORD";
                 signalPtr->convMethod="xtoDWORD";
-                this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
             }
         }else{
             signalPtr->comDataType = "DWORD";
@@ -345,10 +357,10 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             }else{
                 signalPtr->appDataType="DWORD";
                 signalPtr->convMethod="toDWORD";
-                this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
 
             }
-            this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali başlangıç biti 8 ve katları değil,düşük performans");
+            this->setWarning(this->messageID,signalPtr->name+" sinyali başlangıç biti 8 ve katları değil,düşük performans");
         }
     }else if (signalPtr->length < 64){
         if((signalPtr->startBit == 0 )||(signalPtr->startBit == 8 )||(signalPtr->startBit == 16 )||(signalPtr->startBit == 24 )){
@@ -365,9 +377,9 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             }else{
                 signalPtr->appDataType="LWORD";
                 signalPtr->convMethod="toLWORD";
-                this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
             }
-            this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali veri boyutu 8 ve katları değil,standart olmayan veri transferi");
+            this->setWarning(this->messageID,signalPtr->name+" sinyali veri boyutu 8 ve katları değil,standart olmayan veri transferi");
         }else{
             signalPtr->comDataType = "LWORD";
             if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")){
@@ -382,10 +394,10 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             }else{
                 signalPtr->appDataType="LWORD";
                 signalPtr->convMethod="toLWORD";
-                this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
             }
-            this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali veri boyutu 8 ve katları değil,standart olmayan veri transferi");
-            this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali başlangıç biti 8 ve katları değil,düşük perfomans");
+            this->setWarning(this->messageID,signalPtr->name+" sinyali veri boyutu 8 ve katları değil,standart olmayan veri transferi");
+            this->setWarning(this->messageID,signalPtr->name+" sinyali başlangıç biti 8 ve katları değil,düşük perfomans");
         }
     }else if (signalPtr->length == 64){
         signalPtr->comDataType = "LWORD";
@@ -400,7 +412,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             signalPtr->convMethod="xtoLWORD";
         }else{
             signalPtr->appDataType = "LWORD";
-            this->setWarning(this->messageID+" mesajında yer alan "+signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
+            this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
         }
     }
 }
@@ -414,4 +426,5 @@ dataContainer::~dataContainer()
         delete curSignal;
     }
     signalList.clear();
+    warningMessages.clear();
 }

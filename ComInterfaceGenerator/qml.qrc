@@ -21,5 +21,6 @@
         <file>img/sortDnEnabled.png</file>
         <file>img/sortNotEnable.png</file>
         <file>img/sortUpEnabled.png</file>
+        <file>img/progressSucces.png</file>
     </qresource>
 </RCC>

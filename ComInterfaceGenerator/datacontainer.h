@@ -11,7 +11,7 @@ public:
     //Total counters
     static unsigned int messageCounter;
     static unsigned int signalCounter;
-    static QList<QString> warningMessages;
+    static QMap<QString,QList<QString>> warningMessages;
     explicit dataContainer(QObject *parent = nullptr);
 
     //Struct List
@@ -43,7 +43,7 @@ public:
     void setMsTimeOut(QString msTimeout);
     void setMsCycleTime(QString msCycleTime);
     void setComment(QString comment);
-    static void setWarning(QString const& warningCode);
+    static void setWarning(QString ID,QString const& warningCode);
 
 
     ~dataContainer();

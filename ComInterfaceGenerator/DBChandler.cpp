@@ -206,9 +206,10 @@ bool DBCHandler::parseMessages(QFile *ascFile)
             curSignal.comment = commentContainer;
             curSignal.isJ1939 = commentContainer.contains(QString("j1939"),Qt::CaseInsensitive) ;
             /*Defualt value*/
-            if(commentContainer.contains(QString("defValue="),Qt::CaseInsensitive)){
-                curSignal.defValue=commentContainer.mid(commentContainer.indexOf("defValue=")+9,10).trimmed().toDouble();
+            if(commentContainer.contains(QString("defValue"),Qt::CaseInsensitive)){
+                curSignal.defValue=this->getBetween("defValue","**",commentContainer).toDouble();
             }else{
+                dataContainer::setWarning(messageID,curSignal.name+" sinyali için varsayılan değer atanmadığı için 0 atandı,<defValue:XXXXX**> ile atama yapın.");
                 curSignal.defValue=0.0;
             }
             addSignalToMessage (messageID,curSignal);
@@ -219,8 +220,18 @@ bool DBCHandler::parseMessages(QFile *ascFile)
             QStringList messageList = curLine.split(" ");
             QString commentContainer =  curLine.mid(curLine.indexOf(messageList.at(2)),curLine.length());
             QString ID = QString::number(messageList.at(2).toUInt(),16).toUpper();
-            QString msTimeout = this->getBetween("timeout","ms",commentContainer);
-            QString msCycleTime = this->getBetween("cycletime","ms",commentContainer);
+            QString msTimeout="";
+            QString msCycleTime="";
+            if(commentContainer.contains("timeout",Qt::CaseInsensitive)){
+                msTimeout = this->getBetween("timeout","ms",commentContainer);
+            }else{
+                dataContainer::setWarning(ID,"Mesaj için timeout belirlenmemiş, <timeout : XXXX ms> etiketiyle yoruma ekleyin.");
+            }
+            if(commentContainer.contains("cycletime",Qt::CaseInsensitive)){
+                msCycleTime = this->getBetween("cycletime","ms",commentContainer);
+            }else{
+                dataContainer::setWarning(ID,"Mesaj için cycletime belirlenmemiş, <cycletime : XXXX ms> etiketiyle yoruma ekleyin.");
+            }
 
             msgCommentList.append({ID,msTimeout,msCycleTime,commentContainer});
             if (commentContainer.contains(QString("j1939"),Qt::CaseInsensitive)){
@@ -400,6 +411,7 @@ QString DBCHandler::getBetween(QString first, QString second, QString fullText)
 ///******************************************************************************
 void DBCHandler::startToGenerate()
 {
+    setProgress(0.0);
     if(!DBCHandler::selectedMessageCounter){
         this->setErrCode("En az bir mesaj seçmelisin");
     }else if(!isAllInserted){
@@ -416,10 +428,12 @@ void DBCHandler::startToGenerate()
                     throw QString("Dosya açılamadı, lütfen konumu kontrol edin!");
                 }
                 else{
+                    emit progressStarted();
                     if (!createXml_STG1(xmlFile)){
                         throw QString("XML oluşturulurken bir şeyler yanlış gitti!");
                     }else
                         xmlFile->close();
+                    setProgress(1.0);
                 }
 
             }
@@ -446,7 +460,7 @@ bool DBCHandler::createXml_STG1(QFile *xmlFile)
     instruction = doc.createProcessingInstruction( "xml", "version = \'1.0\' encoding=\'utf-8\'" );
     doc.appendChild( instruction );
     //****************************************************
-
+    setProgress(0.1);
     //<project xmlns="http://www.plcopen.org/xml/tc6_0200">
     QDomElement elemProject = doc.createElement( "project" );
     attr = doc.createAttribute( "xmlns" );//Add the text NAME in the USERINFO element
@@ -542,6 +556,7 @@ bool DBCHandler::createXml_STG1(QFile *xmlFile)
         }
         //END OF "ContentHeader"
     }
+    setProgress(0.2);
     {
         //START OF "types"
         QDomElement types = doc.createElement("types");
@@ -572,14 +587,20 @@ bool DBCHandler::createXml_STG1(QFile *xmlFile)
         dataType.appendChild(addData);
         dataTypes.appendChild(dataType);
         types.appendChild(dataTypes);
+        setProgress(0.3);
         if((this->IOType == "II")){
             this->generateIIPous(&pous,doc);
+            setProgress(0.4);
             this->generatePouFpd(&pous,doc);
+            setProgress(0.5);
         }
         else{
             this->generateHandlers(&pous,doc);
+            setProgress(0.4);
             this->generateIOPous(&pous,doc);
+            setProgress(0.5);
             this->generatePouFpd(&pous,doc);
+            setProgress(0.6);
         }
         types.appendChild(pous);
         elemProject.appendChild(types);
@@ -594,6 +615,7 @@ bool DBCHandler::createXml_STG1(QFile *xmlFile)
         instances.appendChild(configurations);
         //END OF "instances"
     }
+    setProgress(0.6);
     {
         //START OF "addData"
         QDomElement addData = doc.createElement("addData");
@@ -629,7 +651,7 @@ bool DBCHandler::createXml_STG1(QFile *xmlFile)
             object.setAttributeNode(attr);
             folder2.appendChild(object);
         }
-
+        setProgress(0.7);
         //DUTs
         ProjectStructure.appendChild(folder1);
         folder1 = doc.createElement("Folder");
@@ -645,6 +667,7 @@ bool DBCHandler::createXml_STG1(QFile *xmlFile)
         folder2.setAttributeNode(attr);
         folder1.appendChild(folder2);
         ProjectStructure.appendChild(folder1);
+         setProgress(0.8);
         //Pous
         folder1 = doc.createElement("Folder");
         attr= doc.createAttribute("Name");
@@ -659,7 +682,7 @@ bool DBCHandler::createXml_STG1(QFile *xmlFile)
         folder2.setAttributeNode(attr);
         folder1.appendChild(folder2);
         ProjectStructure.appendChild(folder1);
-
+        setProgress(0.9);
         //END OF "addData"
     }
 
@@ -2778,7 +2801,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                 if(curVal.at(0)== ("_FB_"+this->dutHeader+"_ERR_Handler")){
                     text=doc.createTextNode(curVal.at(1));
                 }else{
-                    dataContainer::setWarning("ERR_Handler fonksiyonu klasörlenmedi/klasörlenemedi");
+                    dataContainer::setWarning("COMMON","ERR_Handler fonksiyonu klasörlenmedi/klasörlenemedi");
                 }
             }
 
@@ -2886,7 +2909,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                 if(curVal.at(0)== ("_FB_"+this->dutHeader+"_NA_Handler")){
                     text=doc.createTextNode(curVal.at(1));
                 }else{
-                    dataContainer::setWarning("NA_Handler fonksiyonu klasörlenmedi/klasörlenemedi");
+                    dataContainer::setWarning("COMMON","NA_Handler fonksiyonu klasörlenmedi/klasörlenemedi");
                 }
             }
 
@@ -2898,7 +2921,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
             fbdBlocks.append(newBlock);
         }
         }else{
-        dataContainer::setWarning("J1939 mesajı bulunamadığı için NA  ve ERR Handler yerleştirilmedi");
+        dataContainer::setWarning("COMMON","J1939 mesajı bulunamadığı için NA  ve ERR Handler yerleştirilmedi");
         }
         /*VALITIY HANDLER*/
         {
@@ -2995,7 +3018,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                 if(curVal.at(0)== ("_FB_"+this->dutHeader+"_Validity_Handler")){
                     text=doc.createTextNode(curVal.at(1));
                 }else{
-                    dataContainer::setWarning("Validity_Handler fonksiyonu klasörlenmedi/klasörlenemedi");
+                    dataContainer::setWarning("COMMON","Validity_Handler fonksiyonu klasörlenmedi/klasörlenemedi");
                 }
             }
 
@@ -3485,3 +3508,19 @@ void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)
 
 
 
+
+qreal DBCHandler::progress() const
+{
+    return m_progress;
+}
+
+void DBCHandler::setProgress(qreal newProgress)
+{
+    if (m_progress == newProgress)
+        return;
+    m_progress = newProgress;
+    if(m_progress == 1.0)
+        emit progressCompleted();
+    else
+        emit progressChanged();
+}

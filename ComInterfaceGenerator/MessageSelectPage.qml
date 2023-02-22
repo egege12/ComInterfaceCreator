@@ -129,6 +129,9 @@ Rectangle {
             Layout.alignment: Qt.AlignCenter
 
         }*/
+
+
+
             Rectangle {
                 id:signalRectangle
                 Layout.preferredHeight: messageSelPage.height*0.7
@@ -237,7 +240,9 @@ Rectangle {
 
                 }
             }
-        }
+
+
+            }
         RowLayout{
             id:rowLayoutBottom
             Layout.alignment: {Qt.AlignBottom}
@@ -494,6 +499,34 @@ Rectangle {
                     anchors.top :buttonGenerate.top
                     disableButtonClick: false
                 }
+                Image{
+                    id:progressDoneImage
+                    visible:false
+                    anchors.right: parent.right
+                    anchors.rightMargin : 10
+                    anchors.bottom :parent.bottom
+                    anchors.bottomMargin: 10
+                    width:50
+                    fillMode:Image.PreserveAspectFit
+                    source:"qrc:/img/img/progressSucces.png"
+                }
+                Timer {
+                        id:progressDoneTimer
+                        interval: 10000; running: false;repeat:true
+                        onTriggered: { progressDoneImage.visible=false}
+                    }
+
+                ProgressBar{
+                    id:generationProgress
+                    value:comObj.progress
+                    width:190
+                    height: 46
+                    anchors.right: parent.right
+                    anchors.bottom: parent.bottom
+                    anchors.rightMargin: 50
+                    anchors.bottomMargin: 60
+                    visible:false
+                }
             }
 
 
@@ -512,12 +545,32 @@ Rectangle {
         onSelectedViewChanged :tableSignals.setTable(comObj.signalsList())
     }
     Connections{
+        target: comObj
+        onProgressStarted : {buttonGenerate.visible=false
+                             buttonTurnBack.visible=false
+                             generationProgress.visible=true}
+    }
+    Connections{
+        target: comObj
+        onProgressCompleted : {buttonGenerate.visible=true
+                               buttonTurnBack.visible=true
+                               generationProgress.visible=false
+                               progressDoneTimer.start()
+                               progressDoneImage.visible=true}
+    }
+    Connections{
+        target: comObj
+        onProgressChanged : generationProgress.value=comObj.progress
+    }
+
+    Connections{
         target:textFieldPreview
         onTextChanged: comObj.setDutName(textFieldPreview.text)
     }
     Connections{
         target: buttonGenerate
-        onButtonClicked: comObj.startToGenerate();
+        onButtonClicked: {comObj.startToGenerate()
+                          progressDoneTimer.stop()}
     }
     Connections{
         target: buttonTurnBack
@@ -530,6 +583,7 @@ Rectangle {
         target:ioComboBox
         onActivated: comObj.setIOType(areaConfig.dutIOHeader);
     }
+
 }
 
 

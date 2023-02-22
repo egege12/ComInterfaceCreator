@@ -35,6 +35,7 @@ public:
     explicit DBCHandler(QObject *parent = nullptr);
 /*PROPERTIES STARTS*/
     Q_PROPERTY(QString errCode READ errCode WRITE setErrCode NOTIFY errCodeChanged)
+    Q_PROPERTY(qreal progress READ progress WRITE setProgress NOTIFY progressChanged)
 /*PROPERTIES ENDS*/
 /*ERROR CODE- It stored as texts but will be converted into database for language*/
     QString errCode() const;
@@ -42,7 +43,10 @@ public:
 /*END*/
 /*Signal list getter - currently not used anywhere*/
     const dataContainer *getMessage(QString messageID);
-/*END*/
+    /*END*/
+    qreal progress() const;
+    void setProgress(qreal newProgress);
+    qreal m_progress;
 public slots:
 
     void update();
@@ -66,6 +70,10 @@ signals:
     void procesStarted();
     void errCodeChanged();
     void fileandLockOk();
+
+    void progressChanged();
+    void progressCompleted();
+    void progressStarted();
 
 private:
     //Private Variables starts
@@ -129,6 +137,7 @@ private:
     void generateIOST(QString *const ST,dataContainer *const curMessage);
     QString convTypeComtoApp(QString signalName,  unsigned short startbit, unsigned short length, QString converType);
     QString convTypeApptoCom(QString  signalName, unsigned short  startbit, unsigned short length, QString converType);
+
 
 };
 struct DBCHandler::structFbdBlock{
