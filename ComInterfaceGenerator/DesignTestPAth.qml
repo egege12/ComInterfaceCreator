@@ -20,4 +20,11 @@ Item {
         height: 40
     }
 
+    TabButton {
+        id: tabButton
+        x: 313
+        y: 106
+        text: qsTr("Tab Button")
+    }
+
 }

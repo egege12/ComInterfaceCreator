@@ -3,6 +3,7 @@ import TableModel 0.1
 import TableModel2 0.1
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.0
+import QtQuick.Layouts
 
 Rectangle {
     id: messageSelPage
@@ -38,11 +39,11 @@ Rectangle {
                 anchors.leftMargin: 20
                 onWidthChanged: {
                     tableViewMessages.columnWidths[0] = Math.max(150,messageRectangle.width*.3)
-                    tableViewMessages.columnWidths[1] = (messageRectangle.width - tableViewMessages.columnWidths[0])*.20
-                    tableViewMessages.columnWidths[2] = (messageRectangle.width - tableViewMessages.columnWidths[0])*.10
-                    tableViewMessages.columnWidths[3] = (messageRectangle.width - tableViewMessages.columnWidths[0])*.25
-                    tableViewMessages.columnWidths[4] = (messageRectangle.width - tableViewMessages.columnWidths[0])*.25
-                    tableViewMessages.columnWidths[5] = (messageRectangle.width - tableViewMessages.columnWidths[0])*.20
+                    tableViewMessages.columnWidths[1] = Math.max(70,(messageRectangle.width - tableViewMessages.columnWidths[0])*.20)
+                    tableViewMessages.columnWidths[2] = Math.max(50,(messageRectangle.width - tableViewMessages.columnWidths[0])*.10)
+                    tableViewMessages.columnWidths[3] = Math.max(100,(messageRectangle.width - tableViewMessages.columnWidths[0])*.25)
+                    tableViewMessages.columnWidths[4] = Math.max(90,(messageRectangle.width - tableViewMessages.columnWidths[0])*.25)
+                    tableViewMessages.columnWidths[5] = Math.max(90,(messageRectangle.width - tableViewMessages.columnWidths[0])*.20)
                     tableViewMessages.forceLayout();
                 }
 
@@ -59,14 +60,14 @@ Rectangle {
                     property bool enableVScrollbar: true
                     ScrollBar.vertical: ScrollBar{
                         policy: ((tableViewMessages.height - tableViewMessages.contentHeight) < -3) ?
-                                 ScrollBar.AlwaysOff : ScrollBar.AsNeeded
+                                    ScrollBar.AlwaysOff : ScrollBar.AsNeeded
                         visible: ((tableViewMessages.height - tableViewMessages.contentHeight) < -3) ?
                                      true : false
                     }
                     property bool enableHScrollbar: true
                     ScrollBar.horizontal: ScrollBar{
                         policy: (tableViewMessages.width - tableViewMessages.contentWidth < -3) ?
-                                 ScrollBar.AlwaysOff : ScrollBar.AsNeeded
+                                    ScrollBar.AlwaysOff : ScrollBar.AsNeeded
                         visible: (tableViewMessages.width - tableViewMessages.contentWidth < -3) ?
                                      true : false
                     }
@@ -78,7 +79,7 @@ Rectangle {
 
                         implicitHeight: text.implicitHeight + 2
                         implicitWidth: text.implicitWidth +2
-                        color: (heading===true)?"#2d2d2d": (rowLayout.selectedMessage === messageid )? "#EDEDE0":(selected === true)? "#FEBBAA" :"#EDEDF0"
+                        color: (heading===true)?"#303030": (selected === true)? ((rowLayout.selectedMessage === messageid )? "#7ff27c" :"#1fe81a") : (rowLayout.selectedMessage === messageid )? "#decc73" :"#ebedee"
 
                         Text {
                             id:text
@@ -89,7 +90,7 @@ Rectangle {
                             Layout.alignment: Qt.AlignLeft
                             elide: Text.ElideRight
                             font.preferShaping: false
-                            color: "#838383"
+                            color: (heading===true)?"#FFFFFF": (selected === true)? ((rowLayout.selectedMessage === messageid )? "#000000" :"#838383") : (rowLayout.selectedMessage === messageid )? "#000000" :"#838383"
                         }
                         MouseArea{
                             anchors.fill: parent
@@ -106,6 +107,7 @@ Rectangle {
                                     comObj.setSelected(messageid)
                                 }
                             }
+
                         }
                         Image{
                             visible: (heading===true)? true : false
@@ -113,8 +115,10 @@ Rectangle {
                             height:parent.height*0.8
                             anchors.right:parent.right
                             anchors.rightMargin: width*0.05
+                            anchors.verticalCenter: parent.verticalCenter
                             fillMode:Image.PreserveAspectFit
                             antialiasing: true
+                            mipmap:true
                         }
 
 
@@ -130,10 +134,7 @@ Rectangle {
 
         }*/
 
-
-
-            Rectangle {
-                id:signalRectangle
+            Rectangle{
                 Layout.preferredHeight: messageSelPage.height*0.7
                 Layout.preferredWidth: messageSelPage.width/2
                 anchors.right:parent.right
@@ -141,108 +142,140 @@ Rectangle {
                 anchors.left:messageRectangle.right
                 anchors.leftMargin: 5
 
-
-                onWidthChanged: {
-                    tableViewSignals.columnWidths[0] = Math.max(100,signalRectangle.width*.2)
-                    tableViewSignals.columnWidths[1] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
-                    tableViewSignals.columnWidths[2] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
-                    tableViewSignals.columnWidths[3] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
-                    tableViewSignals.columnWidths[4] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
-                    tableViewSignals.columnWidths[5] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
-                    tableViewSignals.columnWidths[6] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
-                    tableViewSignals.columnWidths[7] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
-                    tableViewSignals.columnWidths[8] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
-                    tableViewSignals.columnWidths[9] = Math.max(200,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
-                    tableViewSignals.forceLayout();
+                TabBar{
+                    id:bar
+                    width:parent.width
+                    TabButton {
+                        text:qsTr("Sinyaller")
+                    }
+                    TabButton {
+                        text:qsTr("Uyarılar")
+                    }
+                    TabButton{
+                        text:qsTr("Bilgi Konsolu")
+                    }
                 }
-
-                property string selectedSignalName : ""
-
-                TableView {
-                    id:tableViewSignals
+                StackLayout{
                     anchors.fill: parent
-                    columnSpacing: 1
-                    rowSpacing: 1
-                    clip: true
-
-
-
-                    model: TableModelSignal{
-                        id: tableSignals
-                    }
-
-
-
-                    property bool enableVScrollbar: true
-                    ScrollBar.vertical: ScrollBar{
-                        policy: ((tableViewSignals.height - tableViewSignals.contentHeight) < -3) ?
-                                 ScrollBar.AlwaysOff : ScrollBar.AsNeeded
-                        visible: ((tableViewSignals.height - tableViewSignals.contentHeight) < -3) ?
-                                     true : false
-                    }
-                    property bool enableHScrollbar: true
-                    ScrollBar.horizontal: ScrollBar{
-                        policy: (tableViewSignals.width - tableViewSignals.contentWidth < -3) ?
-                                 ScrollBar.AlwaysOff : ScrollBar.AsNeeded
-                        visible: (tableViewSignals.width - tableViewSignals.contentWidth < -3) ?
-                                     true : false
-                    }
-                    property var columnWidths: [220, 100, 80, 80,80,80,80,100,100,100]
-                    columnWidthProvider: function (column) {
-                        return  columnWidths[column]
-                    }
-
-
-                        delegate: Rectangle {
-
-                            implicitHeight: textSignal.implicitHeight+2
-                            implicitWidth: textSignal.implicitWidth+2
-                            color: (heading===true)?"#2d2d2d": (signalRectangle.selectedSignalName === messagename )? "#EDEDE0":"#EDEDF0"
-
-                            Text {
-                                id:textSignal
-                                text: tabledata
-
-                                padding: 1
-                                font.pointSize: 10
-                                elide: Text.ElideRight
-                                font.preferShaping: false
-                                color: "#838383"
-                                Layout.alignment: Qt.AlignLeft
-
+                    anchors.topMargin:20
+                    currentIndex:bar.currentIndex
+                    Item{
+                        id: signalTable
+                        Item {
+                            anchors.fill:parent
+                            id:signalRectangle
+                            onWidthChanged: {
+                                tableViewSignals.columnWidths[0] = Math.max(100,signalRectangle.width*.2)
+                                tableViewSignals.columnWidths[1] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
+                                tableViewSignals.columnWidths[2] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
+                                tableViewSignals.columnWidths[3] = Math.max(90,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
+                                tableViewSignals.columnWidths[4] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
+                                tableViewSignals.columnWidths[5] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
+                                tableViewSignals.columnWidths[6] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
+                                tableViewSignals.columnWidths[7] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
+                                tableViewSignals.columnWidths[8] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
+                                tableViewSignals.columnWidths[9] = Math.max(200,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
+                                tableViewSignals.forceLayout();
                             }
 
-                            MouseArea {
+                            property string selectedSignalName : ""
+
+                            TableView {
+                                id:tableViewSignals
                                 anchors.fill: parent
-                                onClicked: {
-                                    if(heading===true){
-                                        tableSignals.sortColumn();
-                                    }else{
-                                        signalRectangle.selectedSignalName = messagename
-                                    }
-                                }
-                            }
-                            Image{
-                                visible: (heading===true)? true : false
-                                source: (activesortheader===true)? ((sortheader===true)? "qrc:/img/img/sortDnEnabled.png" :"qrc:/img/img/sortUpEnabled.png"):"qrc:/img/img/sortNotEnable.png"
-                                height:parent.height*0.8
-                                anchors.right:parent.right
-                                anchors.rightMargin: width*0.05
-                                anchors.top:parent.top
-                                anchors.topMargin: 2
-                                fillMode:Image.PreserveAspectFit
-                                antialiasing: true
-                            }
+                                columnSpacing: 1
+                                rowSpacing: 1
+                                clip: true
 
+
+
+                                model: TableModelSignal{
+                                    id: tableSignals
+                                }
+
+
+
+                                property bool enableVScrollbar: true
+                                ScrollBar.vertical: ScrollBar{
+                                    policy: ((tableViewSignals.height - tableViewSignals.contentHeight) < -3) ?
+                                                ScrollBar.AlwaysOff : ScrollBar.AsNeeded
+                                    visible: ((tableViewSignals.height - tableViewSignals.contentHeight) < -3) ?
+                                                 true : false
+                                }
+                                property bool enableHScrollbar: true
+                                ScrollBar.horizontal: ScrollBar{
+                                    policy: (tableViewSignals.width - tableViewSignals.contentWidth < -3) ?
+                                                ScrollBar.AlwaysOff : ScrollBar.AsNeeded
+                                    visible: (tableViewSignals.width - tableViewSignals.contentWidth < -3) ?
+                                                 true : false
+                                }
+                                property var columnWidths: [220, 100, 80, 80,80,80,80,100,100,100]
+                                columnWidthProvider: function (column) {
+                                    return  columnWidths[column]
+                                }
+
+
+                                delegate: Rectangle {
+
+                                    implicitHeight: textSignal.implicitHeight+2
+                                    implicitWidth: textSignal.implicitWidth+2
+                                    color: (heading===true)?"#303030": (signalRectangle.selectedSignalName === messagename )? "#decc73":"#ebedee"
+                                    radius: 1
+                                    Text {
+                                        id:textSignal
+                                        text: tabledata
+                                        padding: 1
+                                        font.pointSize: 10
+                                        elide: Text.ElideRight
+                                        font.preferShaping: false
+                                        color: (heading===true)?"#FFFFFF": (signalRectangle.selectedSignalName === messagename )? "#000000":"#838383"
+                                        Layout.alignment: Qt.AlignLeft
+
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        onClicked: {
+                                            if(heading===true){
+                                                tableSignals.sortColumn();
+                                            }else{
+                                                signalRectangle.selectedSignalName = messagename
+                                            }
+                                        }
+                                    }
+                                    Image{
+                                        visible: (heading===true)? true : false
+                                        source: (activesortheader===true)? ((sortheader===true)? "qrc:/img/img/sortDnEnabled.png" :"qrc:/img/img/sortUpEnabled.png"):"qrc:/img/img/sortNotEnable.png"
+                                        height:parent.height*0.8
+                                        anchors.right:parent.right
+                                        anchors.rightMargin: width*0.05
+                                        anchors.top:parent.top
+                                        anchors.topMargin: 2
+                                        fillMode:Image.PreserveAspectFit
+                                        antialiasing: true
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        mipmap:true
+                                    }
+
+                                }
+
+
+
+                            }
                         }
 
-
-
+                    }
+                    Item{
+                        id: warningList
+                    }
+                    Item{
+                        id: consoleInfo
+                    }
                 }
-            }
 
 
             }
+        }
         RowLayout{
             id:rowLayoutBottom
             Layout.alignment: {Qt.AlignBottom}
@@ -510,12 +543,15 @@ Rectangle {
                     fillMode:Image.PreserveAspectFit
                     source:"qrc:/img/img/progressSucces.png"
                 }
-                Timer {
+                Rectangle{
+                    Timer {
                         id:progressDoneTimer
-                        interval: 10000; running: false;repeat:true
+                        interval: 3000;
+                        running: true;
+                        repeat:true
                         onTriggered: { progressDoneImage.visible=false}
                     }
-
+                }
                 ProgressBar{
                     id:generationProgress
                     value:comObj.progress
@@ -542,21 +578,22 @@ Rectangle {
     }
     Connections{
         target: comObj
-        onSelectedViewChanged :tableSignals.setTable(comObj.signalsList())
+        onSelectedViewChanged :{tableSignals.setTable(comObj.signalsList()) ;}
+
     }
     Connections{
         target: comObj
         onProgressStarted : {buttonGenerate.visible=false
-                             buttonTurnBack.visible=false
-                             generationProgress.visible=true}
+            buttonTurnBack.visible=false
+            generationProgress.visible=true}
     }
     Connections{
         target: comObj
         onProgressCompleted : {buttonGenerate.visible=true
-                               buttonTurnBack.visible=true
-                               generationProgress.visible=false
-                               progressDoneTimer.start()
-                               progressDoneImage.visible=true}
+            buttonTurnBack.visible=true
+            generationProgress.visible=false
+            progressDoneTimer.restart()
+            progressDoneImage.visible=true}
     }
     Connections{
         target: comObj
@@ -569,8 +606,7 @@ Rectangle {
     }
     Connections{
         target: buttonGenerate
-        onButtonClicked: {comObj.startToGenerate()
-                          progressDoneTimer.stop()}
+        onButtonClicked: {comObj.startToGenerate()}
     }
     Connections{
         target: buttonTurnBack

@@ -108,8 +108,10 @@ void DBCHandler::openFile()
                 if (!parseMessages(ascFile)){
                     ascFile->close();
                     throw QString("Arayüzü okurken bir şeyler yanlış gitti!");
-                }else
+                }else{
                     emit interfaceReady();
+                    this->setDisplayReqSignal(comInterface.firstKey());
+                }
                 ascFile->close();
             }
 

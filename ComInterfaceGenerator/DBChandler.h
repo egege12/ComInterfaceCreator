@@ -47,6 +47,7 @@ public:
     qreal progress() const;
     void setProgress(qreal newProgress);
     qreal m_progress;
+    QString displayReqSignalID;
 public slots:
 
     void update();
@@ -83,7 +84,7 @@ private:
     QList<structFbdBlock*> fbdBlocks;
     QString folderLoc;
     QString dbcPath;
-    QString displayReqSignalID;
+
     QString dutName;
     QString dutHeader;
     QString IOType;

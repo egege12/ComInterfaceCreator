@@ -209,6 +209,7 @@ Item {
                 width: parent.width*.55
                 height: 228
                 fillMode:Image.PreserveAspectFit
+                mipmap:true
             }
         }
     }
