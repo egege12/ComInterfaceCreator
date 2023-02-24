@@ -33,6 +33,7 @@ public:
     static unsigned counterfbWORDTOBYTE;
     static unsigned counterfbBYTETO8BIT;
     explicit DBCHandler(QObject *parent = nullptr);
+
 /*PROPERTIES STARTS*/
     Q_PROPERTY(QString errCode READ errCode WRITE setErrCode NOTIFY errCodeChanged)
     Q_PROPERTY(qreal progress READ progress WRITE setProgress NOTIFY progressChanged)
@@ -62,7 +63,8 @@ public slots:
     QList<QList<QString>> messagesList();
     QList<QList<QString>> signalsList();
     void startToGenerate();
-
+    QList<QString> getWarningList();
+     QList<QString> getMsgWarningList();
 signals:
 
     void interfaceReady();
@@ -71,6 +73,7 @@ signals:
     void procesStarted();
     void errCodeChanged();
     void fileandLockOk();
+
 
     void progressChanged();
     void progressCompleted();

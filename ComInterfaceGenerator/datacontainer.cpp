@@ -71,17 +71,21 @@ unsigned short dataContainer::getDLC()
     return this->dlc;
 }
 
-const QList<QString> *dataContainer::getWarningList()
+const QList<QString> dataContainer::getWarningList()
 {
-    QList<QString> *warningMessagesAll = new QList<QString>();
+    QList<QString> warningMessagesAll;
     foreach(QList <QString> warningMessages , warningMessages){
 
-        warningMessagesAll->append(warningMessages);
+        warningMessagesAll.append(warningMessages);
 
     }
     return warningMessagesAll;
 }
 
+const QList<QString> dataContainer::getMsgWarningList(QString ID)
+{
+    return warningMessages.value(ID);
+}
 void dataContainer::setName(QString Name)
 {
     this->Name = Name;
@@ -136,6 +140,7 @@ void dataContainer::setWarning(QString ID,const QString &warningCode)
         temporary.append("Warning: Mesaj=>"+ID+":"+warningCode);
     dataContainer::warningMessages.insert(ID,temporary);
     }
+
 }
 
 void dataContainer::dataTypeAss(signal *signalPtr)

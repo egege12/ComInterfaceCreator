@@ -20,6 +20,8 @@ set(PROJECT_SOURCES
         main.cpp
         tablemodel.cpp
         tablemodel.h
+        listmodel.h
+        listmodel.cpp
         datacontainer.cpp
         datacontainer.h
         DBChandler.cpp

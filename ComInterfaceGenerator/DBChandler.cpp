@@ -14,6 +14,8 @@ unsigned DBCHandler::counterfbLWORDTOBYTE = 0;
 unsigned DBCHandler::counterfbDWORDTOBYTE = 0;
 unsigned DBCHandler::counterfbWORDTOBYTE = 0;
 unsigned DBCHandler::counterfbBYTETO8BIT = 0;
+
+
 DBCHandler::DBCHandler(QObject *parent)
     : QObject{parent}
 {
@@ -265,10 +267,7 @@ bool DBCHandler::parseMessages(QFile *ascFile)
         }
     }
     this->isAllInserted = true;
-    const QList<QString> *data = dataContainer::getWarningList();
-    foreach(QString messageWarning , *data){
-        qInfo()<<messageWarning;
-    }
+
     return true;
 }
 //BO_ <ID> <Message_name>: <DLC> Vector__XXX -> for messages
@@ -446,6 +445,15 @@ void DBCHandler::startToGenerate()
     fbNameandObjId.clear();
 
     //do here
+}
+
+QList<QString> DBCHandler::getWarningList()
+{
+    return dataContainer::getWarningList();
+}
+QList<QString> DBCHandler::getMsgWarningList()
+{
+    return dataContainer::getMsgWarningList(displayReqSignalID);
 }
 
 bool DBCHandler::createXml_STG1(QFile *xmlFile)

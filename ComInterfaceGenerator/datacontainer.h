@@ -32,8 +32,8 @@ public:
     bool getIfSelected();
     bool getIfExtended();
     unsigned short getDLC();
-    static const QList<QString> *getWarningList();
-
+    static const QList<QString> getWarningList();
+    static const QList<QString> getMsgWarningList(QString ID);
     //Setters
     void setName(QString Name);
     void setmessageID(QString messageID);
@@ -59,7 +59,6 @@ private:
     bool isInserted;
     QList<signal*> signalList;
 signals:
-
 };
 
 struct dataContainer::signal{

@@ -1,6 +1,7 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include "tablemodel.h"
+#include "listmodel.h"
 #include <QQmlContext>
 #include "DBChandler.h"
 
@@ -15,6 +16,7 @@ int main(int argc, char *argv[])
 
    qmlRegisterType<tablemodel>("TableModel",0, 1, "TableModel");
    qmlRegisterType<tablemodel>("TableModel2",0, 1, "TableModelSignal");
+   qmlRegisterType<listmodel>("ListModel1",0,1,"ListModelWarnings");
     //class definitions
 
     DBCHandler interface(&app) ;

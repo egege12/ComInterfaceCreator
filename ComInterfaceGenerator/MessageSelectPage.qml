@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import TableModel 0.1
 import TableModel2 0.1
+import ListModel1 0.1
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.0
 import QtQuick.Layouts
@@ -98,8 +99,18 @@ Rectangle {
                                 if(heading===true){
                                     tableMessages.sortColumn();
                                 }else{
-                                    comObj.setDisplayReqSignal(messageid)
-                                    rowLayout.selectedMessage = messageid
+                                    if (rowLayout.selectedMessage !== messageid){
+                                        comObj.setDisplayReqSignal(messageid)
+                                        rowLayout.selectedMessage = messageid
+                                    }else{
+                                        rowLayout.selectedMessage = "FFFFFF"
+                                    }
+                                    if(rowLayout.selectedMessage !=="FFFFFF"){
+                                        listModelWarnings.setList(comObj.getMsgWarningList())
+                                    }else{
+                                        listModelWarnings.setList(comObj.getWarningList())
+                                    }
+
                                 }
                             }
                             onDoubleClicked: {
@@ -267,6 +278,61 @@ Rectangle {
                     }
                     Item{
                         id: warningList
+                        anchors.fill: parent
+                        clip:true
+                        Item{
+                            anchors.fill: parent
+                            ListView{
+                                id: listViewWarnings
+                                anchors.fill: parent
+                                model: ListModelWarnings {
+                                    id: listModelWarnings
+                                }
+                                property bool enableVScrollbar: true
+                                ScrollBar.vertical: ScrollBar{
+                                    policy: ((listViewWarnings.height - listViewWarnings.contentHeight) < -3) ?
+                                                ScrollBar.AlwaysOff : ScrollBar.AsNeeded
+                                    visible: ((listViewWarnings.height - listViewWarnings.contentHeight) < -3) ?
+                                                 true : false
+                                }
+                                property bool enableHScrollbar: true
+                                ScrollBar.horizontal: ScrollBar{
+                                    policy: (listViewWarnings.width - listViewWarnings.contentWidth < -3) ?
+                                                ScrollBar.AlwaysOff : ScrollBar.AsNeeded
+                                    visible: (listViewWarnings.width - listViewWarnings.contentWidth < -3) ?
+                                                 true : false
+                                }
+                                delegate:Rectangle{
+                                    id:delegateRectangle
+                                    implicitHeight: textWarnings.implicitHeight+2
+                                    implicitWidth: textWarnings.implicitWidth+2
+
+                                    Text {
+                                        id: textWarnings
+                                        width:parent.width
+                                        text: listdata
+                                        font.pointSize: 10
+                                        elide: Text.ElideRight
+                                        font.preferShaping: false
+                                        Layout.alignment: Qt.AlignLeft
+                                    }
+                                    MouseArea {
+                                        anchors.fill: parent
+
+                                        hoverEnabled: true;
+                                        onEntered: {delegateRectangle.color= "#decc73"; textWarnings.color = "#FFFFFF"}
+                                        onExited:{ delegateRectangle.color= "#FFFFFF" ; textWarnings.color = "#000000"}
+                                    }
+                                }
+
+
+                            }
+                        }
+
+
+
+
+
                     }
                     Item{
                         id: consoleInfo
@@ -570,7 +636,9 @@ Rectangle {
     }
     Connections{
         target: comObj
-        onInterfaceReady : tableMessages.setTable(comObj.messagesList())
+        onInterfaceReady : {tableMessages.setTable(comObj.messagesList())
+                            listModelWarnings.setList(comObj.getWarningList())
+        }
     }
     Connections{
         target: comObj
@@ -578,8 +646,9 @@ Rectangle {
     }
     Connections{
         target: comObj
-        onSelectedViewChanged :{tableSignals.setTable(comObj.signalsList()) ;}
+        onSelectedViewChanged :{tableSignals.setTable(comObj.signalsList())
 
+    }
     }
     Connections{
         target: comObj
@@ -615,6 +684,8 @@ Rectangle {
             stack.push("fileDialogPage.qml")
         }
     }
+
+
     Connections{
         target:ioComboBox
         onActivated: comObj.setIOType(areaConfig.dutIOHeader);
