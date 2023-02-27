@@ -2,6 +2,7 @@ import QtQuick 2.15
 import TableModel 0.1
 import TableModel2 0.1
 import ListModel1 0.1
+import ListModel2 0.1
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.0
 import QtQuick.Layouts
@@ -336,6 +337,56 @@ Rectangle {
                     }
                     Item{
                         id: consoleInfo
+                        /*anchors.fill: parent
+                        clip:true
+                        Item{
+                            anchors.fill: parent
+                            ListView{
+                                id: listViewInfos
+                                anchors.fill: parent
+                                model: ListModelWarnings {
+                                    id: listModelInfos
+                                }
+                                property bool enableVScrollbar: true
+                                ScrollBar.vertical: ScrollBar{
+                                    policy: ((listViewInfos.height - listViewInfos.contentHeight) < -3) ?
+                                                ScrollBar.AlwaysOff : ScrollBar.AsNeeded
+                                    visible: ((listViewInfos.height - listViewInfos.contentHeight) < -3) ?
+                                                 true : false
+                                }
+                                property bool enableHScrollbar: true
+                                ScrollBar.horizontal: ScrollBar{
+                                    policy: (listViewInfos.width - listViewInfos.contentWidth < -3) ?
+                                                ScrollBar.AlwaysOff : ScrollBar.AsNeeded
+                                    visible: (listViewInfos.width - listViewInfos.contentWidth < -3) ?
+                                                 true : false
+                                }
+                                delegate:Rectangle{
+                                    id:delegateRectangleInfo
+                                    implicitHeight: textInfos.implicitHeight+2
+                                    implicitWidth: textInfos.implicitWidth+2
+
+                                    Text {
+                                        id: textInfos
+                                        width:parent.width
+                                        text: listdata
+                                        font.pointSize: 10
+                                        elide: Text.ElideRight
+                                        font.preferShaping: false
+                                        Layout.alignment: Qt.AlignLeft
+                                    }
+                                    MouseArea {
+                                        anchors.fill: parent
+
+                                        hoverEnabled: true;
+                                        onEntered: {delegateRectangleInfo.color= "#decc73"; textInfos.color = "#FFFFFF"}
+                                        onExited:{ delegateRectangleInfo.color= "#FFFFFF" ; textInfos.color = "#000000"}
+                                    }
+                                }
+
+
+                            }
+                        }*/
                     }
                 }
 

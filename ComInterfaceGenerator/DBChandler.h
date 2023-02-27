@@ -64,7 +64,8 @@ public slots:
     QList<QList<QString>> signalsList();
     void startToGenerate();
     QList<QString> getWarningList();
-     QList<QString> getMsgWarningList();
+    QList<QString> getMsgWarningList();
+    /*QList<QString> getInfoList();*/
 signals:
 
     void interfaceReady();
@@ -120,6 +121,7 @@ private:
     double parseMinValue(QString  splitedPart);
     QString parseComment(QString splitedPart);
     QString getBetween(QString first, QString second,QString fullText);
+    void setTmOutCycleTmWarnings();
     //***********************************
     // Reading Process from dbc file end
     //Generate XML file start

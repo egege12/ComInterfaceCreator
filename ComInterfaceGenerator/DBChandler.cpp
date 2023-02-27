@@ -111,6 +111,7 @@ void DBCHandler::openFile()
                     ascFile->close();
                     throw QString("Arayüzü okurken bir şeyler yanlış gitti!");
                 }else{
+                    setTmOutCycleTmWarnings();
                     emit interfaceReady();
                     this->setDisplayReqSignal(comInterface.firstKey());
                 }
@@ -229,12 +230,12 @@ bool DBCHandler::parseMessages(QFile *ascFile)
             if(commentContainer.contains("timeout",Qt::CaseInsensitive)){
                 msTimeout = this->getBetween("timeout","ms",commentContainer);
             }else{
-                dataContainer::setWarning(ID,"Mesaj için timeout belirlenmemiş, <timeout : XXXX ms> etiketiyle yoruma ekleyin.");
+                dataContainer::setWarning(ID,"Mesaj için timeout hatalı yazılmış, <timeout : XXXX ms> etiketiyle yoruma ekleyin.");
             }
             if(commentContainer.contains("cycletime",Qt::CaseInsensitive)){
                 msCycleTime = this->getBetween("cycletime","ms",commentContainer);
             }else{
-                dataContainer::setWarning(ID,"Mesaj için cycletime belirlenmemiş, <cycletime : XXXX ms> etiketiyle yoruma ekleyin.");
+                dataContainer::setWarning(ID,"Mesaj için cycletime hatalı yazılmış, <cycletime : XXXX ms> etiketiyle yoruma ekleyin.");
             }
 
             msgCommentList.append({ID,msTimeout,msCycleTime,commentContainer});
@@ -299,7 +300,9 @@ bool DBCHandler::createObjIds()
         this->fbNameandObjId.append({name,getRandomID()});
         name = "_FB_"+this->dutHeader+"_ERR_Handler";
         this->fbNameandObjId.append({name,getRandomID()});
-        name = "_FB_"+this->dutHeader+"_Validty_Handler";
+        name = "_FB_"+this->dutHeader+"_Validity_Handler";
+        this->fbNameandObjId.append({name,getRandomID()});
+        name = "_FB_"+this->dutHeader+"_Output_Handler";
         this->fbNameandObjId.append({name,getRandomID()});
     }
     this->dutObjID = this->getRandomID();
@@ -401,6 +404,19 @@ QString DBCHandler::getBetween(QString first, QString second, QString fullText)
     }return "(*ERROR*)";
 }
 
+void DBCHandler::setTmOutCycleTmWarnings()
+{
+    foreach (dataContainer * curMessage , comInterface){
+        if(!curMessage->isCycleTmSet){
+            dataContainer::setWarning(curMessage->getID(),"mesajı için cycletime belirtilmediği için 100ms atandı");
+        }
+        if(!curMessage->isTmOutSet){
+            dataContainer::setWarning(curMessage->getID(),"mesajı için timeout belirtilmediği için 2500ms atandı");
+        }
+    }
+
+}
+
 ///******************************************************************************
 /// XML GENERATION
 /// -Open XML
@@ -455,6 +471,11 @@ QList<QString> DBCHandler::getMsgWarningList()
 {
     return dataContainer::getMsgWarningList(displayReqSignalID);
 }
+
+/*QList<QString> DBCHandler::getInfoList()
+{
+    return dataContainer::getInfoList();
+}*/
 
 bool DBCHandler::createXml_STG1(QFile *xmlFile)
 {
@@ -2263,7 +2284,8 @@ void DBCHandler::generateIOST(QString *const ST,dataContainer *const curMessage)
 }
 QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbit,unsigned short length,  QString converType)
 {
-    QString ST="\n\n\n(*Conversion starts : "+signalName+"*)\n\n\n";
+
+    QString ST="\n\n\n{region \""+signalName+"\"}\n\n\n";
     // TYPE CONVERTION AND E  NA CONTROL STARTS
     if((length<9)){
         if((converType == "toBYTE")|| (converType == "xtoBYTE")){
@@ -2465,12 +2487,12 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
            "\n ELSE"
            "\n 	IF "+this->dutHeader+"."+signalName+".J1939 THEN"
            "\n 	//Transmit Data : Data not valid J1939 error transmission Start"
-           "\n 	IF <IODUT_NAME>.<VAR_NAME>.na THEN	"
-           "\n 	Cont_<VAR_NAME>:= 16#FF000001;"
-           "\n 	ELSIF <IODUT_NAME>.<VAR_NAME>.e THEN"
-           "\n 	Cont_<VAR_NAME>:= 16#FE000001;"
+           "\n 	IF "+this->dutHeader+"."+signalName+".na THEN	"
+           "\n 	Cont_"+signalName+":= 16#FF000001;"
+           "\n 	ELSIF "+this->dutHeader+"."+signalName+".e THEN"
+           "\n 	Cont_"+signalName+":= 16#FE000001;"
            "\n 	ELSE"
-           "\n 	Cont_<VAR_NAME>:= 16#FE000001;"
+           "\n 	Cont_"+signalName+":= 16#FE000001;"
            "\n 	END_IF;"
            "\n 	//Transmit Data : Data not valid J1939 error transmission End"
            "\n 	ELSE"
@@ -2495,12 +2517,12 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
            "\n ELSE"
            "\n 	IF "+this->dutHeader+"."+signalName+".J1939 THEN"
            "\n 	//Transmit Data : Data not valid J1939 error transmission Start"
-           "\n 	IF <IODUT_NAME>.<VAR_NAME>.na THEN	"
-           "\n 	Cont_<VAR_NAME>:= 16#FF000001;"
-           "\n 	ELSIF <IODUT_NAME>.<VAR_NAME>.e THEN"
-           "\n 	Cont_<VAR_NAME>:= 16#FE000001;"
+           "\n 	IF "+this->dutHeader+"."+signalName+".na THEN	"
+           "\n 	Cont_"+signalName+":= 16#FF000001;"
+           "\n 	ELSIF "+this->dutHeader+"."+signalName+".e THEN"
+           "\n 	Cont_"+signalName+":= 16#FE000001;"
            "\n 	ELSE"
-           "\n 	Cont_<VAR_NAME>:= 16#FE000001;"
+           "\n 	Cont_"+signalName+":= 16#FE000001;"
            "\n 	END_IF;"
            "\n 	//Transmit Data : Data not valid J1939 error transmission End"
            "\n 	ELSE"
@@ -2525,12 +2547,12 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
             "\n ELSE"
             "\n 	IF "+this->dutHeader+"."+signalName+".J1939 THEN"
             "\n 	//Transmit Data : Data not valid J1939 error transmission Start"
-            "\n 	IF <IODUT_NAME>.<VAR_NAME>.na THEN	"
-            "\n 	Cont_<VAR_NAME>:= 16#FF000001;"
-            "\n 	ELSIF <IODUT_NAME>.<VAR_NAME>.e THEN"
-            "\n 	Cont_<VAR_NAME>:= 16#FE000001;"
+            "\n 	IF "+this->dutHeader+"."+signalName+".na THEN	"
+            "\n 	Cont_"+signalName+":= 16#FF000001;"
+            "\n 	ELSIF "+this->dutHeader+"."+signalName+".e THEN"
+            "\n 	Cont_"+signalName+":= 16#FE000001;"
             "\n 	ELSE"
-            "\n 	Cont_<VAR_NAME>:= 16#FE000001;"
+            "\n 	Cont_"+signalName+":= 16#FE000001;"
             "\n 	END_IF;"
             "\n 	//Transmit Data : Data not valid J1939 error transmission End"
             "\n 	ELSE"
@@ -2555,12 +2577,12 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
             "\n ELSE"
             "\n 	IF "+this->dutHeader+"."+signalName+".J1939 THEN"
             "\n 	//Transmit Data : Data not valid J1939 error transmission Start"
-            "\n 	IF <IODUT_NAME>.<VAR_NAME>.na THEN	"
-            "\n 	Cont_<VAR_NAME>:= 16#FF00000000000001;"
-            "\n 	ELSIF <IODUT_NAME>.<VAR_NAME>.e THEN"
-            "\n 	Cont_<VAR_NAME>:= 16#FE00000000000001;"
+            "\n 	IF "+this->dutHeader+"."+signalName+".na THEN	"
+            "\n 	Cont_"+signalName+":= 16#FF00000000000001;"
+            "\n 	ELSIF "+this->dutHeader+"."+signalName+".e THEN"
+            "\n 	Cont_"+signalName+":= 16#FE00000000000001;"
             "\n 	ELSE"
-            "\n 	Cont_<VAR_NAME>:= 16#FE00000000000001;"
+            "\n 	Cont_"+signalName+":= 16#FE00000000000001;"
             "\n 	END_IF;"
             "\n 	//Transmit Data : Data not valid J1939 error transmission End"
             "\n 	ELSE"
@@ -2584,12 +2606,12 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
             "\n ELSE"
             "\n 	IF "+this->dutHeader+"."+signalName+".J1939 THEN"
             "\n 	//Transmit Data : Data not valid J1939 error transmission Start"
-            "\n 	IF <IODUT_NAME>.<VAR_NAME>.na THEN	"
-            "\n 	Cont_<VAR_NAME>:= 16#FF00000000000001;"
-            "\n 	ELSIF <IODUT_NAME>.<VAR_NAME>.e THEN"
-            "\n 	Cont_<VAR_NAME>:= 16#FE00000000000001;"
+            "\n 	IF "+this->dutHeader+"."+signalName+".na THEN	"
+            "\n 	Cont_"+signalName+":= 16#FF00000000000001;"
+            "\n 	ELSIF "+this->dutHeader+"."+signalName+".e THEN"
+            "\n 	Cont_"+signalName+":= 16#FE00000000000001;"
             "\n 	ELSE"
-            "\n 	Cont_<VAR_NAME>:= 16#FE00000000000001;"
+            "\n 	Cont_"+signalName+":= 16#FE00000000000001;"
             "\n 	END_IF;"
             "\n 	//Transmit Data : Data not valid J1939 error transmission End"
             "\n 	ELSE"
@@ -2613,12 +2635,12 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
             "\n ELSE"
             "\n 	IF "+this->dutHeader+"."+signalName+".J1939 THEN"
             "\n 	//Transmit Data : Data not valid J1939 error transmission Start"
-            "\n 	IF <IODUT_NAME>.<VAR_NAME>.na THEN	"
-            "\n 	Cont_<VAR_NAME>:= 16#FF00000000000001;"
-            "\n 	ELSIF <IODUT_NAME>.<VAR_NAME>.e THEN"
-            "\n 	Cont_<VAR_NAME>:= 16#FE00000000000001;"
+            "\n 	IF "+this->dutHeader+"."+signalName+".na THEN	"
+            "\n 	Cont_"+signalName+":= 16#FF00000000000001;"
+            "\n 	ELSIF "+this->dutHeader+"."+signalName+".e THEN"
+            "\n 	Cont_"+signalName+":= 16#FE00000000000001;"
             "\n 	ELSE"
-            "\n 	Cont_<VAR_NAME>:= 16#FE00000000000001;"
+            "\n 	Cont_"+signalName+":= 16#FE00000000000001;"
             "\n 	END_IF;"
             "\n 	//Transmit Data : Data not valid J1939 error transmission End"
             "\n 	ELSE"
@@ -2642,11 +2664,11 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
         ST.append("\n_FB_UNPACK_WORD_TO_BYTE_"+QString::number(counterfbWORDTOBYTE)+"(X_WORD_0:= Cont_"+signalName+", X_BYTE_0=> X_IO_BYTE_"+QString::number(startbit/8)+", X_BYTE_1=> X_IO_BYTE_"+QString::number((startbit/8)+1)+");");
         counterfbWORDTOBYTE++;
     }else if((converType=="xtoDWORD")||(converType=="xtoUDINT")||((converType=="xtoREAL") && (length==32))){
-        ST.append("\n_FB_UNPACK_DWORD_TO_BYTE_"+QString::number(counterfbDWORDTOBYTE)+"(X_DWORD_0:= Cont_"+signalName+", X_BYTE_0=> X_IO_BYTE_"+QString::number(startbit/8)+", X_BYTE_1=> X_IO_BYTE_"+QString::number((startbit/8)+1)+", X_BYTE_2=>"+QString::number((startbit/8)+2)+", X_BYTE_3=>"+QString::number((startbit/8)+3)+");");
+        ST.append("\n_FB_UNPACK_DWORD_TO_BYTE_"+QString::number(counterfbDWORDTOBYTE)+"(X_DWORD_0:= Cont_"+signalName+", X_BYTE_0=> X_IO_BYTE_"+QString::number(startbit/8)+", X_BYTE_1=> X_IO_BYTE_"+QString::number((startbit/8)+1)+", X_BYTE_2=>X_IO_BYTE_"+QString::number((startbit/8)+2)+", X_BYTE_3=>X_IO_BYTE_"+QString::number((startbit/8)+3)+");");
         counterfbDWORDTOBYTE++;
     }else if((converType=="xtoLWORD")||(converType=="xtoULINT")||(converType=="xtoLREAL") ){
         ST.append("\n_FB_UNPACK_LWORD_TO_BYTE_"+QString::number(counterfbDWORDTOBYTE)+"(X_LWORD_0:= Cont_"+signalName+", X_BYTE_0=> X_IO_BYTE_"+QString::number(startbit/8)+", X_BYTE_1=> X_IO_BYTE_"+QString::number((startbit/8)+1)+", X_BYTE_2=> X_IO_BYTE_"+QString::number((startbit/8)+2)+", X_BYTE_3=> X_IO_BYTE_"+QString::number((startbit/8)+3)+", X_BYTE_4=> X_IO_BYTE_"+QString::number((startbit/8)+4)+", X_BYTE_5=> X_IO_BYTE_"+QString::number((startbit/8)+5)+", X_BYTE_6=> X_IO_BYTE_"+QString::number((startbit/8)+6)+", X_BYTE_7=> X_IO_BYTE_"+QString::number((startbit/8)+7)+");");
-        counterfbDWORDTOBYTE++;
+        counterfbLWORDTOBYTE++;
     }else{
         bool flagPack = false;
         if((length>8)){
@@ -2707,7 +2729,7 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
         counterfbBYTETO8BIT = counterfbBYTETO8BIT+ counterBITBYTE;
     }
 
-    ST.append("\n\n\n(*Conversion ends : "+signalName+"*)\n\n\n");
+    ST.append("\n\n\n{endregion}\n\n\n");
     return ST;
 
 }
@@ -2759,7 +2781,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"ERR_"+curSignal->name,"TRUE","BOOL"," "});
+                        newBlock->inputVars.append({"ERR_"+curSignal->name," ","BOOL"," "});
                     }
                 }
             }
@@ -2822,8 +2844,6 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
             for(QList<QString> curVal : this->fbNameandObjId){
                 if(curVal.at(0)== ("_FB_"+this->dutHeader+"_ERR_Handler")){
                     text=doc.createTextNode(curVal.at(1));
-                }else{
-                    dataContainer::setWarning("COMMON","ERR_Handler fonksiyonu klasörlenmedi/klasörlenemedi");
                 }
             }
 
@@ -2867,7 +2887,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"NA_"+curSignal->name,"TRUE","BOOL"," "});
+                        newBlock->inputVars.append({"NA_"+curSignal->name," ","BOOL"," "});
                     }
                 }
             }
@@ -2930,8 +2950,6 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
             foreach(QList<QString> curVal , this->fbNameandObjId){
                 if(curVal.at(0)== ("_FB_"+this->dutHeader+"_NA_Handler")){
                     text=doc.createTextNode(curVal.at(1));
-                }else{
-                    dataContainer::setWarning("COMMON","NA_Handler fonksiyonu klasörlenmedi/klasörlenemedi");
                 }
             }
 
@@ -2977,7 +2995,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"VALID_"+curSignal->name,"FALSE","BOOL"," "});
+                        newBlock->inputVars.append({"VALID_"+curSignal->name," ","BOOL"," "});
 
 
                 }
@@ -3039,8 +3057,6 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
             for(QList<QString> curVal : this->fbNameandObjId){
                 if(curVal.at(0)== ("_FB_"+this->dutHeader+"_Validity_Handler")){
                     text=doc.createTextNode(curVal.at(1));
-                }else{
-                    dataContainer::setWarning("COMMON","Validity_Handler fonksiyonu klasörlenmedi/klasörlenemedi");
                 }
             }
 
@@ -3053,6 +3069,110 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
 
         }
 
+        /*OUTPUT HANDLER*/
+    {
+                structFbdBlock* newBlock = new structFbdBlock;
+                newBlock->name="_FB_"+this->dutHeader+"_Output_Handler";
+                QDomElement pou = doc.createElement("pou");
+                /*set pou name*/
+                attr=doc.createAttribute("name");
+                attr.setValue("_FB_"+this->dutHeader+"_Output_Handler");
+                pou.setAttributeNode(attr);
+                /*set pouType*/
+                attr=doc.createAttribute("pouType");
+                attr.setValue("functionBlock");
+                pou.setAttributeNode(attr);
+
+                QDomElement interface = doc.createElement("interface");
+                /*Input Variables*/
+                QDomElement inputVars = doc.createElement("inputVars");
+
+                foreach (dataContainer * curMessage , comInterface){
+                    if(curMessage->getIfSelected())
+                    for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
+
+
+                            QDomElement variable = doc.createElement("variable");
+                            attr=doc.createAttribute("name");
+                            attr.setValue("VALUE_"+curSignal->name);
+                            variable.setAttributeNode(attr);
+                            QDomElement type = doc.createElement("type");
+                            QDomElement BOOL = doc.createElement(curSignal->appDataType);
+                            type.appendChild(BOOL);
+                            variable.appendChild(type);
+                            inputVars.appendChild(variable);
+                            newBlock->inputVars.append({"VALUE_"+curSignal->name,"FALSE",curSignal->appDataType," "});
+
+                    }
+                }
+                interface.appendChild(inputVars);
+
+                /*Generate Output Input Variables - inoutVars*/
+                QDomElement inoutVars = doc.createElement("inOutVars");
+                {
+                    QDomElement variable = doc.createElement("variable");
+                    attr=doc.createAttribute("name");
+                    attr.setValue(dutHeader);
+                    variable.setAttributeNode(attr);
+                    QDomElement type = doc.createElement("type");
+                    QDomElement dataVarType = doc.createElement("derived");
+                    attr=doc.createAttribute("name");
+                    attr.setValue(dutName);
+                    dataVarType.setAttributeNode(attr);
+                    type.appendChild(dataVarType);
+                    variable.appendChild(type);
+                    inoutVars.appendChild(variable);
+                };
+                interface.appendChild(inoutVars);
+
+                pou.appendChild(interface);
+
+                QDomElement body = doc.createElement("body");
+                QDomElement ST = doc.createElement("ST");
+                QDomElement xhtml = doc.createElement("xhtml");
+                attr=doc.createAttribute("xmlns");
+                attr.setValue("http://www.w3.org/1999/xhtml");
+                xhtml.setAttributeNode(attr);
+                QString handlerText="";
+                /*ST text of NA Handler*/
+                foreach (dataContainer * curMessage , comInterface){
+                    if(curMessage->getIfSelected())
+                    for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
+                            handlerText.append("\n"+this->dutHeader+ "."+curSignal->name+ ".x					:=	VALUE_"+curSignal->name+ ";");
+                    }
+                }
+                /*ST text of Error Handler*/
+                text=doc.createTextNode(handlerText);
+                xhtml.appendChild(text);
+                ST.appendChild(xhtml);
+                body.appendChild(ST);
+                pou.appendChild(body);
+
+                /*Create addData*/
+                QDomElement addData = doc.createElement("addData");
+                QDomElement data = doc.createElement("data");
+                attr=doc.createAttribute("name");
+                attr.setValue("http://www.3s-software.com/plcopenxml/objectid");
+                data.setAttributeNode(attr);
+                attr=doc.createAttribute("handleUnknown");
+                attr.setValue("discard");
+                data.setAttributeNode(attr);
+                QDomElement ObjectId = doc.createElement("ObjectId");
+
+                for(QList<QString> curVal : this->fbNameandObjId){
+                    if(curVal.at(0)== ("_FB_"+this->dutHeader+"_Output_Handler")){
+                        text=doc.createTextNode(curVal.at(1));
+                    }
+                }
+
+                ObjectId.appendChild(text);
+                data.appendChild(ObjectId);
+                addData.appendChild(data);
+                pou.appendChild(addData);
+                pous->appendChild(pou);
+                fbdBlocks.append(newBlock);
+
+            }
 }
 
 void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)

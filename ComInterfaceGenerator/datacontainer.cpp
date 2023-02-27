@@ -4,12 +4,14 @@
 unsigned int dataContainer::messageCounter = 0;
 unsigned int dataContainer::signalCounter = 0;
 QMap<QString,QList<QString>> dataContainer::warningMessages ={};
-
+/*QList<QString> dataContainer::infoMessages ={};*/
 dataContainer::dataContainer(QObject *parent)
 {
     ++dataContainer::messageCounter;
     this->isInserted=false;
     this->isSelected = false;
+    this->isCycleTmSet = false;
+    this->isTmOutSet = false;
     this->msTimeout ="2500";
     this->msCycleTime ="100";
     this->comment="No Comment";
@@ -21,6 +23,7 @@ bool dataContainer::addSignal(signal newSignal)
     signal *Ptr = new signal;
     *Ptr = newSignal;
     dataTypeAss(Ptr);
+    signalChecker(Ptr);
     this->signalList.append(Ptr);
     return true;
 }
@@ -74,7 +77,7 @@ unsigned short dataContainer::getDLC()
 const QList<QString> dataContainer::getWarningList()
 {
     QList<QString> warningMessagesAll;
-    foreach(QList <QString> warningMessages , warningMessages){
+    foreach(QList <QString> warningMessages , dataContainer::warningMessages){
 
         warningMessagesAll.append(warningMessages);
 
@@ -86,6 +89,11 @@ const QList<QString> dataContainer::getMsgWarningList(QString ID)
 {
     return warningMessages.value(ID);
 }
+/*
+const QList<QString> dataContainer::getInfoList()
+{
+    return dataContainer::infoMessages;
+}*/
 void dataContainer::setName(QString Name)
 {
     this->Name = Name;
@@ -119,11 +127,13 @@ void dataContainer::setInserted()
 void dataContainer::setMsTimeOut(QString msTimeout)
 {
     this->msTimeout = msTimeout;
+    this->isTmOutSet=true;
 }
 
 void dataContainer::setMsCycleTime(QString msCycleTime)
 {
     this->msCycleTime = msCycleTime;
+    this->isCycleTmSet=true;
 }
 
 void dataContainer::setComment(QString comment)
@@ -133,14 +143,18 @@ void dataContainer::setComment(QString comment)
 
 void dataContainer::setWarning(QString ID,const QString &warningCode)
 {
-    if(warningMessages.contains(ID)){
-    dataContainer::warningMessages[ID].append("Warning: Mesaj=>"+ID+":"+warningCode);
-    }else{
-        QList<QString> temporary = {};
-        temporary.append("Warning: Mesaj=>"+ID+":"+warningCode);
-    dataContainer::warningMessages.insert(ID,temporary);
-    }
-
+    /*if(ID == ("INFO") || (ID == ("info") )){
+        dataContainer::infoMessages.append(warningCode);
+        emit infoListChanged();
+    }else{*/
+        if(warningMessages.contains(ID)){
+        dataContainer::warningMessages[ID].append("Uyarı: Mesaj=>"+ID+":"+warningCode);
+        }else{
+            QList<QString> temporary = {};
+            temporary.append("Uyarı: Mesaj=>"+ID+":"+warningCode);
+        dataContainer::warningMessages.insert(ID,temporary);
+        }
+    /*}*/
 }
 
 void dataContainer::dataTypeAss(signal *signalPtr)
@@ -180,7 +194,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             signalPtr->convMethod="toBYTE";
             this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
         }
-
+    this->setWarning(this->messageID,signalPtr->name+" sinyali veri boyutu 8 ve katları değil,standart olmayan veri transferi");
     }else if (signalPtr->length == 8){
         if((signalPtr->startBit == 0 )||(signalPtr->startBit == 8 )||(signalPtr->startBit == 16 )||(signalPtr->startBit == 24 )||(signalPtr->startBit == 32 )||(signalPtr->startBit == 40 )||(signalPtr->startBit == 48 )||(signalPtr->startBit == 56 )){
             signalPtr->comDataType = "BYTE";
@@ -216,6 +230,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
 
             }
             this->setWarning(this->messageID,signalPtr->name+" sinyali başlangıç biti 8 ve katları değil, düşük performans");
+
         }
     }else if (signalPtr->length <  16){
         if((signalPtr->startBit == 0 )||(signalPtr->startBit == 8 )||(signalPtr->startBit == 16 )||(signalPtr->startBit == 24 )||(signalPtr->startBit == 32 )||(signalPtr->startBit == 40 )||(signalPtr->startBit == 48 )){
@@ -432,4 +447,42 @@ dataContainer::~dataContainer()
     }
     signalList.clear();
     warningMessages.clear();
+}
+
+void dataContainer::signalChecker(signal *signalPtr)
+{
+    if(signalPtr->length == 8){
+        if(signalPtr ->maxValue > 250){
+            if(signalPtr ->isJ1939){
+                this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 250 olarak atandı.");
+                signalPtr->maxValue = 250;
+            }
+             this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri atamasu veri tipi kapasitesi baz alınarak yapılmış, mantıksal değişken değer aralığı hesaplanması önerilir.");
+        }
+    }else if(signalPtr->length == 16){
+        if(signalPtr ->maxValue > 64255){
+            if(signalPtr ->isJ1939){
+                this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 64255 olarak atandı.");
+                signalPtr->maxValue = 64255;
+            }
+             this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri atamasu veri tipi kapasitesi baz alınarak yapılmış, mantıksal değişken değer aralığı hesaplanması önerilir.");
+        }
+    }else if(signalPtr->length == 32){
+        if(signalPtr ->maxValue > 4211081215){
+            if(signalPtr ->isJ1939){
+                this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 4211081215 olarak atandı.");
+                signalPtr->maxValue = 4211081215;
+            }
+             this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri atamasu veri tipi kapasitesi baz alınarak yapılmış, mantıksal değişken değer aralığı hesaplanması önerilir.");
+        }
+    }
+
+    if(signalPtr->offset >=0 && signalPtr->minValue <0){
+        this->setWarning(this->messageID,signalPtr->name+" sinyali offset verilmeden negatif minimum aralık tanımlanmış, minimum değer 0 atandı.");
+        signalPtr->minValue = 0;
+    }
+    if(signalPtr->length > (64 - signalPtr->startBit)){
+        this->setWarning(this->messageID,signalPtr->name+" sinyali için veri boyutu tanım aralığından büyük.");
+    }
+
 }
