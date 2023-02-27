@@ -796,6 +796,18 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
                         value.appendChild(simpleValue);
                         structValue.appendChild(value);
                     }
+                    {
+                        QDomElement value = doc.createElement("value");
+                        attr = doc.createAttribute("member");
+                        attr.setValue("J1939");
+                        value.setAttributeNode(attr);
+                        QDomElement simpleValue = doc.createElement("simpleValue");
+                        attr = doc.createAttribute("value");
+                        attr.setValue(QString::number(curSignal->isJ1939));
+                        simpleValue.setAttributeNode(attr);
+                        value.appendChild(simpleValue);
+                        structValue.appendChild(value);
+                    }
                     initialValue.appendChild(structValue);
                     variable.appendChild(initialValue);
                 }
@@ -1566,8 +1578,8 @@ QString DBCHandler::convTypeComtoApp(QString signalName, unsigned short startbit
         else if ((converType == "toREAL")|| (converType == "xtoREAL")){
             ST.append("\nCont_"+signalName+"				:= USINT_TO_REAL(BYTE_TO_USINT(Raw_"+signalName+"))*"+this->dutHeader+"."+signalName+".Param_Res+"+this->dutHeader+"."+signalName+".Param_Off ;");
         }
-        ST.append( "\n"+this->dutHeader+"."+signalName+".e              := (Raw_"+signalName+" > 16#FF);");
-        ST.append("\n"+this->dutHeader+"."+signalName+".na              := (Raw_"+signalName+" > 16#FE) ;");
+        ST.append( "\n"+this->dutHeader+"."+signalName+".e              := (Raw_"+signalName+" > 16#FD);");
+        ST.append("\n"+this->dutHeader+"."+signalName+".na              := (Raw_"+signalName+" = 16#FF) ;");
 
     }else if((length<17)){
         if((converType == "toWORD")|| (converType == "xtoWORD")){
