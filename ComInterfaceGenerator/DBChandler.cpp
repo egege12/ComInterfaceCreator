@@ -2781,7 +2781,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"ERR_"+curSignal->name," ","BOOL"," "});
+                        newBlock->inputVars.append({"ERR_"+curSignal->name,"CONNECT_ERROR_VARIABLE_HERE","BOOL"," "});
                     }
                 }
             }
@@ -2887,7 +2887,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"NA_"+curSignal->name," ","BOOL"," "});
+                        newBlock->inputVars.append({"NA_"+curSignal->name,"CONNECT_NA_VARIABLE_HERE","BOOL"," "});
                     }
                 }
             }
@@ -2995,7 +2995,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"VALID_"+curSignal->name," ","BOOL"," "});
+                        newBlock->inputVars.append({"VALID_"+curSignal->name,"CONNECT_VALIDITY_VARIABLE_HERE","BOOL"," "});
 
 
                 }
@@ -3101,7 +3101,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                             type.appendChild(BOOL);
                             variable.appendChild(type);
                             inputVars.appendChild(variable);
-                            newBlock->inputVars.append({"VALUE_"+curSignal->name,"FALSE",curSignal->appDataType," "});
+                            newBlock->inputVars.append({"VALUE_"+curSignal->name,"CONNECT_VALUE_VARIABLE_HERE",curSignal->appDataType," "});
 
                     }
                 }
