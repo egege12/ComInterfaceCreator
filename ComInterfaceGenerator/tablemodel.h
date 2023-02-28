@@ -46,6 +46,7 @@ signals:
     void tableChanged();
 public slots:
     void setTable(QList<QList<QString>> table);
+    void updateTable(QList<QList<QString>> table);
     void sortColumn();
     void sortColumnPrivate();
 };

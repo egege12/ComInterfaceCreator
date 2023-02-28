@@ -693,7 +693,7 @@ Rectangle {
     }
     Connections{
         target: comObj
-        onSelectedStatChanged : tableMessages.setTable(comObj.messagesList())
+        onSelectedStatChanged : tableMessages.updateTable(comObj.messagesList())
     }
     Connections{
         target: comObj

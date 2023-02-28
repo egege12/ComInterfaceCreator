@@ -100,6 +100,21 @@ void tablemodel::setTable(QList<QList<QString> > table)
     emit this->tableChanged();
 }
 
+void tablemodel::updateTable(QList<QList<QString> > table) /*CID#0007*/
+{
+  beginResetModel();
+  QList<QList<QString>>::iterator thisRow;
+  QList<QList<QString>>::iterator inRow;
+  for(inRow=table.begin();inRow!=table.end();inRow++){
+    for(thisRow=this->table.begin();thisRow!=this->table.end();thisRow++){
+        if(inRow->at(1)==thisRow->at(1)){
+            *thisRow=*inRow;
+        }
+    }
+  }
+  endResetModel();
+}
+
 void tablemodel::sortColumn()
 {
     beginResetModel();

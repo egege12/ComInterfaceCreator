@@ -417,6 +417,22 @@ void DBCHandler::setTmOutCycleTmWarnings()
 
 }
 
+qreal DBCHandler::progress() const
+{
+    return m_progress;
+}
+
+void DBCHandler::setProgress(qreal newProgress)
+{
+    if (m_progress == newProgress)
+        return;
+    m_progress = newProgress;
+    if(m_progress == 1.0)
+        emit progressCompleted();
+    else
+        emit progressChanged();
+}
+
 ///******************************************************************************
 /// XML GENERATION
 /// -Open XML
@@ -1481,7 +1497,7 @@ void DBCHandler::generateIIST(QString *const ST,dataContainer *const curMessage)
 }
 QString DBCHandler::convTypeComtoApp(QString signalName, unsigned short startbit,unsigned short length,  QString converType)
 {
-    QString ST="\n\n\n(*Conversion starts : "+signalName+"*)\n\n\n";
+    QString ST="\n\n\n{region \""+signalName+"\"}\n\n\n";
     if(converType=="BOOL:BOOL"){
         ST.append("\n"+this->dutHeader+"."+signalName+".v               := NOT S_Msg_TmOut OR FrcHi_"+signalName+" OR FrcLo_"+signalName+" ;"
                   "\n"+this->dutHeader+"."+signalName+".x                := "+this->dutHeader+"."+signalName+".v AND (S_II_BIT_"+QString::number(startbit)+" OR FrcHi_"+signalName+") AND NOT FrcLo_"+signalName+" ;");
@@ -1655,7 +1671,7 @@ QString DBCHandler::convTypeComtoApp(QString signalName, unsigned short startbit
         "\n	"+this->dutHeader+"."+signalName+".x 		   	:= "+this->dutHeader+"."+signalName+".Param_Def;"
         "\nEND_IF;\n");
     }
-    ST.append("\n\n\n(*Conversion ends : "+signalName+"*)\n\n\n");
+    ST.append("\n\n\n{endregion}\n\n\n");
     return ST;
 }
 
@@ -3646,23 +3662,3 @@ void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)
     fbdBlocks.clear();
 }
 
-
-
-
-
-
-qreal DBCHandler::progress() const
-{
-    return m_progress;
-}
-
-void DBCHandler::setProgress(qreal newProgress)
-{
-    if (m_progress == newProgress)
-        return;
-    m_progress = newProgress;
-    if(m_progress == 1.0)
-        emit progressCompleted();
-    else
-        emit progressChanged();
-}
