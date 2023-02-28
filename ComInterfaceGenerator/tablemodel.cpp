@@ -47,11 +47,18 @@ QVariant tablemodel::data(const QModelIndex &index, int role) const
     case TableDataRole:
         return table.at(index.row()).at(index.column());
     case MessageID:
-        return table.at(index.row()).at(1);
+        return table.at(index.row()).at(2);
     case MessageName:
-        return table.at(index.row()).at(0);
+    {
+        if(table.at(0).at(0) =="Name")
+            return table.at(index.row()).at(0);
+        else
+            return table.at(index.row()).at(1);
+    }
+    case SelectionColumn:
+        return (index.column()==0);
     case Selected:
-        return (table.at(index.row()).at(5)== "X");
+        return (table.at(index.row()).at(0)== "X");
     case ActiveSortHeader:
         return index.column() ==tablemodel::lastColumnID;
     case SortHeader:
@@ -82,6 +89,7 @@ QHash<int, QByteArray> tablemodel::roleNames() const
     roles[Selected] = "selected";
     roles[SortHeader]="sortheader";
     roles[ActiveSortHeader]="activesortheader";
+    roles[SelectionColumn]="selectioncolumn";
     return roles;
 }
 
@@ -98,6 +106,7 @@ void tablemodel::setTable(QList<QList<QString> > table)
     this->table.append(table);
     endResetModel();
     emit this->tableChanged();
+    this->tablebackup = this->table;
 }
 
 void tablemodel::updateTable(QList<QList<QString> > table) /*CID#0007*/
@@ -105,8 +114,17 @@ void tablemodel::updateTable(QList<QList<QString> > table) /*CID#0007*/
   beginResetModel();
   QList<QList<QString>>::iterator thisRow;
   QList<QList<QString>>::iterator inRow;
+   /*apply changes to table without sorting*/
   for(inRow=table.begin();inRow!=table.end();inRow++){
     for(thisRow=this->table.begin();thisRow!=this->table.end();thisRow++){
+        if(inRow->at(1)==thisRow->at(1)){
+            *thisRow=*inRow;
+        }
+    }
+  }
+  /*apply changes to backup table for search ability*/
+  for(inRow=table.begin();inRow!=table.end();inRow++){
+    for(thisRow=this->tablebackup.begin();thisRow!=this->tablebackup.end();thisRow++){
         if(inRow->at(1)==thisRow->at(1)){
             *thisRow=*inRow;
         }
@@ -137,5 +155,32 @@ void tablemodel::sortColumnPrivate()
     }
     tablemodel::scolumnID = tablemodel::lastColumnID;
     endResetModel();
+}
+
+void tablemodel::search(QString text)
+{
+    QList<QList<QString>>::Iterator rowItr;
+    QList<QString>::Iterator columnItr;
+    QList<QList<QString>> searchTable;
+    searchTable.append(tablebackup.at(0));
+    if(text.isEmpty()){
+        beginResetModel();
+        table=tablebackup;
+        endResetModel();
+    }else{
+        for(rowItr=tablebackup.begin();rowItr!=tablebackup.end();rowItr++){
+            for(columnItr=rowItr->begin();columnItr!=rowItr->end();columnItr++){
+                if(columnItr->contains(text,Qt::CaseInsensitive)){
+                    searchTable.append(*rowItr);
+                    break;
+                }
+            }
+        }
+        beginResetModel();
+        table=searchTable;
+        endResetModel();
+    }
+
+
 }
 

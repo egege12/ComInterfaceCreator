@@ -14,6 +14,7 @@ unsigned DBCHandler::counterfbLWORDTOBYTE = 0;
 unsigned DBCHandler::counterfbDWORDTOBYTE = 0;
 unsigned DBCHandler::counterfbWORDTOBYTE = 0;
 unsigned DBCHandler::counterfbBYTETO8BIT = 0;
+bool DBCHandler::allSelected=false;
 
 
 DBCHandler::DBCHandler(QObject *parent)
@@ -38,9 +39,9 @@ QList<QList<QString>> DBCHandler::messagesList()
 {
     if (isAllInserted){
         QList<QList<QString>> data;
-        data.append({"Name","ID(HEX)","DLC","CycleTime[ms]","Timeout[ms]","Status"});
+        data.append({"  ","Name","ID(HEX)","DLC","CycleTime[ms]","Timeout[ms]"});
         foreach(dataContainer *const curValue , comInterface){
-            data.append({curValue->getName(),curValue->getID(),QString::number(curValue->getDLC()),curValue->getMsCycleTime(),curValue->getMsTimeOut(),curValue->getIfSelected() ? "X" : "O" });
+            data.append({curValue->getIfSelected() ? "X" : "O" ,curValue->getName(),curValue->getID(),QString::number(curValue->getDLC()),curValue->getMsCycleTime(),curValue->getMsTimeOut()});
         }
         return data;
     }
@@ -145,6 +146,23 @@ void DBCHandler::setSelected(QString messageID)
     emit selectedStatChanged();
 }
 
+void DBCHandler::setAllSelected()
+{
+    for(dataContainer *const curValue : comInterface){
+        if(DBCHandler::allSelected && curValue->getIfSelected()){
+           curValue->setSelected();
+           DBCHandler::selectedMessageCounter++;
+        }
+        if(!DBCHandler::allSelected && !curValue->getIfSelected()){
+           curValue->setSelected();
+           DBCHandler::selectedMessageCounter--;
+        }
+        emit selectedStatChanged();
+    }
+    DBCHandler::allSelected=!DBCHandler::allSelected;
+    emit allSelectedChanged();
+}
+
 void DBCHandler::setDisplayReqSignal(QString signalID)
 {
     this->displayReqSignalID = signalID;
@@ -188,8 +206,12 @@ bool DBCHandler::parseMessages(QFile *ascFile)
             inlineOfMessage = true;
 
             QStringList messageList = curLine.split(" ");
+            if(messageList.at(1).toUInt()>2047){
+                messageID = QString::number((messageList.at(1).toUInt())-2147483648,16).toUpper();
+            }else{
+                messageID = QString::number(messageList.at(1).toUInt(),16).toUpper();
+            }
 
-            messageID = QString::number(messageList.at(1).toUInt(),16).toUpper();
             messageName= messageList.at(2);
             messageName.remove(QChar(':'),Qt::CaseInsensitive);
             messageDLC = messageList.at(3).toUShort();
@@ -486,6 +508,11 @@ QList<QString> DBCHandler::getWarningList()
 QList<QString> DBCHandler::getMsgWarningList()
 {
     return dataContainer::getMsgWarningList(displayReqSignalID);
+}
+
+bool DBCHandler::getAllSelected()
+{
+    return DBCHandler::allSelected;
 }
 
 /*QList<QString> DBCHandler::getInfoList()

@@ -14,6 +14,7 @@ class tablemodel : public QAbstractTableModel
         MessageID,
         MessageName,
         Selected,
+        SelectionColumn,
         SortHeader,
         ActiveSortHeader
     };
@@ -29,6 +30,7 @@ Q_PROPERTY(QList<QList<QString>> table READ getTable WRITE setTable NOTIFY table
 
 
     QList<QList<QString>> table;
+    QList<QList<QString>> tablebackup;
 
     explicit tablemodel(QAbstractTableModel *parent = nullptr);
 
@@ -49,6 +51,7 @@ public slots:
     void updateTable(QList<QList<QString>> table);
     void sortColumn();
     void sortColumnPrivate();
+    void search(QString text);
 };
 
 #endif // TABLEMODEL_H

@@ -32,6 +32,7 @@ public:
     static unsigned counterfbDWORDTOBYTE;
     static unsigned counterfbWORDTOBYTE;
     static unsigned counterfbBYTETO8BIT;
+    static bool allSelected;
     explicit DBCHandler(QObject *parent = nullptr);
 
 /*PROPERTIES STARTS*/
@@ -55,6 +56,7 @@ public slots:
     void clearData();
     void readFile(QString fileLocation);
     void setSelected(QString messageID);
+    void setAllSelected();
     void setDisplayReqSignal(QString signalID);
     void setFolderLoc(QString folderLoc);
     void setDutName(QString dutName);
@@ -65,6 +67,7 @@ public slots:
     void startToGenerate();
     QList<QString> getWarningList();
     QList<QString> getMsgWarningList();
+    static bool getAllSelected();
     /*QList<QString> getInfoList();*/
 signals:
 
@@ -74,8 +77,7 @@ signals:
     void procesStarted();
     void errCodeChanged();
     void fileandLockOk();
-
-
+    void allSelectedChanged();
     void progressChanged();
     void progressCompleted();
     void progressStarted();

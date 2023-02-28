@@ -29,33 +29,72 @@ Rectangle {
         RowLayout{
             id:rowLayout
             Layout.alignment: {Qt.AlignTop}
-
+            spacing : 2
             property string selectedMessage : "";
 
-            spacing : 2
             Rectangle {
                 id:messageRectangle
                 Layout.preferredHeight: messageSelPage.height*0.7
                 Layout.preferredWidth: messageSelPage.width/2
                 anchors.left:parent.left
                 anchors.leftMargin: 20
+                color:"transparent"
                 onWidthChanged: {
-                    tableViewMessages.columnWidths[0] = Math.max(150,messageRectangle.width*.3)
-                    tableViewMessages.columnWidths[1] = Math.max(70,(messageRectangle.width - tableViewMessages.columnWidths[0])*.20)
-                    tableViewMessages.columnWidths[2] = Math.max(50,(messageRectangle.width - tableViewMessages.columnWidths[0])*.10)
-                    tableViewMessages.columnWidths[3] = Math.max(100,(messageRectangle.width - tableViewMessages.columnWidths[0])*.25)
-                    tableViewMessages.columnWidths[4] = Math.max(90,(messageRectangle.width - tableViewMessages.columnWidths[0])*.25)
+                    tableViewMessages.columnWidths[0] = 20
+                    tableViewMessages.columnWidths[1] = Math.max(210,(messageRectangle.width - tableViewMessages.columnWidths[0])*.35)
+                    tableViewMessages.columnWidths[2] = Math.max(70,(messageRectangle.width - tableViewMessages.columnWidths[0])*.15)
+                    tableViewMessages.columnWidths[3] = Math.max(50,(messageRectangle.width - tableViewMessages.columnWidths[0])*.10)
+                    tableViewMessages.columnWidths[4] = Math.max(100,(messageRectangle.width - tableViewMessages.columnWidths[0])*.20)
                     tableViewMessages.columnWidths[5] = Math.max(90,(messageRectangle.width - tableViewMessages.columnWidths[0])*.20)
                     tableViewMessages.forceLayout();
+                }
+                Rectangle{
+                    id:filterArea
+                    color:"transparent"
+
+                    width: parent.width
+                    anchors.top: parent.top
+                    anchors.left:parent.left
+                    height:50
+                    Text{
+                        id:headerMsgTableSearch
+                        text:"Mesajlarda Ara"
+                        anchors.top: parent.top
+                        anchors.topMargin: 1
+                        anchors.left:parent.left
+                        anchors.leftMargin:15
+                        font.family: "Verdana"
+                    }
+
+                    TextField{
+
+                        id:textFieldMsgTableSearch
+                        width :130
+                        height:20
+                        anchors.top: parent.top
+                        anchors.topMargin: 20
+                        anchors.left:headerMsgTableSearch.left
+                        anchors.leftMargin:5
+                        font.pixelSize: 16
+                        placeholderText: qsTr("Arama...")
+                        font.family: "Verdana"
+
+
+                    }
+
                 }
 
                 TableView {
                     id:tableViewMessages
-                    anchors.fill: parent
+                    anchors.top: filterArea.bottom
+                    anchors.left:parent.left
+                    width: parent.width
+                    height: parent.height-filterArea.height
                     columnSpacing: 1
                     rowSpacing: 1
                     clip: true
 
+                    property bool isAllSelected :false
                     model: TableModel{
                         id: tableMessages}
 
@@ -65,15 +104,22 @@ Rectangle {
                                     ScrollBar.AlwaysOff : ScrollBar.AsNeeded
                         visible: ((tableViewMessages.height - tableViewMessages.contentHeight) < -3) ?
                                      true : false
+
                     }
                     property bool enableHScrollbar: true
                     ScrollBar.horizontal: ScrollBar{
+                        id:scrollbarHMessages
+                        parent:tableViewMessages.parent
+                        anchors.top: tableViewMessages.bottom
+                        anchors.left: tableViewMessages.left
+                        anchors.right: tableViewMessages.right
                         policy: (tableViewMessages.width - tableViewMessages.contentWidth < -3) ?
                                     ScrollBar.AlwaysOff : ScrollBar.AsNeeded
                         visible: (tableViewMessages.width - tableViewMessages.contentWidth < -3) ?
                                      true : false
+
                     }
-                    property var columnWidths: [220, 100, 80, 80, 100]
+                    property var columnWidths: [10,150, 100, 80, 80, 100]
                     columnWidthProvider: function (column) { return columnWidths[column] }
 
 
@@ -104,9 +150,9 @@ Rectangle {
                                         comObj.setDisplayReqSignal(messageid)
                                         rowLayout.selectedMessage = messageid
                                     }else{
-                                        rowLayout.selectedMessage = "FFFFFF"
+                                        rowLayout.selectedMessage = "FFFFFFFF"
                                     }
-                                    if(rowLayout.selectedMessage !=="FFFFFF"){
+                                    if(rowLayout.selectedMessage !=="FFFFFFFF"){
                                         listModelWarnings.setList(comObj.getMsgWarningList())
                                     }else{
                                         listModelWarnings.setList(comObj.getWarningList())
@@ -114,15 +160,9 @@ Rectangle {
 
                                 }
                             }
-                            onDoubleClicked: {
-                                if(heading ===false){
-                                    comObj.setSelected(messageid)
-                                }
-                            }
-
                         }
                         Image{
-                            visible: (heading===true)? true : false
+                            visible: (selectioncolumn===true)? false :((heading===true)? true : false)
                             source: (activesortheader===true)? ((sortheader===true)? "qrc:/img/img/sortDnEnabled.png" :"qrc:/img/img/sortUpEnabled.png"):"qrc:/img/img/sortNotEnable.png"
                             height:parent.height*0.8
                             anchors.right:parent.right
@@ -131,6 +171,14 @@ Rectangle {
                             fillMode:Image.PreserveAspectFit
                             antialiasing: true
                             mipmap:true
+                        }
+                        CheckBox{
+
+                            visible:(selectioncolumn ===true)
+                            checked: (heading===true)? tableViewMessages.isAllSelected:selected
+                            //indicator: {width:8; height:8;}
+                            onClicked: (heading===true)? comObj.setAllSelected():comObj.setSelected(messageid)
+                            anchors.fill: parent
                         }
 
 
@@ -153,16 +201,15 @@ Rectangle {
                 anchors.rightMargin: 20
                 anchors.left:messageRectangle.right
                 anchors.leftMargin: 5
+                color:"transparent"
 
                 TabBar{
                     id:bar
                     width:parent.width
                     TabButton {
-                        text:qsTr("Sinyaller")
+                        text:qsTr("Mesaj İçeriği")
                     }
-                    TabButton {
-                        text:qsTr("Uyarılar")
-                    }
+
                     TabButton{
                         text:qsTr("Bilgi Konsolu")
                     }
@@ -171,11 +218,42 @@ Rectangle {
                     anchors.fill: parent
                     anchors.topMargin:20
                     currentIndex:bar.currentIndex
-                    Item{
-                        id: signalTable
-                        Item {
-                            anchors.fill:parent
+
+                    Rectangle{
+                        id: rectangleSignalWarning
+                        anchors.fill: parent
+                        color:"transparent"
+
+                        Rectangle{
+                            id:headerSignalList
+                            anchors.top:parent.top
+                            anchors.margins:1
+                            height:30
+                            width:parent.width
+                            color:"transparent"
+                            Text{
+                                anchors.top: parent.top
+                                anchors.left:parent.left
+                                anchors.leftMargin:15
+                                anchors.verticalCenter: parent.verticalCenter
+                                text:"Sinyaller"
+                                antialiasing: true
+                                font.hintingPreference: Font.PreferNoHinting
+                                style: Text.Normal
+                                focus: false
+                                font.weight: Font.Medium
+                                font.pixelSize: 16
+                                font.family: "Verdana"
+                                elide: Text.ElideRight
+                            }
+                        }
+                        Rectangle {
+                            anchors.top:headerSignalList.bottom
+                            anchors.margins:1
+                            height:(parent.height-(headerSignalList.height+headerWarningList.height))*0.7
+                            width:parent.width
                             id:signalRectangle
+                            color:"transparent"
                             onWidthChanged: {
                                 tableViewSignals.columnWidths[0] = Math.max(100,signalRectangle.width*.2)
                                 tableViewSignals.columnWidths[1] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
@@ -209,6 +287,7 @@ Rectangle {
 
                                 property bool enableVScrollbar: true
                                 ScrollBar.vertical: ScrollBar{
+
                                     policy: ((tableViewSignals.height - tableViewSignals.contentHeight) < -3) ?
                                                 ScrollBar.AlwaysOff : ScrollBar.AsNeeded
                                     visible: ((tableViewSignals.height - tableViewSignals.contentHeight) < -3) ?
@@ -216,6 +295,10 @@ Rectangle {
                                 }
                                 property bool enableHScrollbar: true
                                 ScrollBar.horizontal: ScrollBar{
+                                    parent:tableViewSignals.parent
+                                    anchors.top: tableViewSignals.bottom
+                                    anchors.left: tableViewSignals.left
+                                    anchors.right: tableViewSignals.right
                                     policy: (tableViewSignals.width - tableViewSignals.contentWidth < -3) ?
                                                 ScrollBar.AlwaysOff : ScrollBar.AsNeeded
                                     visible: (tableViewSignals.width - tableViewSignals.contentWidth < -3) ?
@@ -271,68 +354,96 @@ Rectangle {
 
                                 }
 
-
-
                             }
                         }
-
-                    }
-                    Item{
-                        id: warningList
-                        anchors.fill: parent
-                        clip:true
-                        Item{
-                            anchors.fill: parent
-                            ListView{
-                                id: listViewWarnings
+                        Rectangle{
+                            id:headerWarningList
+                            anchors.top:signalRectangle.bottom
+                            anchors.topMargin:20
+                            height:30
+                            width:parent.width
+                            color:"transparent"
+                            Text{
+                                anchors.top: parent.top
+                                anchors.left:parent.left
+                                anchors.leftMargin:15
+                                anchors.verticalCenter: parent.verticalCenter
+                                text:"Uyarılar"
+                                antialiasing: true
+                                font.hintingPreference: Font.PreferNoHinting
+                                style: Text.Normal
+                                focus: false
+                                font.weight: Font.Medium
+                                font.pixelSize: 16
+                                font.family: "Verdana"
+                                elide: Text.ElideRight
+                            }
+                        }
+                        Rectangle{
+                            id: warningList
+                            anchors.bottom:parent.bottom
+                            anchors.bottomMargin:1
+                            anchors.top:headerWarningList.bottom
+                            anchors.topMargin:1
+                            height:(parent.height-(headerSignalList.height+headerWarningList.height))*0.3
+                            width:parent.width
+                            clip:true
+                            anchors.margins: 2
+                            Item{
                                 anchors.fill: parent
-                                model: ListModelWarnings {
-                                    id: listModelWarnings
-                                }
-                                property bool enableVScrollbar: true
-                                ScrollBar.vertical: ScrollBar{
-                                    policy: ((listViewWarnings.height - listViewWarnings.contentHeight) < -3) ?
-                                                ScrollBar.AlwaysOff : ScrollBar.AsNeeded
-                                    visible: ((listViewWarnings.height - listViewWarnings.contentHeight) < -3) ?
-                                                 true : false
-                                }
-                                property bool enableHScrollbar: true
-                                ScrollBar.horizontal: ScrollBar{
-                                    policy: (listViewWarnings.width - listViewWarnings.contentWidth < -3) ?
-                                                ScrollBar.AlwaysOff : ScrollBar.AsNeeded
-                                    visible: (listViewWarnings.width - listViewWarnings.contentWidth < -3) ?
-                                                 true : false
-                                }
-                                delegate:Rectangle{
-                                    id:delegateRectangle
-                                    implicitHeight: textWarnings.implicitHeight+2
-                                    implicitWidth: textWarnings.implicitWidth+2
-
-                                    Text {
-                                        id: textWarnings
-                                        width:parent.width
-                                        text: listdata
-                                        font.pointSize: 10
-                                        elide: Text.ElideRight
-                                        font.preferShaping: false
-                                        Layout.alignment: Qt.AlignLeft
+                                ListView{
+                                    id: listViewWarnings
+                                    anchors.fill: parent
+                                    model: ListModelWarnings {
+                                        id: listModelWarnings
                                     }
-                                    MouseArea {
-                                        anchors.fill: parent
-
-                                        hoverEnabled: true;
-                                        onEntered: {delegateRectangle.color= "#decc73"; textWarnings.color = "#FFFFFF"}
-                                        onExited:{ delegateRectangle.color= "#FFFFFF" ; textWarnings.color = "#000000"}
+                                    property bool enableVScrollbar: true
+                                    ScrollBar.vertical: ScrollBar{
+                                        policy: ((listViewWarnings.height - listViewWarnings.contentHeight) < -3) ?
+                                                    ScrollBar.AlwaysOff : ScrollBar.AsNeeded
+                                        visible: ((listViewWarnings.height - listViewWarnings.contentHeight) < -3) ?
+                                                     true : false
                                     }
+                                    property bool enableHScrollbar: true
+                                    ScrollBar.horizontal: ScrollBar{
+                                        policy: (listViewWarnings.width - listViewWarnings.contentWidth < -3) ?
+                                                    ScrollBar.AlwaysOff : ScrollBar.AsNeeded
+                                        visible: (listViewWarnings.width - listViewWarnings.contentWidth < -3) ?
+                                                     true : false
+                                    }
+                                    delegate:Rectangle{
+                                        id:delegateRectangle
+                                        implicitHeight: textWarnings.implicitHeight+2
+                                        implicitWidth: textWarnings.implicitWidth+2
+                                        color:"transparent"
+                                        Text {
+                                            id: textWarnings
+                                            width:parent.width
+                                            text: listdata
+                                            font.pointSize: 10
+                                            elide: Text.ElideRight
+                                            font.preferShaping: false
+                                            Layout.alignment: Qt.AlignLeft
+                                            color:"#838383"
+                                        }
+                                        MouseArea {
+                                            anchors.fill: parent
+
+                                            hoverEnabled: true;
+                                            onEntered: {delegateRectangle.color= "#decc73"; textWarnings.color = "#000000"}
+                                            onExited:{ delegateRectangle.color= "transparent" ; textWarnings.color = "#838383"}
+                                        }
+                                    }
+
+
                                 }
-
-
                             }
+
+
+
+
+
                         }
-
-
-
-
 
                     }
                     Item{
@@ -450,6 +561,7 @@ Rectangle {
                     anchors.topMargin: 5
                     anchors.left:textHeaderDutCombo.left
                     anchors.leftMargin:5
+                    displayText: "Seçim Yapınız"
                     model:
                         ["BA - Fren Kontrol Ünitesi"          ,
                         "BS - Süspansiyon Kontrol Ünitesi"   ,
@@ -478,6 +590,7 @@ Rectangle {
                         else
                             contt = contt.slice(0,1);
                         parent.dutUnitHeader = contt;
+                        displayText=currentText;
                     }
                 }//Combobox
                 Rectangle{
@@ -511,6 +624,7 @@ Rectangle {
                     anchors.topMargin: 5
                     anchors.left:textHeaderIOSel.left
                     anchors.leftMargin: 5
+                    displayText:"Seçim Yapınız"
                     model:
                         ["II - Gelen Mesajlar"          ,
                         "IO - Giden Mesajlar"]
@@ -520,6 +634,7 @@ Rectangle {
                         var contt = currentText;
                         contt = contt.slice(0,2);
                         parent.dutIOHeader = contt;
+                        displayText=currentText;
                     }
 
 
@@ -688,7 +803,7 @@ Rectangle {
     Connections{
         target: comObj
         onInterfaceReady : {tableMessages.setTable(comObj.messagesList())
-                            listModelWarnings.setList(comObj.getWarningList())
+            listModelWarnings.setList(comObj.getWarningList())
         }
     }
     Connections{
@@ -699,7 +814,7 @@ Rectangle {
         target: comObj
         onSelectedViewChanged :{tableSignals.setTable(comObj.signalsList())
 
-    }
+        }
     }
     Connections{
         target: comObj
@@ -735,11 +850,18 @@ Rectangle {
             stack.push("fileDialogPage.qml")
         }
     }
-
+    Connections{
+        target:comObj
+        onAllSelectedChanged: tableViewMessages.isAllSelected=comObj.getAllSelected();
+    }
 
     Connections{
         target:ioComboBox
         onActivated: comObj.setIOType(areaConfig.dutIOHeader);
+    }
+    Connections{
+        target:textFieldMsgTableSearch
+        onTextChanged: tableMessages.search(textFieldMsgTableSearch.text);
     }
 
 }

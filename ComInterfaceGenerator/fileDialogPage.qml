@@ -81,6 +81,7 @@ Item {
                         rightMargin: 5
                     }
                     placeholderText: qsTr("Seçim için sağdaki kutucuğa tıklayın")
+                    font.family: "Verdana"
                 }
             }
             FileDialog {
@@ -126,6 +127,7 @@ Item {
 
                     }
                     placeholderText: qsTr("Seçim için sağdaki kutucuğa tıklayın")
+                    font.family: "Verdana"
 
                 }
             }
