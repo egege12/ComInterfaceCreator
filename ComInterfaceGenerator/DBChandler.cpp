@@ -21,6 +21,54 @@ DBCHandler::DBCHandler(QObject *parent)
     : QObject{parent}
 {
     this->isAllInserted = false;
+
+
+    if(QFile::exists("log.txt")){
+        QFile logFile("log.txt");
+        if (!logFile.open(QIODevice::ReadOnly| QIODevice::Text )){
+            dataContainer::setWarning("INFO","Kayıt defteri açılamadı");
+        }else{
+            QTextStream lines(&logFile);
+            while (!lines.atEnd()) {
+                QString curLine = lines.readLine();
+                dataContainer::infoMessages.append(curLine);
+            }
+            dataContainer::setWarning("INFO","Kayıt defteri okundu");
+            logFile.close();
+        }
+
+    }else{
+            dataContainer::setWarning("INFO","Kayıt defteri bulunamadı");
+    }
+
+
+
+    dataContainer::setWarning("INFO","Program başlatıldı");
+}
+
+DBCHandler::~DBCHandler()
+{
+        dataContainer::setWarning("INFO",dbcPath+"dosyası kapatıldı");
+        QFile logFile("log.txt");
+        if (!logFile.open(QIODevice::WriteOnly| QIODevice::Truncate )){
+            setErrCode("Yapılan değişiklikler kayıt defterine işlenemedi");
+        }else{
+            QTextStream out(&logFile);
+            foreach(QString logLine , dataContainer::infoMessages){
+                out<<logLine<<Qt::endl;
+            }
+            dataContainer::setWarning("INFO","Kayıt defteri yazıldı.");
+            logFile.close();
+        }
+
+    isAllInserted = false;
+    for(dataContainer * curValue : comInterface){
+        delete curValue;
+    }
+    comInterface.clear();
+    setErrCode("Tablo temizlendi");
+    dataContainer::setWarning("INFO","Tablo temizlendi");
+
 }
 
 QString DBCHandler::errCode() const
@@ -74,12 +122,15 @@ void DBCHandler::update()
 
 void DBCHandler::clearData()
 {
+    dataContainer::setWarning("INFO",dbcPath+"dosyası kapatıldı");
     isAllInserted = false;
     for(dataContainer * curValue : comInterface){
         delete curValue;
     }
     comInterface.clear();
     setErrCode("Tablo temizlendi");
+    dataContainer::setWarning("INFO","Tablo temizlendi");
+
 }
 
 void DBCHandler::readFile(QString fileLocation)
@@ -107,11 +158,12 @@ void DBCHandler::openFile()
                 throw QString("Dosya açılamadı, lütfen konumu kontrol edin!");
             }
             else{
+                dataContainer::setWarning("INFO",dbcPath+"dosyası açıldı");
                 emit fileandLockOk();
                 if (!parseMessages(ascFile)){
                     ascFile->close();
                     throw QString("Arayüzü okurken bir şeyler yanlış gitti!");
-                }else{
+                }else{ 
                     setTmOutCycleTmWarnings();
                     emit interfaceReady();
                     this->setDisplayReqSignal(comInterface.firstKey());
@@ -202,7 +254,7 @@ bool DBCHandler::parseMessages(QFile *ascFile)
         QString curLine = lines.readLine();
 
         /*Message parse - split message line to items and rise message block flasg (inlineOfMessage)*/
-        if(curLine.contains("BO_ ") && curLine.indexOf("BO_") < 2){
+        if(curLine.contains("BO_ ") && curLine.indexOf("BO_") < 2 && !(curLine.contains("INDEPENDENT")&&curLine.contains("VECTOR"))){
             inlineOfMessage = true;
 
             QStringList messageList = curLine.split(" ");
@@ -467,6 +519,7 @@ void DBCHandler::setProgress(qreal newProgress)
 void DBCHandler::startToGenerate()
 {
     setProgress(0.0);
+    qint64 startTimeMs = QDateTime::currentMSecsSinceEpoch();
     if(!DBCHandler::selectedMessageCounter){
         this->setErrCode("En az bir mesaj seçmelisin");
     }else if(!isAllInserted){
@@ -484,11 +537,14 @@ void DBCHandler::startToGenerate()
                 }
                 else{
                     emit progressStarted();
+                    creationDate = QDateTime::currentDateTime();
                     if (!createXml_STG1(xmlFile)){
                         throw QString("XML oluşturulurken bir şeyler yanlış gitti!");
                     }else
                         xmlFile->close();
                     setProgress(1.0);
+                    dataContainer::setWarning("INFO",this->dutHeader+" oluşturuldu. Oluşturma süresi:"+QString::number((QDateTime::currentMSecsSinceEpoch())-startTimeMs)+"ms");
+                    emit infoListChanged();
                 }
 
             }
@@ -508,6 +564,11 @@ QList<QString> DBCHandler::getWarningList()
 QList<QString> DBCHandler::getMsgWarningList()
 {
     return dataContainer::getMsgWarningList(displayReqSignalID);
+}
+
+QList<QString> DBCHandler::getInfoList()
+{
+    return dataContainer::getInfoList();
 }
 
 bool DBCHandler::getAllSelected()
@@ -557,7 +618,7 @@ bool DBCHandler::createXml_STG1(QFile *xmlFile)
         attr.setValue("CODESYS V3.5 SP17");
         fileHeader.setAttributeNode(attr);
         attr =doc.createAttribute("creationDateTime");
-        attr.setValue("2023-01-01T01:01:01.0000001");
+        attr.setValue(creationDate.toString(Qt::DateFormat::ISODate));
         fileHeader.setAttributeNode(attr);
         //Append child to project
         elemProject.appendChild(fileHeader);
@@ -768,9 +829,10 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
 {
     QDomAttr attr;
     QDomText text;
-
+    bool flagNewMessage=false;
     for(dataContainer *const curValue : comInterface){
         if(curValue->getIfSelected()){
+            flagNewMessage=true;
             for(const dataContainer::signal * curSignal : *curValue->getSignalList()){
                 QDomElement variable = doc.createElement("variable");
                 attr = doc.createAttribute("name");
@@ -880,8 +942,16 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
                 attr=doc.createAttribute("xmlns");
                 attr.setValue("http://www.w3.org/1999/xhtml");
                 xhtml.setAttributeNode(attr);
-                text =doc.createTextNode(curSignal->comment+"/StartBit:"+QString::number(curSignal->startBit)+"/Length:"+QString::number(curSignal->length)+"/J1939:"+((curSignal->isJ1939)?"YES":"NO"));
+                {
+                    QString comment;
+                if (flagNewMessage){
+                    comment.append("****************************************** MESSAGE: "+curValue->getName()+"  ID: "+curValue->getID()+" ******************************************\n");
+                    flagNewMessage=false;
+                }
+                   comment.append(curSignal->name+"/StartBit:"+QString::number(curSignal->startBit)+"/Length:"+QString::number(curSignal->length)+"/J1939:"+((curSignal->isJ1939)?"YES":"NO"));
+                text =doc.createTextNode(comment);
                 xhtml.appendChild(text);
+                }
                 documentation.appendChild(xhtml);
                 variable.appendChild(documentation);
                 strucT->appendChild(variable);
@@ -1430,6 +1500,27 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
 }
 void DBCHandler::generateIIST(QString *const ST,dataContainer *const curMessage)
 {
+    ST->append("(*\n"
+               "**********************************************************************\n"
+               "Bozankaya A.Ş.\n"
+               "**********************************************************************\n"
+               "Name					: _FB_"+dutHeader+"_"+curMessage->getName()+"_"+curMessage->getID()+"\n"
+               "POU Type				: FB\n"
+               "Created by              : COMMUNICATION INTERFACE GENERATOR , BZK.\n"
+               "Creation Date 			: "+creationDate.toString(Qt::DateFormat::ISODate)+"\n"
+               "Modifications			: see version description below\n"
+               "\n"
+               "\n"
+               "FB Description:"
+               "This FB which is created by automatically by communication interface generator \n handles the RX (INPUT) can messages according to CAN_500_LIB\n"
+               "*********************************************************************\n"
+               "\n"
+               "Version 1	\n"
+               "*********************************************************************\n"
+               "Version Description:\n"
+               "- initial version\n"
+               "*********************************************************************\n"
+               "*)");
     ST->append( "\n_FB_CanRx_Message_Unpack_0(\n"
                 "C_Enable:= C_Init_Can,\n"
                 "Obj_CAN:= Ptr_Obj_Can ,\n"
@@ -1540,7 +1631,7 @@ QString DBCHandler::convTypeComtoApp(QString signalName, unsigned short startbit
         ST.append("\n_FB_PACK_BYTE_TO_DWORD_"+QString::number(counterfbBYTETODWORD)+"(X_BYTE_0:= X_II_BYTE_"+QString::number(startbit/8)+", X_BYTE_1:= X_II_BYTE_"+QString::number((startbit/8)+1)+", X_BYTE_2:= X_II_BYTE_"+QString::number((startbit/8)+2)+", X_BYTE_3:= X_II_BYTE_"+QString::number((startbit/8)+3)+" , X_DWORD_0 => Raw_"+signalName+");");
         counterfbBYTETODWORD++;
     }else if((converType=="xtoLWORD")||(converType=="xtoULINT")||(converType=="xtoLREAL") ){
-        ST.append("\n_FB_PACK_BYTE_TO_LWORD_"+QString::number(counterfbBYTETOLWORD)+"(X_BYTE_0:= X_II_BYTE_"+QString::number(startbit/8)+", X_BYTE_1:= X_II_BYTE_"+QString::number((startbit/8)+1)+", X_BYTE_2:=X_II_BYTE_"+QString::number((startbit/8)+2)+" , X_BYTE_3:= X_II_BYTE_"+QString::number((startbit/8)+3)+", X_BYTE_4:= X_II_BYTE_"+QString::number((startbit/8)+4)+", X_BYTE_5:= X_II_BYTE_"+QString::number((startbit/8)+5)+", X_BYTE_6:= X_II_BYTE_"+QString::number((startbit/8)+6)+", X_BYTE_7:= X_II_BYTE_"+QString::number((startbit/8)+7)+" , X_II_DWORD_0 := Raw_"+signalName+");");
+        ST.append("\n_FB_PACK_BYTE_TO_LWORD_"+QString::number(counterfbBYTETOLWORD)+"(X_BYTE_0:= X_II_BYTE_"+QString::number(startbit/8)+", X_BYTE_1:= X_II_BYTE_"+QString::number((startbit/8)+1)+", X_BYTE_2:=X_II_BYTE_"+QString::number((startbit/8)+2)+" , X_BYTE_3:= X_II_BYTE_"+QString::number((startbit/8)+3)+", X_BYTE_4:= X_II_BYTE_"+QString::number((startbit/8)+4)+", X_BYTE_5:= X_II_BYTE_"+QString::number((startbit/8)+5)+", X_BYTE_6:= X_II_BYTE_"+QString::number((startbit/8)+6)+", X_BYTE_7:= X_II_BYTE_"+QString::number((startbit/8)+7)+" , X_LWORD_0 := Raw_"+signalName+");");
         counterfbBYTETOLWORD++;
     }else{
         bool flagPack = false;
@@ -2231,7 +2322,27 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
 
 }
 void DBCHandler::generateIOST(QString *const ST,dataContainer *const curMessage)
-{
+{       ST->append("(*\n"
+                   "**********************************************************************\n"
+                   "Bozankaya A.Ş.\n"
+                   "**********************************************************************\n"
+                   "Name					: _FB_"+dutHeader+"_"+curMessage->getName()+"_"+curMessage->getID()+"\n"
+                   "POU Type				: FB\n"
+                   "Created by              : COMMUNICATION INTERFACE GENERATOR , BZK.\n"
+                   "Creation Date 			: "+creationDate.toString(Qt::DateFormat::ISODate)+"\n"
+                   "Modifications			: see version description below\n"
+                   "\n"
+                   "\n"
+                   "FB Description:"
+                   "This FB which is created by automatically by communication interface generator \n handles the TX (OUTPUT) can messages according to CAN_500_LIB \n"
+                   "*********************************************************************\n"
+                   "\n"
+                   "Version 1	\n"
+                   "*********************************************************************\n"
+                   "Version Description:\n"
+                   "- initial version\n"
+                   "*********************************************************************\n"
+                   "*)");
     for( const dataContainer::signal * curSignal : *curMessage->getSignalList()){
         ST->append(convTypeApptoCom(curSignal->name,curSignal->startBit,curSignal->length,curSignal->convMethod));
     }
@@ -3004,7 +3115,8 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
             fbdBlocks.append(newBlock);
         }
         }else{
-        dataContainer::setWarning("COMMON","J1939 mesajı bulunamadığı için NA  ve ERR Handler yerleştirilmedi");
+        dataContainer::setWarning("INFO","J1939 mesajı bulunamadığı için NA  ve ERR Handler yerleştirilmedi");
+        emit infoListChanged();
         }
         /*VALITIY HANDLER*/
         {

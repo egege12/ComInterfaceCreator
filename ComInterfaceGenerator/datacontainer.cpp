@@ -1,10 +1,10 @@
 #include "datacontainer.h"
 #include <QDebug>
-
+#include <QDateTime>
 unsigned int dataContainer::messageCounter = 0;
 unsigned int dataContainer::signalCounter = 0;
 QMap<QString,QList<QString>> dataContainer::warningMessages ={};
-/*QList<QString> dataContainer::infoMessages ={};*/
+QList<QString> dataContainer::infoMessages ={};
 dataContainer::dataContainer(QObject *parent)
 {
     ++dataContainer::messageCounter;
@@ -89,11 +89,11 @@ const QList<QString> dataContainer::getMsgWarningList(QString ID)
 {
     return warningMessages.value(ID);
 }
-/*
+
 const QList<QString> dataContainer::getInfoList()
 {
     return dataContainer::infoMessages;
-}*/
+}
 void dataContainer::setName(QString Name)
 {
     this->Name = Name;
@@ -143,10 +143,9 @@ void dataContainer::setComment(QString comment)
 
 void dataContainer::setWarning(QString ID,const QString &warningCode)
 {
-    /*if(ID == ("INFO") || (ID == ("info") )){
-        dataContainer::infoMessages.append(warningCode);
-        emit infoListChanged();
-    }else{*/
+    if(ID == ("INFO") || (ID == ("info") )){
+        dataContainer::infoMessages.append(QDateTime::currentDateTime().toString("dd.mm.yy - hh:mm:ss.zzz")+": "+warningCode);
+    }else{
         if(warningMessages.contains(ID)){
         dataContainer::warningMessages[ID].append("Uyarı: Mesaj=>"+ID+":"+warningCode);
         }else{
@@ -154,7 +153,7 @@ void dataContainer::setWarning(QString ID,const QString &warningCode)
             temporary.append("Uyarı: Mesaj=>"+ID+":"+warningCode);
         dataContainer::warningMessages.insert(ID,temporary);
         }
-    /*}*/
+    }
 }
 
 void dataContainer::dataTypeAss(signal *signalPtr)

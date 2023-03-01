@@ -34,6 +34,8 @@ public:
     static unsigned counterfbBYTETO8BIT;
     static bool allSelected;
     explicit DBCHandler(QObject *parent = nullptr);
+    ~DBCHandler();
+    QDateTime creationDate;
 
 /*PROPERTIES STARTS*/
     Q_PROPERTY(QString errCode READ errCode WRITE setErrCode NOTIFY errCodeChanged)
@@ -67,6 +69,7 @@ public slots:
     void startToGenerate();
     QList<QString> getWarningList();
     QList<QString> getMsgWarningList();
+    QList<QString> getInfoList();
     static bool getAllSelected();
     /*QList<QString> getInfoList();*/
 signals:
@@ -81,6 +84,7 @@ signals:
     void progressChanged();
     void progressCompleted();
     void progressStarted();
+    void infoListChanged();
 
 private:
     //Private Variables starts

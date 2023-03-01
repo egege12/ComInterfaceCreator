@@ -3,7 +3,7 @@
 listmodel::listmodel(QObject *parent)
     : QAbstractListModel(parent)
 {
-    list.append("Warnings");
+    list.append("Henüz işlenmedi");
 }
 
 

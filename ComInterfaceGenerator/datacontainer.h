@@ -12,7 +12,7 @@ public:
     static unsigned int messageCounter;
     static unsigned int signalCounter;
     static QMap<QString,QList<QString>> warningMessages;
-    //static QList<QString> infoMessages;
+    static QList<QString> infoMessages;
     explicit dataContainer(QObject *parent = nullptr);
 
     //Struct List
@@ -35,7 +35,7 @@ public:
     unsigned short getDLC();
     static const QList<QString> getWarningList();
     static const QList<QString> getMsgWarningList(QString ID);
-    //static const QList<QString> getInfoList();
+    static const QList<QString> getInfoList();
     //Setters
     void setName(QString Name);
     void setmessageID(QString messageID);
@@ -65,7 +65,7 @@ private:
     void signalChecker(signal *signalPtr);
 
 signals:
-    /*static void infoListChanged();*/
+
 };
 
 struct dataContainer::signal{

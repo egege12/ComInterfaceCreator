@@ -25,6 +25,7 @@ Rectangle {
         }
         orientation: Gradient.Vertical
     }
+    Component.onCompleted: listModelInfos.setList(comObj.getInfoList());
     ColumnLayout{
         RowLayout{
             id:rowLayout
@@ -75,7 +76,7 @@ Rectangle {
                         anchors.topMargin: 20
                         anchors.left:headerMsgTableSearch.left
                         anchors.leftMargin:5
-                        font.pixelSize: 16
+                        font.pixelSize: 14
                         placeholderText: qsTr("Arama...")
                         font.family: "Verdana"
 
@@ -448,14 +449,14 @@ Rectangle {
                     }
                     Item{
                         id: consoleInfo
-                        /*anchors.fill: parent
+                        anchors.fill: parent
                         clip:true
                         Item{
                             anchors.fill: parent
                             ListView{
                                 id: listViewInfos
                                 anchors.fill: parent
-                                model: ListModelWarnings {
+                                model: ListModelInfos {
                                     id: listModelInfos
                                 }
                                 property bool enableVScrollbar: true
@@ -476,7 +477,7 @@ Rectangle {
                                     id:delegateRectangleInfo
                                     implicitHeight: textInfos.implicitHeight+2
                                     implicitWidth: textInfos.implicitWidth+2
-
+                                    color:"transparent"
                                     Text {
                                         id: textInfos
                                         width:parent.width
@@ -485,19 +486,20 @@ Rectangle {
                                         elide: Text.ElideRight
                                         font.preferShaping: false
                                         Layout.alignment: Qt.AlignLeft
+                                        color:"#838383"
                                     }
                                     MouseArea {
                                         anchors.fill: parent
 
                                         hoverEnabled: true;
-                                        onEntered: {delegateRectangleInfo.color= "#decc73"; textInfos.color = "#FFFFFF"}
-                                        onExited:{ delegateRectangleInfo.color= "#FFFFFF" ; textInfos.color = "#000000"}
+                                        onEntered: {delegateRectangleInfo.color= "#decc73"; textInfos.color = "#000000"}
+                                        onExited:{ delegateRectangleInfo.color= "transparent" ; textInfos.color = "#838383"}
                                     }
                                 }
 
 
                             }
-                        }*/
+                        }
                     }
                 }
 
@@ -862,6 +864,10 @@ Rectangle {
     Connections{
         target:textFieldMsgTableSearch
         onTextChanged: tableMessages.search(textFieldMsgTableSearch.text);
+    }
+    Connections{
+        target:comObj
+        onInfoListChanged: listModelInfos.setList(comObj.getInfoList())
     }
 
 }
