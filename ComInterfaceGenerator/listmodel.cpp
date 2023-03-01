@@ -37,6 +37,7 @@ void listmodel::setList(QList<QString> list)
     beginResetModel();
     this->list.clear();
     qInfo()<<"list appended";
+    std::reverse(list.begin(),list.end());
     this->list.append(list);
     endResetModel();
     emit this->listChanged();

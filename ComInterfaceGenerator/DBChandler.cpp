@@ -838,7 +838,7 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
                 attr = doc.createAttribute("name");
                 attr.setValue(curSignal->name);
                 variable.setAttributeNode(attr);
-                { //type and derived element with name attribut
+                { //type and derived element with name attribute
                     QDomElement type = doc.createElement("type");
                     QDomElement derived = doc.createElement("derived");
                     attr = doc.createAttribute("name");
@@ -945,7 +945,7 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
                 {
                     QString comment;
                 if (flagNewMessage){
-                    comment.append("****************************************** MESSAGE: "+curValue->getName()+"  ID: "+curValue->getID()+" ******************************************\n");
+                    comment.append("\n\n****************************************** MESSAGE: "+curValue->getName()+"  ID: "+curValue->getID()+" ******************************************\n");
                     flagNewMessage=false;
                 }
                    comment.append(curSignal->name+"/StartBit:"+QString::number(curSignal->startBit)+"/Length:"+QString::number(curSignal->length)+"/J1939:"+((curSignal->isJ1939)?"YES":"NO"));
@@ -956,6 +956,106 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
                 variable.appendChild(documentation);
                 strucT->appendChild(variable);
             }
+
+
+        }
+    }
+    if(dutName.contains("II")||dutName.contains("ii")){
+        bool flagBlankSpace=true;
+        foreach(dataContainer *const curValue , comInterface){
+            if(curValue->getIfSelected()){
+
+                QDomElement variable = doc.createElement("variable");
+                attr = doc.createAttribute("name");
+                attr.setValue("S_TmOut_"+curValue->getName()+"_0X"+curValue->getID());
+                variable.setAttributeNode(attr);
+                { //type and derived element with name attribute
+                    QDomElement type = doc.createElement("type");
+                    QDomElement BOOL = doc.createElement("BOOL");
+                    type.appendChild(BOOL);
+                    variable.appendChild(type);
+                }
+                {//Documentation
+
+                    QDomElement documentation=doc.createElement("documentation");
+                    QDomElement xhtml = doc.createElement("xhtml");
+                    attr=doc.createAttribute("xmlns");
+                    attr.setValue("http://www.w3.org/1999/xhtml");
+                    xhtml.setAttributeNode(attr);
+                    {
+                        QString comment;
+                        if(flagBlankSpace){
+                            comment.append("\n\nTIMEOUT SIGNALS\n");
+                            flagBlankSpace=false;
+                        }
+
+                        comment.append("Signal timeout status. Timeout parameter for signal :"+curValue->getMsTimeOut()+"ms");
+                        text =doc.createTextNode(comment);
+                        xhtml.appendChild(text);
+                    }
+                    documentation.appendChild(xhtml);
+                    variable.appendChild(documentation);
+                }
+                strucT->appendChild(variable);
+            }
+        }
+        {
+            QDomElement variable = doc.createElement("variable");
+            attr = doc.createAttribute("name");
+            attr.setValue("S_Com_Flt_"+dutHeader);
+            variable.setAttributeNode(attr);
+            { //type and derived element with name attribute
+                QDomElement type = doc.createElement("type");
+                QDomElement BOOL = doc.createElement("BOOL");
+                type.appendChild(BOOL);
+                variable.appendChild(type);
+            }
+            {//Documentation
+
+                QDomElement documentation=doc.createElement("documentation");
+                QDomElement xhtml = doc.createElement("xhtml");
+                attr=doc.createAttribute("xmlns");
+                attr.setValue("http://www.w3.org/1999/xhtml");
+                xhtml.setAttributeNode(attr);
+                {
+                    QString comment;
+                    comment.append("All of the timeout states are TRUE, no communication with unit");
+                    text =doc.createTextNode(comment);
+                    xhtml.appendChild(text);
+                }
+                documentation.appendChild(xhtml);
+                variable.appendChild(documentation);
+            }
+            strucT->appendChild(variable);
+        }
+        {
+            QDomElement variable = doc.createElement("variable");
+            attr = doc.createAttribute("name");
+            attr.setValue("S_Com_Distrb_"+dutHeader);
+            variable.setAttributeNode(attr);
+            { //type and derived element with name attribute
+                QDomElement type = doc.createElement("type");
+                QDomElement BOOL = doc.createElement("BOOL");
+                type.appendChild(BOOL);
+                variable.appendChild(type);
+            }
+            {//Documentation
+
+                QDomElement documentation=doc.createElement("documentation");
+                QDomElement xhtml = doc.createElement("xhtml");
+                attr=doc.createAttribute("xmlns");
+                attr.setValue("http://www.w3.org/1999/xhtml");
+                xhtml.setAttributeNode(attr);
+                {
+                    QString comment;
+                    comment.append("One of the messages is not receiving from that unit, communication disturbed with unit");
+                    text =doc.createTextNode(comment);
+                    xhtml.appendChild(text);
+                }
+                documentation.appendChild(xhtml);
+                variable.appendChild(documentation);
+            }
+            strucT->appendChild(variable);
         }
     }
 }
@@ -1093,7 +1193,7 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                     type.appendChild(BOOL);
                     variable.appendChild(type);
                     outputVars.appendChild(variable);
-                    newBlock->outputVars.append({"S_Msg_TmOut","TIMEOUTVAR","BOOL"," "});
+                    newBlock->outputVars.append({"S_Msg_TmOut","GVL."+dutHeader+".S_TmOut_"+curMessage->getName()+"_0X"+curMessage->getID(),"BOOL"," "});
                 }
                 interface.appendChild(outputVars);
             }
@@ -3735,7 +3835,7 @@ void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)
                         QDomElement connectionPointIn = doc.createElement("connectionPointIn");
                         QDomElement connection = doc.createElement("connection");
                         QDomElement expression = doc.createElement("expression");
-                        text=doc.createTextNode("ASSIGNMENT_NEEDED");
+                        text=doc.createTextNode(curVar.at(1));
                         expression.appendChild(text);
                         attr=doc.createAttribute("x");
                         attr.setValue("0");
