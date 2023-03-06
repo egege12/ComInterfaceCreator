@@ -3653,7 +3653,6 @@ void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)
                         inVariable.setAttributeNode(attr);
                         FBD.appendChild(inVariable);
                         countLocalID++;
-
                     }
 
                     {

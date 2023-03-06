@@ -486,14 +486,14 @@ Rectangle {
                                         elide: Text.ElideRight
                                         font.preferShaping: false
                                         Layout.alignment: Qt.AlignLeft
-                                        color:"#838383"
+                                        color:generationinfo? "#000000":"#838383"
                                     }
                                     MouseArea {
                                         anchors.fill: parent
 
                                         hoverEnabled: true;
                                         onEntered: {delegateRectangleInfo.color= "#decc73"; textInfos.color = "#000000"}
-                                        onExited:{ delegateRectangleInfo.color= "transparent" ; textInfos.color = "#838383"}
+                                        onExited:{ delegateRectangleInfo.color= "transparent" ; textInfos.color = generationinfo? "#000000":"#838383"}
                                     }
                                 }
 

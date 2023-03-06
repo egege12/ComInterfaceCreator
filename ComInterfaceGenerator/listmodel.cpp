@@ -17,6 +17,8 @@ QVariant listmodel::data(const QModelIndex &index, int role) const
     switch (role) {
     case ListDataRole:
         return list.at(index.row());
+    case GenerationInfos:
+        return list.at(index.row()).contains("oluşturuldu");
      default:
         break;
     }
@@ -28,6 +30,7 @@ QHash<int, QByteArray> listmodel::roleNames() const
     QHash<int,QByteArray> roles;
     roles[ListDataRole] = "listdata";
     roles[Selected] = "selected";
+    roles[GenerationInfos] = "generationinfo";
 
     return roles;
 }
