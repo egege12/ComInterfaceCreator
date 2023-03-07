@@ -1002,7 +1002,7 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
         {
             QDomElement variable = doc.createElement("variable");
             attr = doc.createAttribute("name");
-            attr.setValue("S_Com_Flt_"+dutHeader);
+            attr.setValue("S_Com_Flt");
             variable.setAttributeNode(attr);
             { //type and derived element with name attribute
                 QDomElement type = doc.createElement("type");
@@ -1031,7 +1031,7 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
         {
             QDomElement variable = doc.createElement("variable");
             attr = doc.createAttribute("name");
-            attr.setValue("S_Com_Distrb_"+dutHeader);
+            attr.setValue("S_Com_Distrb");
             variable.setAttributeNode(attr);
             { //type and derived element with name attribute
                 QDomElement type = doc.createElement("type");
@@ -1057,6 +1057,37 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
             }
             strucT->appendChild(variable);
         }
+
+    }
+    // CAN_Init register for DUT
+    {
+        QDomElement variable = doc.createElement("variable");
+        attr = doc.createAttribute("name");
+        attr.setValue("S_CAN_Init");
+        variable.setAttributeNode(attr);
+        { //type and derived element with name attribute
+            QDomElement type = doc.createElement("type");
+            QDomElement BOOL = doc.createElement("BOOL");
+            type.appendChild(BOOL);
+            variable.appendChild(type);
+        }
+        {//Documentation
+
+            QDomElement documentation=doc.createElement("documentation");
+            QDomElement xhtml = doc.createElement("xhtml");
+            attr=doc.createAttribute("xmlns");
+            attr.setValue("http://www.w3.org/1999/xhtml");
+            xhtml.setAttributeNode(attr);
+            {
+                QString comment;
+                comment.append("CAN Initilizer variable");
+                text =doc.createTextNode(comment);
+                xhtml.appendChild(text);
+            }
+            documentation.appendChild(xhtml);
+            variable.appendChild(documentation);
+        }
+        strucT->appendChild(variable);
     }
 }
 ///******************************************************************************
@@ -1067,6 +1098,12 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
 {
     QDomAttr attr;
     QDomText text;
+     //For AND and OR gate to manipulate timeout and disturbance flags
+    structFbdBlock* gateAND = new structFbdBlock;
+    structFbdBlock* gateOR = new structFbdBlock;
+    unsigned short counterInANDOR = 1;
+    gateAND->name="AND";
+    gateOR->name="OR";
 
     foreach (dataContainer * curMessage , comInterface){
         if(curMessage->getIfSelected()){
@@ -1102,7 +1139,7 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                     type.appendChild(BOOL);
                     variable.appendChild(type);
                     inputVars.appendChild(variable);
-                    newBlock->inputVars.append({"C_Init_Can","CAN_Init","BOOL"," "});
+                    newBlock->inputVars.append({"C_Init_Can","GVL."+dutHeader+".S_CAN_Init","BOOL"," "});
                 }
                 /*Ptr_Obj_Can*/
                 {
@@ -1591,9 +1628,22 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
 
 
            fbdBlocks.append(newBlock);
+           // append input variables to AND gate to check disturbance -> EXP format : GVL.IIXC.S_TmOut_Motor_Messages_3_0X512
+           gateAND->inputVars.append({"In"+QString::number(counterInANDOR),"GVL."+dutHeader+".S_TmOut_"+curMessage->getName()+"_0X"+curMessage->getID(),"BOOL"," "});
+           // append input variables to OR gate to check disturbance -> EXP format : GVL.IIXC.S_TmOut_Motor_Messages_3_0X512
+           gateOR->inputVars.append({"In"+QString::number(counterInANDOR),"GVL."+dutHeader+".S_TmOut_"+curMessage->getName()+"_0X"+curMessage->getID(),"BOOL"," "});
+           counterInANDOR++;
         }
 
     }
+ // It only has one output so It is outside of loop
+  // append input variables to AND gate to check disturbance -> EXP format : GVL.IIXC.S_Com_Distrb_IIXC
+    gateAND->outputVars.append({"Out1","GVL."+dutHeader+".S_Com_Distrb","BOOL"," "});
+  // append input variables to OR gate to check disturbance -> EXP format : GVL.IIXC.S_Com_Flt_IIXC
+    gateOR->outputVars.append({"Out1","GVL."+dutHeader+".S_Com_Flt","BOOL"," "});
+
+    fbdBlocks.append(gateAND);
+    fbdBlocks.append(gateOR);
 
 
 
@@ -1933,7 +1983,7 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
                     type.appendChild(BOOL);
                     variable.appendChild(type);
                     inputVars.appendChild(variable);
-                    newBlock->inputVars.append({"C_Init_Can","CAN_Init","BOOL"," "});
+                    newBlock->inputVars.append({"C_Init_Can","GVL."+dutHeader+".S_CAN_Init","BOOL"," "});
                 }
                 /*Ptr_Obj_Can*/
                 {
@@ -3452,40 +3502,23 @@ void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)
 
         {/*LOCAL VARS*/
                 QDomElement localVars = doc.createElement("localVars");
-            {
 
-                QDomElement variable = doc.createElement("variable");
-                attr=doc.createAttribute("name");
-                attr.setValue("CAN_Init");
-                variable.setAttributeNode(attr);
-                QDomElement type = doc.createElement("type");
-                QDomElement BOOL = doc.createElement("BOOL");
-                QDomElement initialValue = doc.createElement("initialValue");
-                QDomElement simpleValue = doc.createElement("simpleValue");
-                attr=doc.createAttribute("value");
-                attr.setValue("TRUE");
-                simpleValue.setAttributeNode(attr);
-                initialValue.appendChild(simpleValue);
-                type.appendChild(BOOL);
-                variable.appendChild(type);
-                variable.appendChild(initialValue);
-                localVars.appendChild(variable);
-
-            }
-            for(DBCHandler::structFbdBlock * curStruct : fbdBlocks){
-                QDomElement variable=doc.createElement("variable");
-                attr=doc.createAttribute("name");
-                attr.setValue(curStruct->name+"_0");
-                variable.setAttributeNode(attr);
-                QDomElement type = doc.createElement("type");
-                QDomElement derived = doc.createElement("derived");
-                attr=doc.createAttribute("name");
-                attr.setValue(curStruct->name);
-                derived.setAttributeNode(attr);
-                type.appendChild(derived);
-                variable.appendChild(type);
-                localVars.appendChild(variable);
-            }
+                for(DBCHandler::structFbdBlock * curStruct : fbdBlocks){
+                    if(curStruct->name != "AND" && curStruct->name != "OR"){
+                        QDomElement variable=doc.createElement("variable");
+                        attr=doc.createAttribute("name");
+                        attr.setValue(curStruct->name+"_0");
+                        variable.setAttributeNode(attr);
+                        QDomElement type = doc.createElement("type");
+                        QDomElement derived = doc.createElement("derived");
+                        attr=doc.createAttribute("name");
+                        attr.setValue(curStruct->name);
+                        derived.setAttributeNode(attr);
+                        type.appendChild(derived);
+                        variable.appendChild(type);
+                        localVars.appendChild(variable);
+                    }
+                }
 
             {
                 QDomElement variable = doc.createElement("variable");
@@ -3611,7 +3644,8 @@ void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)
                         attr=doc.createAttribute("xmlns");
                         attr.setValue("http://www.w3.org/1999/xhtml");
                         xhtml.setAttributeNode(attr);
-                        text=doc.createTextNode("THIS POU AUTOMATICALLY GENERATED BY TOOL DO NOT EDIT WITHOUT IMPLEMENTING ON DBC FILE");
+                        QString creationHeader="THIS POU AUTOMATICALLY GENERATED BY INTERFACE GENERATOR AT"+creationDate.toString(Qt::DateFormat::ISODate);
+                        text=doc.createTextNode(creationHeader);
                         xhtml.appendChild(text);
                         content.appendChild(xhtml);
                         comment.appendChild(content);
@@ -3655,6 +3689,7 @@ void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)
                         countLocalID++;
                     }
 
+                    if(curStruct->name != "AND" && curStruct->name != "OR")
                     {
                         QDomElement inVariable = doc.createElement("inVariable");
                         QDomElement position = doc.createElement("position");
@@ -3686,10 +3721,13 @@ void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)
                         attr=doc.createAttribute("typeName");
                         attr.setValue(curStruct->name);
                         block.setAttributeNode(attr);
-                        attr=doc.createAttribute("instanceName");
-                        attr.setValue(curStruct->name+"_0");
-                        block.setAttributeNode(attr);
-
+                        //Add instaceName if only It is user derived fb, dont add for OR,AND etc.
+                        if(curStruct->name != "AND" && curStruct->name != "OR")
+                        {
+                            attr=doc.createAttribute("instanceName");
+                            attr.setValue(curStruct->name+"_0");
+                            block.setAttributeNode(attr);
+                        }
 
                         QDomElement position = doc.createElement("position");
                         attr=doc.createAttribute("x");
@@ -3724,7 +3762,8 @@ void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)
                             block.appendChild(inputVariables);
 
                         QDomElement inoutVariables = doc.createElement("inOutVariables");
-                            {
+
+                        if(curStruct->name != "AND" && curStruct->name != "OR"){
                             QDomElement variable = doc.createElement("variable");
                             attr=doc.createAttribute("formalParameter");
                             attr.setValue(this->dutHeader);
@@ -3747,6 +3786,13 @@ void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)
                                 attr=doc.createAttribute("formalParameter");
                                 attr.setValue(curVar.at(0));
                                 variable.setAttributeNode(attr);
+                                //Add negated attribute if only It is OR or AND gate
+                                if(curStruct->name == "AND" || curStruct->name == "OR")
+                                {
+                                    attr=doc.createAttribute("negated");
+                                    attr.setValue("true");
+                                    variable.setAttributeNode(attr);
+                                }
                                 QDomElement connectionPointIn = doc.createElement("connectionPointOut");
                                 variable.appendChild(connectionPointIn);
                                 outputVariables.appendChild(variable);

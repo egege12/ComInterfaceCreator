@@ -25,7 +25,8 @@ Rectangle {
         }
         orientation: Gradient.Vertical
     }
-    Component.onCompleted: listModelInfos.setList(comObj.getInfoList());
+    Component.onCompleted: {listModelInfos.setList(comObj.getInfoList())
+                            comObj.setDutName(textFieldPreview.text)}
     ColumnLayout{
         RowLayout{
             id:rowLayout
