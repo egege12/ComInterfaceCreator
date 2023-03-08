@@ -45,6 +45,7 @@ public:
     void setMsTimeOut(QString msTimeout);
     void setMsCycleTime(QString msCycleTime);
     void setComment(QString comment);
+    void setExtended(bool isExtended);
     static void setWarning(QString ID,QString const& warningCode);
 
     bool isTmOutSet;

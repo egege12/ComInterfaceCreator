@@ -978,9 +978,9 @@ Rectangle {
                 Image{
                     id:progressDoneImage
                     visible:false
-                    anchors.right: parent.right
+                    anchors.left: buttonGenerate.right
                     anchors.rightMargin : 10
-                    anchors.bottom :parent.bottom
+                    anchors.top :buttonGenerate.bottom
                     anchors.bottomMargin: 10
                     width:50
                     fillMode:Image.PreserveAspectFit
@@ -1000,10 +1000,8 @@ Rectangle {
                     value:comObj.progress
                     width:190
                     height: 46
-                    anchors.right: parent.right
-                    anchors.bottom: parent.bottom
-                    anchors.rightMargin: 50
-                    anchors.bottomMargin: 60
+                    anchors.left: buttonTurnBack.left
+                    anchors.top: buttonTurnBack.top
                     visible:false
                 }
             }

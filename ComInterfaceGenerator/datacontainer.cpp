@@ -102,11 +102,7 @@ void dataContainer::setName(QString Name)
 
 void dataContainer::setmessageID(QString messageID)
 {
-
-    bool isExtended = (messageID.toULong()> 1000);
     this->messageID = messageID;
-    this->isExtended = isExtended;
-
 }
 
 void dataContainer::setDLC(unsigned short DLC)
@@ -139,6 +135,11 @@ void dataContainer::setMsCycleTime(QString msCycleTime)
 void dataContainer::setComment(QString comment)
 {
     this->comment = comment;
+}
+
+void dataContainer::setExtended(bool isExtended)
+{
+    this->isExtended=isExtended;
 }
 
 void dataContainer::setWarning(QString ID,const QString &warningCode)

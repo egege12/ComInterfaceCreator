@@ -93,8 +93,7 @@ QList<QList<QString>> DBCHandler::messagesList()
             data.append({curValue->getIfSelected() ? "X" : "O" ,curValue->getName(),curValue->getID(),QString::number(curValue->getDLC()),curValue->getMsCycleTime(),curValue->getMsTimeOut()});
         }
         return data;
-    }else
-		return data;
+    }
 }
 
 QList<QList<QString> > DBCHandler::signalsList()
@@ -109,8 +108,7 @@ QList<QList<QString> > DBCHandler::signalsList()
         }
         qInfo()<<"Signal List turned signal"<<displayReqSignalID;
         return dataSignal;
-    }else
-		return dataSignal;
+    }
 }
 
 void DBCHandler::update()
@@ -246,45 +244,49 @@ void DBCHandler::setIOType(QString setIOType)
 
 bool DBCHandler::parseMessages(QFile *ascFile)
 {
-    QTextStream lines(ascFile);
+    QTextStream  *lines = new QTextStream(ascFile);
     bool inlineOfMessage=false;
     bool inlineOfMessageOld=false;
     QString messageID;
     QString messageName ;
     unsigned short  messageDLC ;
     QList<QList<QString>> msgCommentList;
-
-    while (!lines.atEnd()) {
-        QString curLine = lines.readLine();
+    unsigned long debugcounter=0;
+    bool isExtended = 0;
+    while (!lines->atEnd()) {
+        QString curLine = lines->readLine();
 
         /*Message parse - split message line to items and rise message block flasg (inlineOfMessage)*/
         if(curLine.contains("BO_ ") && curLine.indexOf("BO_") < 2 && !(curLine.contains("INDEPENDENT")&&curLine.contains("VECTOR"))){
             inlineOfMessage = true;
+            debugcounter++;
 
             QStringList messageList = curLine.split(" ");
             if(messageList.at(1).toUInt()>2047){
                 messageID = QString::number((messageList.at(1).toUInt())-2147483648,16).toUpper();
+                isExtended=true;
             }else{
                 messageID = QString::number(messageList.at(1).toUInt(),16).toUpper();
+                isExtended=false;
             }
 
             messageName= messageList.at(2);
-            messageName.remove(QChar(':'),Qt::CaseInsensitive);
+            messageName.remove(QChar(':'),Qt::CaseInsensitive).replace(" ","_");;
             messageDLC = messageList.at(3).toUShort();
             if (!comInterface.contains(messageID)){
-                generateNewMessage(messageID,messageName,messageDLC);
+                generateNewMessage(messageID,messageName,messageDLC,isExtended);
             }
             /*Signal parse - split signal lines to items*/
         }else if(inlineOfMessage && curLine.contains("SG_")){
-            QStringList signalList = curLine.split(" ");
+
             dataContainer::signal curSignal;
-            curSignal.name = signalList.at(2);
-            curSignal.startBit = parseStartBit(signalList.at(4));
-            curSignal.length = parseLength(signalList.at(4));
-            curSignal.resolution = parseResolution(signalList.at(5));
-            curSignal.offset = parseOffset(signalList.at(5));
-            curSignal.minValue = parseMinValue(signalList.at(6));
-            curSignal.maxValue = parseMaxValue(signalList.at(6));
+            curSignal.name = getBetween("SG_",":",curLine).trimmed().replace(" ","_");
+            curSignal.startBit = parseStartBit(getBetween(":","(",curLine));
+            curSignal.length = parseLength(getBetween(":","(",curLine));
+            curSignal.resolution = parseResolution(getBetween("(",")",curLine));
+            curSignal.offset = parseOffset(getBetween("(",")",curLine));
+            curSignal.minValue = parseMinValue(getBetween("[","]",curLine));
+            curSignal.maxValue = parseMaxValue(getBetween("[","]",curLine));
             QString commentContainer = parseComment(curLine);
             curSignal.comment = commentContainer;
             curSignal.isJ1939 = commentContainer.contains(QString("j1939"),Qt::CaseInsensitive) ;
@@ -330,7 +332,9 @@ bool DBCHandler::parseMessages(QFile *ascFile)
             comInterface.value(messageID)->setInserted();
         }
         inlineOfMessageOld = inlineOfMessage;
+
     }
+    delete lines;
     /*Assing the message comments on the list*/
     for(dataContainer *const curValue : comInterface){
         for (QList<QString> contMessage: msgCommentList){
@@ -347,18 +351,19 @@ bool DBCHandler::parseMessages(QFile *ascFile)
     }
 
     this->isAllInserted = true;
-
+    //checkRepatedSignal();
     return true;
 }
 //BO_ <ID> <Message_name>: <DLC> Vector__XXX -> for messages
 //SG_ <Name> : <Bit order> | <Bit length>@1+ (<resolution>,<offset>) [<min_value>|max_value] "comment" -> for signals
 
-bool DBCHandler::generateNewMessage(QString messageID, QString messageName , unsigned short messageDLC)
+bool DBCHandler::generateNewMessage(QString messageID, QString messageName , unsigned short messageDLC, bool isExtended)
 {
     dataContainer* newMessage = new dataContainer();
     newMessage->setName(messageName);
     newMessage->setmessageID(messageID);
     newMessage->setDLC(messageDLC);
+    newMessage->setExtended(isExtended);
     comInterface.insert(messageID,newMessage);
     return true;
 }
@@ -494,6 +499,25 @@ void DBCHandler::setTmOutCycleTmWarnings()
         }
     }
 
+}
+
+void DBCHandler::checkRepatedSignal()
+{
+    for (dataContainer * curMessage : comInterface){
+        for( dataContainer::signal * curSignal : *curMessage->getSignalList()){
+            for (dataContainer * curMessageNested : comInterface){
+                for( dataContainer::signal * curSignalNested : *curMessageNested->getSignalList()){
+                    if(curSignalNested->name == curSignal->name){
+                        dataContainer::setWarning(curMessage->getID(),curMessageNested->getName()+" mesajında tanımlı "+curSignal->name+" sinyal ile aynı isimde sinyal var");
+                        dataContainer::setWarning(curMessageNested->getID(),curMessage->getName()+" mesajında tanımlı "+curSignal->name+" sinyal ile aynı isimde sinyal var");
+                        curSignalNested->name=curSignalNested->name+"_"+curMessageNested->getID();
+                        curSignal->name=curSignal->name+"_"+curMessage->getID();
+                        emit selectedViewChanged(); //signal list changed
+                    }
+                }
+            }
+        }
+    }
 }
 
 qreal DBCHandler::progress() const

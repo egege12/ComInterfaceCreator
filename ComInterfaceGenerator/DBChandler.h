@@ -114,7 +114,7 @@ private:
     //***********************************
     void openFile();
     bool parseMessages(QFile *ascFile);
-    bool generateNewMessage(QString messageID, QString messageName , unsigned short messageDLC);
+    bool generateNewMessage(QString messageID, QString messageName , unsigned short messageDLC, bool isExtended);
     bool createObjIds();
     QString getRandomID();
 
@@ -128,6 +128,7 @@ private:
     QString parseComment(QString splitedPart);
     QString getBetween(QString first, QString second,QString fullText);
     void setTmOutCycleTmWarnings();
+    void checkRepatedSignal();
     //***********************************
     // Reading Process from dbc file end
     //Generate XML file start
