@@ -4,7 +4,7 @@
 #include <QtGlobal>
 #include <QRegularExpression>
 #include <QUuid>
-unsigned int DBCHandler::selectedMessageCounter = 0;
+unsigned long long DBCHandler::selectedMessageCounter = 0;
 unsigned DBCHandler::counterfbBYTETOWORD = 0;
 unsigned DBCHandler::counterfbBYTETODWORD = 0;
 unsigned DBCHandler::counterfbBYTETOLWORD = 0;
@@ -85,6 +85,7 @@ void DBCHandler::setErrCode(const QString &newErrCode)
 
 QList<QList<QString>> DBCHandler::messagesList()
 {
+	QList<QList<QString>> data;
     if (isAllInserted){
         QList<QList<QString>> data;
         data.append({"  ","Name","ID(HEX)","DLC","CycleTime[ms]","Timeout[ms]"});
@@ -92,21 +93,24 @@ QList<QList<QString>> DBCHandler::messagesList()
             data.append({curValue->getIfSelected() ? "X" : "O" ,curValue->getName(),curValue->getID(),QString::number(curValue->getDLC()),curValue->getMsCycleTime(),curValue->getMsTimeOut()});
         }
         return data;
-    }
+    }else
+		return data;
 }
 
 QList<QList<QString> > DBCHandler::signalsList()
 {
+	 QList<QList<QString>> dataSignal;
     if (isAllInserted){
 
-        QList<QList<QString>> dataSignal;
+        
         dataSignal.append({"Name","StartBit","Length","Resolution","Offset","MinValue","MaxValue","App. DataType","Com. DataType","Comment"});
         for ( const dataContainer::signal *data : *comInterface.value(this->displayReqSignalID)->getSignalList()){
             dataSignal.append({data->name,QString::number(data->startBit),QString::number(data->length),QString::number(data->resolution),QString::number(data->offset),QString::number(data->minValue),QString::number(data->maxValue),data->appDataType,data->comDataType,data->comment});
         }
         qInfo()<<"Signal List turned signal"<<displayReqSignalID;
         return dataSignal;
-    }
+    }else
+		return dataSignal;
 }
 
 void DBCHandler::update()
@@ -341,6 +345,7 @@ bool DBCHandler::parseMessages(QFile *ascFile)
             }
         }
     }
+
     this->isAllInserted = true;
 
     return true;

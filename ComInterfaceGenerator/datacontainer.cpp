@@ -1,8 +1,8 @@
 #include "datacontainer.h"
 #include <QDebug>
 #include <QDateTime>
-unsigned int dataContainer::messageCounter = 0;
-unsigned int dataContainer::signalCounter = 0;
+unsigned long long dataContainer::messageCounter = 0;
+unsigned long long dataContainer::signalCounter = 0;
 QMap<QString,QList<QString>> dataContainer::warningMessages ={};
 QList<QString> dataContainer::infoMessages ={};
 dataContainer::dataContainer(QObject *parent)

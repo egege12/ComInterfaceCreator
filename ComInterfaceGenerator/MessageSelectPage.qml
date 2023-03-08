@@ -26,18 +26,19 @@ Rectangle {
         orientation: Gradient.Vertical
     }
     Component.onCompleted: {listModelInfos.setList(comObj.getInfoList())
-                            comObj.setDutName(textFieldPreview.text)}
-    ColumnLayout{
-        RowLayout{
-            id:rowLayout
-            Layout.alignment: {Qt.AlignTop}
-            spacing : 2
+                            comObj.setDutName(textFieldPreview.text)} 
+        Item{
+            id:topLayout
+            anchors.top: parent.top
+            anchors.left:parent.left
+            height : parent.height*0.8
+            anchors.right: parent.right
             property string selectedMessage : "";
 
             Rectangle {
                 id:messageRectangle
-                Layout.preferredHeight: messageSelPage.height*0.7
-                Layout.preferredWidth: messageSelPage.width/2
+                height: parent.height
+                width: messageSelPage.width/2
                 anchors.left:parent.left
                 anchors.leftMargin: 20
                 color:"transparent"
@@ -58,27 +59,75 @@ Rectangle {
                     anchors.top: parent.top
                     anchors.left:parent.left
                     height:50
-                    Text{
-                        id:headerMsgTableSearch
-                        text:"Mesajlarda Ara"
-                        anchors.top: parent.top
-                        anchors.topMargin: 1
+                    Rectangle{
+                        id:separatorTopMessages
+                        anchors.top:parent.top
                         anchors.left:parent.left
-                        anchors.leftMargin:15
+                        width:200
+                        height:2
+                        color :"#ebedee"
+                        gradient: Gradient {
+                            GradientStop {
+                                position: 0
+                                color: "#c1c1c1"
+                            }
+
+                            GradientStop {
+                                position: 0.6
+                                color: "#ebedee"
+                            }
+                            orientation: Gradient.Vertical
+                        }
+                    }
+                    Rectangle{
+                        id:separatorSideMessages
+                        anchors.top:parent.top
+                        anchors.left:parent.left
+                        width:2
+                        anchors.bottom: textHeaderMessages.bottom
+                        color :"#ebedee"
+                        gradient: Gradient {
+                            GradientStop {
+                                position: 0
+                                color: "#c1c1c1"
+                            }
+
+                            GradientStop {
+                                position: 0.6
+                                color: "#ebedee"
+                            }
+                            orientation: Gradient.Horizontal
+                        }
+                    }
+                    Text{
+                        id : textHeaderMessages
+                        text: qsTr("Mesajlar")
+                        width :80
+                        height:20
+                        anchors.top: separatorTopMessages.bottom
+                        anchors.left: separatorSideMessages.right
+                        anchors.leftMargin: 1
+                        font.pixelSize: 18
+                        antialiasing: true
+                        font.hintingPreference: Font.PreferNoHinting
+                        style: Text.Normal
+                        focus: false
+                        font.weight: Font.Medium
                         font.family: "Verdana"
                     }
+
 
                     TextField{
 
                         id:textFieldMsgTableSearch
-                        width :130
+                        width :150
                         height:20
-                        anchors.top: parent.top
-                        anchors.topMargin: 20
-                        anchors.left:headerMsgTableSearch.left
+                        anchors.top: textHeaderMessages.bottom
+                        anchors.topMargin: 5
+                        anchors.left:textHeaderMessages.left
                         anchors.leftMargin:5
                         font.pixelSize: 14
-                        placeholderText: qsTr("Arama...")
+                        placeholderText: qsTr("Mesajlarda ara...")
                         font.family: "Verdana"
 
 
@@ -91,7 +140,7 @@ Rectangle {
                     anchors.top: filterArea.bottom
                     anchors.left:parent.left
                     width: parent.width
-                    height: parent.height-filterArea.height
+                    height: parent.height-filterArea.height - scrollbarHMessages.height
                     columnSpacing: 1
                     rowSpacing: 1
                     clip: true
@@ -129,7 +178,7 @@ Rectangle {
 
                         implicitHeight: text.implicitHeight + 2
                         implicitWidth: text.implicitWidth +2
-                        color: (heading===true)?"#303030": (selected === true)? ((rowLayout.selectedMessage === messageid )? "#7ff27c" :"#1fe81a") : (rowLayout.selectedMessage === messageid )? "#decc73" :"#ebedee"
+                        color: (heading===true)?"#303030": (selected === true)? ((topLayout.selectedMessage === messageid )? "#7ff27c" :"#1fe81a") : (topLayout.selectedMessage === messageid )? "#decc73" :"#ebedee"
 
                         Text {
                             id:text
@@ -137,10 +186,9 @@ Rectangle {
                             width:tableMessages.width
                             padding: 1
                             font.pointSize: 10
-                            Layout.alignment: Qt.AlignLeft
                             elide: Text.ElideRight
                             font.preferShaping: false
-                            color: (heading===true)?"#FFFFFF": (selected === true)? ((rowLayout.selectedMessage === messageid )? "#000000" :"#838383") : (rowLayout.selectedMessage === messageid )? "#000000" :"#838383"
+                            color: (heading===true)?"#FFFFFF": (selected === true)? ((topLayout.selectedMessage === messageid )? "#000000" :"#838383") : (topLayout.selectedMessage === messageid )? "#000000" :"#838383"
                         }
                         MouseArea{
                             anchors.fill: parent
@@ -148,13 +196,13 @@ Rectangle {
                                 if(heading===true){
                                     tableMessages.sortColumn();
                                 }else{
-                                    if (rowLayout.selectedMessage !== messageid){
+                                    if (topLayout.selectedMessage !== messageid){
                                         comObj.setDisplayReqSignal(messageid)
-                                        rowLayout.selectedMessage = messageid
+                                        topLayout.selectedMessage = messageid
                                     }else{
-                                        rowLayout.selectedMessage = "FFFFFFFF"
+                                        topLayout.selectedMessage = "FFFFFFFF"
                                     }
-                                    if(rowLayout.selectedMessage !=="FFFFFFFF"){
+                                    if(topLayout.selectedMessage !=="FFFFFFFF"){
                                         listModelWarnings.setList(comObj.getMsgWarningList())
                                     }else{
                                         listModelWarnings.setList(comObj.getWarningList())
@@ -187,22 +235,15 @@ Rectangle {
                     }
 
                 }
-            }
-            /*Rectangle {
-            id:midArea
-            Layout.preferredHeight: 400
-            Layout.preferredWidth: 70
-            Layout.alignment: Qt.AlignCenter
-
-        }*/
-
+            } 
             Rectangle{
-                Layout.preferredHeight: messageSelPage.height*0.7
-                Layout.preferredWidth: messageSelPage.width/2
+                id:tabArea
+                height: parent.height
+                width: messageSelPage.width/2
                 anchors.right:parent.right
-                anchors.rightMargin: 20
+                anchors.rightMargin: 0
                 anchors.left:messageRectangle.right
-                anchors.leftMargin: 5
+                anchors.leftMargin: 0
                 color:"transparent"
 
                 TabBar{
@@ -220,7 +261,7 @@ Rectangle {
                     anchors.fill: parent
                     anchors.topMargin:20
                     currentIndex:bar.currentIndex
-
+                    //Signals tab
                     Rectangle{
                         id: rectangleSignalWarning
                         anchors.fill: parent
@@ -233,10 +274,52 @@ Rectangle {
                             height:30
                             width:parent.width
                             color:"transparent"
-                            Text{
-                                anchors.top: parent.top
+                            Rectangle{
+                                id:separatorTopSignals
+                                anchors.top:parent.top
+                                anchors.topMargin: 2
                                 anchors.left:parent.left
-                                anchors.leftMargin:15
+                                width:200
+                                height:2
+                                color :"#ebedee"
+                                gradient: Gradient {
+                                    GradientStop {
+                                        position: 0
+                                        color: "#c1c1c1"
+                                    }
+
+                                    GradientStop {
+                                        position: 0.6
+                                        color: "#ebedee"
+                                    }
+                                    orientation: Gradient.Vertical
+                                }
+                            }
+                            Rectangle{
+                                id:separatorSideSignals
+                                anchors.top:separatorTopSignals.bottom
+                                anchors.left:parent.left
+                                anchors.leftMargin: 0
+                                anchors.bottom:parent.bottom
+                                width:2
+                                color :"#ebedee"
+                                gradient: Gradient {
+                                    GradientStop {
+                                        position: 0
+                                        color: "#c1c1c1"
+                                    }
+
+                                    GradientStop {
+                                        position: 0.6
+                                        color: "#ebedee"
+                                    }
+                                    orientation: Gradient.Horizontal
+                                }
+                            }
+                            Text{
+
+                                anchors.left:separatorSideSignals.right
+                                anchors.leftMargin:1
                                 anchors.verticalCenter: parent.verticalCenter
                                 text:"Sinyaller"
                                 antialiasing: true
@@ -326,7 +409,6 @@ Rectangle {
                                         elide: Text.ElideRight
                                         font.preferShaping: false
                                         color: (heading===true)?"#FFFFFF": (signalRectangle.selectedSignalName === messagename )? "#000000":"#838383"
-                                        Layout.alignment: Qt.AlignLeft
 
                                     }
 
@@ -365,10 +447,52 @@ Rectangle {
                             height:30
                             width:parent.width
                             color:"transparent"
-                            Text{
-                                anchors.top: parent.top
+                            Rectangle{
+                                id:separatorTopWarnings
+                                anchors.top:parent.top
+                                anchors.topMargin: 2
                                 anchors.left:parent.left
-                                anchors.leftMargin:15
+                                width:200
+                                height:2
+                                color :"#ebedee"
+                                gradient: Gradient {
+                                    GradientStop {
+                                        position: 0
+                                        color: "#c1c1c1"
+                                    }
+
+                                    GradientStop {
+                                        position: 0.6
+                                        color: "#ebedee"
+                                    }
+                                    orientation: Gradient.Vertical
+                                }
+                            }
+                            Rectangle{
+                                id:separatorSideWarnings
+                                anchors.top:separatorTopWarnings.bottom
+                                anchors.left:parent.left
+                                anchors.leftMargin: 0
+                                anchors.bottom:parent.bottom
+                                width:2
+                                color :"#ebedee"
+                                gradient: Gradient {
+                                    GradientStop {
+                                        position: 0
+                                        color: "#c1c1c1"
+                                    }
+
+                                    GradientStop {
+                                        position: 0.6
+                                        color: "#ebedee"
+                                    }
+                                    orientation: Gradient.Horizontal
+                                }
+                            }
+                            Text{
+
+                                anchors.left:parent.left
+                                anchors.leftMargin:1
                                 anchors.verticalCenter: parent.verticalCenter
                                 text:"Uyarılar"
                                 antialiasing: true
@@ -389,16 +513,20 @@ Rectangle {
                             anchors.topMargin:1
                             height:(parent.height-(headerSignalList.height+headerWarningList.height))*0.3
                             width:parent.width
-                            clip:true
                             anchors.margins: 2
+                            clip:true
                             Item{
-                                anchors.fill: parent
+                                anchors.fill:parent
+                                anchors.bottomMargin:hscrollBarWarning.height
+
                                 ListView{
                                     id: listViewWarnings
                                     anchors.fill: parent
+
                                     model: ListModelWarnings {
                                         id: listModelWarnings
                                     }
+                                    contentWidth: 1000
                                     property bool enableVScrollbar: true
                                     ScrollBar.vertical: ScrollBar{
                                         policy: ((listViewWarnings.height - listViewWarnings.contentHeight) < -3) ?
@@ -408,11 +536,14 @@ Rectangle {
                                     }
                                     property bool enableHScrollbar: true
                                     ScrollBar.horizontal: ScrollBar{
+                                        id:hscrollBarWarning
+                                    anchors.top:listViewWarnings.bottom
                                         policy: (listViewWarnings.width - listViewWarnings.contentWidth < -3) ?
                                                     ScrollBar.AlwaysOff : ScrollBar.AsNeeded
-                                        visible: (listViewWarnings.width - listViewWarnings.contentWidth < -3) ?
+                                        visible: ((listViewWarnings.width - listViewWarnings.contentWidth) < -3) ?
                                                      true : false
                                     }
+                                    flickableDirection : Flickable.AutoFlickDirection
                                     delegate:Rectangle{
                                         id:delegateRectangle
                                         implicitHeight: textWarnings.implicitHeight+2
@@ -425,12 +556,10 @@ Rectangle {
                                             font.pointSize: 10
                                             elide: Text.ElideRight
                                             font.preferShaping: false
-                                            Layout.alignment: Qt.AlignLeft
                                             color:"#838383"
                                         }
                                         MouseArea {
                                             anchors.fill: parent
-
                                             hoverEnabled: true;
                                             onEntered: {delegateRectangle.color= "#decc73"; textWarnings.color = "#000000"}
                                             onExited:{ delegateRectangle.color= "transparent" ; textWarnings.color = "#838383"}
@@ -448,18 +577,90 @@ Rectangle {
                         }
 
                     }
+                    //Info console tab
                     Item{
                         id: consoleInfo
                         anchors.fill: parent
-                        clip:true
+
+                        Rectangle{
+                            id:headerInfoList
+                            anchors.top:parent.top
+                            anchors.margins:1
+                            height:30
+                            width:parent.width
+                            color:"transparent"
+                            Rectangle{
+                                id:separatorTopInfos
+                                anchors.top:parent.top
+                                anchors.topMargin: 2
+                                anchors.left:parent.left
+                                width:200
+                                height:2
+                                color :"#ebedee"
+                                gradient: Gradient {
+                                    GradientStop {
+                                        position: 0
+                                        color: "#c1c1c1"
+                                    }
+
+                                    GradientStop {
+                                        position: 0.6
+                                        color: "#ebedee"
+                                    }
+                                    orientation: Gradient.Vertical
+                                }
+                            }
+                            Rectangle{
+                                id:separatorSideInfos
+                                anchors.top:separatorTopInfos.bottom
+                                anchors.left:parent.left
+                                anchors.leftMargin: 0
+                                anchors.bottom:parent.bottom
+                                width:2
+                                color :"#ebedee"
+                                gradient: Gradient {
+                                    GradientStop {
+                                        position: 0
+                                        color: "#c1c1c1"
+                                    }
+
+                                    GradientStop {
+                                        position: 0.6
+                                        color: "#ebedee"
+                                    }
+                                    orientation: Gradient.Horizontal
+                                }
+                            }
+                            Text{
+
+                                anchors.left:separatorSideInfos.right
+                                anchors.leftMargin:1
+                                anchors.verticalCenter: parent.verticalCenter
+                                text:"Bilgi konsolu"
+                                antialiasing: true
+                                font.hintingPreference: Font.PreferNoHinting
+                                style: Text.Normal
+                                focus: false
+                                font.weight: Font.Medium
+                                font.pixelSize: 16
+                                font.family: "Verdana"
+                                elide: Text.ElideRight
+                            }
+                        }
                         Item{
-                            anchors.fill: parent
+                            anchors.bottom:parent.bottom
+                            anchors.left:parent.left
+                            anchors.right:parent.right
+                            anchors.top:headerInfoList.bottom
+                            clip:true
                             ListView{
                                 id: listViewInfos
                                 anchors.fill: parent
+                                anchors.bottomMargin: hScrollBarInfos.height
                                 model: ListModelInfos {
                                     id: listModelInfos
                                 }
+                                contentWidth:700
                                 property bool enableVScrollbar: true
                                 ScrollBar.vertical: ScrollBar{
                                     policy: ((listViewInfos.height - listViewInfos.contentHeight) < -3) ?
@@ -469,11 +670,15 @@ Rectangle {
                                 }
                                 property bool enableHScrollbar: true
                                 ScrollBar.horizontal: ScrollBar{
+                                    id:hScrollBarInfos
+                                    anchors.top:listViewInfos.bottom
                                     policy: (listViewInfos.width - listViewInfos.contentWidth < -3) ?
                                                 ScrollBar.AlwaysOff : ScrollBar.AsNeeded
                                     visible: (listViewInfos.width - listViewInfos.contentWidth < -3) ?
                                                  true : false
                                 }
+
+                                flickableDirection : Flickable.AutoFlickDirection
                                 delegate:Rectangle{
                                     id:delegateRectangleInfo
                                     implicitHeight: textInfos.implicitHeight+2
@@ -486,7 +691,6 @@ Rectangle {
                                         font.pointSize: 10
                                         elide: Text.ElideRight
                                         font.preferShaping: false
-                                        Layout.alignment: Qt.AlignLeft
                                         color:generationinfo? "#000000":"#838383"
                                     }
                                     MouseArea {
@@ -507,14 +711,17 @@ Rectangle {
 
             }
         }
-        RowLayout{
-            id:rowLayoutBottom
-            Layout.alignment: {Qt.AlignBottom}
+        Item{
+            id:botLayout
+            anchors.bottom:parent.bottom
+            anchors.left:parent.left
+            anchors.top:topLayout.bottom
+            height:parent.height*0.3
+            width:parent.width
             Item {
                 id:areaConfig
-                Layout.preferredHeight: messageSelPage.height*0.3
-                Layout.preferredWidth: messageSelPage.width*0.7
-                Layout.alignment: Qt.AlignLeft
+                height: parent.height
+                width: parent.width*0.7
 
                 property string dutUnitHeader : "UNIT"
                 property string dutIOHeader :"IO"
@@ -714,9 +921,11 @@ Rectangle {
             }
             Item{
                 id:areaGenerate
-                Layout.preferredHeight: messageSelPage.height*0.3
-                Layout.preferredWidth: messageSelPage.width*0.3
-                Layout.alignment: Qt.AlignRight
+                height: parent.height
+                width:parent.width*0.3
+                anchors.left:areaConfig.right
+                anchors.right:parent.right
+                anchors.bottom: parent.bottom
 
                 MenuButton{
                     id:buttonGenerate
@@ -738,10 +947,9 @@ Rectangle {
                     visible: true
                     radius: 1
                     anchors.right: parent.right
-                    anchors.bottom: parent.bottom
-                    anchors.rightMargin: 50
-                    anchors.bottomMargin: 60
+                    anchors.rightMargin: 30
                     disableButtonClick: false
+                    anchors.verticalCenter: parent.verticalCenter
                 }
                 MenuButton{
                     id:buttonTurnBack
@@ -802,7 +1010,7 @@ Rectangle {
 
 
         }
-    }
+
     Connections{
         target: comObj
         onInterfaceReady : {tableMessages.setTable(comObj.messagesList())
@@ -837,7 +1045,6 @@ Rectangle {
         target: comObj
         onProgressChanged : generationProgress.value=comObj.progress
     }
-
     Connections{
         target:textFieldPreview
         onTextChanged: comObj.setDutName(textFieldPreview.text)
@@ -857,7 +1064,6 @@ Rectangle {
         target:comObj
         onAllSelectedChanged: tableViewMessages.isAllSelected=comObj.getAllSelected();
     }
-
     Connections{
         target:ioComboBox
         onActivated: comObj.setIOType(areaConfig.dutIOHeader);

@@ -21,7 +21,7 @@ class DBCHandler : public QObject
 
 public:
 
-    static unsigned int selectedMessageCounter;
+    static unsigned long long selectedMessageCounter;
     static QList<QList<QString>> pouHolder;
     static unsigned counterfbBYTETOWORD;
     static unsigned counterfbBYTETODWORD;

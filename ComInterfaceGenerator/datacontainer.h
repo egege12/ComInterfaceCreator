@@ -9,8 +9,8 @@ class dataContainer : public QObject
 public:
     struct signal;
     //Total counters
-    static unsigned int messageCounter;
-    static unsigned int signalCounter;
+    static unsigned long long messageCounter;
+    static unsigned long long signalCounter;
     static QMap<QString,QList<QString>> warningMessages;
     static QList<QString> infoMessages;
     explicit dataContainer(QObject *parent = nullptr);

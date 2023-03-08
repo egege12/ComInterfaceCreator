@@ -13,16 +13,7 @@ Window {
     title: qsTr("Interface Creator")
 
     Frame{
-        width: parent.width
-        height: parent.height
-        anchors.bottom:parent.bottom
-        anchors.bottomMargin: 2
-        anchors.top:parent.top
-        anchors.topMargin:2
-        anchors.left:parent.left
-        anchors.leftMargin:2
-        anchors.right:parent.right
-        anchors.rightMargin:2
+        anchors.fill:parent
         z:3
         StackView {
             id: stack
