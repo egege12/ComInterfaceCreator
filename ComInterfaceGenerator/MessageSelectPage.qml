@@ -920,7 +920,7 @@ Rectangle {
                 }
 
             }
-            Item{
+            Rectangle{
                 id:areaGenerate
                 height: parent.height
                 width:parent.width*0.3
@@ -997,12 +997,12 @@ Rectangle {
                 }
                 ProgressBar{
                     id:generationProgress
-                    value:comObj.progress
                     width:190
                     height: 46
                     anchors.left: buttonTurnBack.left
-                    anchors.top: buttonTurnBack.top
-                    visible:false
+                    anchors.top: buttonTurnBack.bottom
+                    visible:visible
+
                 }
             }
 

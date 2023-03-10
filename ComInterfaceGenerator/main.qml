@@ -14,6 +14,7 @@ Window {
 
     Frame{
         anchors.fill:parent
+        anchors.margins: 1
         z:3
         StackView {
             id: stack

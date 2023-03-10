@@ -4,6 +4,7 @@
 #include <QtGlobal>
 #include <QRegularExpression>
 #include <QUuid>
+
 unsigned long long DBCHandler::selectedMessageCounter = 0;
 unsigned DBCHandler::counterfbBYTETOWORD = 0;
 unsigned DBCHandler::counterfbBYTETODWORD = 0;
@@ -546,6 +547,8 @@ void DBCHandler::setProgress(qreal newProgress)
         emit progressCompleted();
     else
         emit progressChanged();
+
+
 }
 
 ///******************************************************************************
