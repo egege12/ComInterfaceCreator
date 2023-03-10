@@ -190,19 +190,25 @@ const dataContainer *DBCHandler::getMessage(QString messageID)
 
 void DBCHandler::setSelected(QString messageID)
 {
-    comInterface.value(messageID)->setSelected();
-    qInfo()<<"Selection status changed to "<<QString::number(comInterface.value(messageID)->getIfSelected()) <<"for message ID:"<<displayReqSignalID;
-    if(comInterface.value(messageID)->getIfSelected()){
-        DBCHandler::selectedMessageCounter++;
+    if(!comInterface.value(messageID)->getIfNotSelectable()){
+        comInterface.value(messageID)->setSelected();
+        qInfo()<<"Selection status changed to "<<QString::number(comInterface.value(messageID)->getIfSelected()) <<"for message ID:"<<displayReqSignalID;
+        if(comInterface.value(messageID)->getIfSelected()){
+            DBCHandler::selectedMessageCounter++;
+        }else{
+            DBCHandler::selectedMessageCounter--;
+        }
+        emit selectedStatChanged();
     }else{
-        DBCHandler::selectedMessageCounter--;
+        emit selectedStatChanged();
+        setErrCode(messageID+" seçime uygun değil, uyarıları kontrol et");
     }
-    emit selectedStatChanged();
 }
 
 void DBCHandler::setAllSelected()
 {
     for(dataContainer *const curValue : comInterface){
+      if(!curValue->getIfNotSelectable()){
         if(DBCHandler::allSelected && curValue->getIfSelected()){
            curValue->setSelected();
            DBCHandler::selectedMessageCounter++;
@@ -212,6 +218,12 @@ void DBCHandler::setAllSelected()
            DBCHandler::selectedMessageCounter--;
         }
         emit selectedStatChanged();
+      }else{
+          dataContainer::setWarning("INFO",curValue->getID() + "mesajı seçime uygun değil,tümünü seçime dahil edilmedi.");
+          setErrCode("Seçilemeyen mesaj/mesajlar var");
+        emit selectedStatChanged();
+      }
+
     }
     DBCHandler::allSelected=!DBCHandler::allSelected;
     emit allSelectedChanged();

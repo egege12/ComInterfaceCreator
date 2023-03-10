@@ -504,13 +504,20 @@ void dataContainer::signalChecker(signal *signalPtr)
         this->setWarning(this->messageID,signalPtr->name+" sinyali offset verilmeden negatif minimum aralık tanımlanmış, minimum değer 0 atandı.");
         signalPtr->minValue = 0;
     }
-    if(signalPtr->length > (64 - signalPtr->startBit)){
+    if(signalPtr->length > (dlc*8 - signalPtr->startBit)){
         this->setWarning(this->messageID,signalPtr->name+" sinyali için veri boyutu tanım aralığından büyük.Mesaj OpenXML formatı dönüştürülemez.");
         setNotSelectable();
     }
-    if(signalPtr->startBit > 64){
+    if(signalPtr->startBit > dlc*8){
         this->setWarning(this->messageID,signalPtr->name+" sinyali için veri boyutu tanım aralığından büyük.Mesaj OpenXML formatı dönüştürülemez.");
         setNotSelectable();
     }
-
+    if(signalPtr->length+signalPtr->startBit > dlc*8){
+        dlc=8;
+        this->setWarning(this->messageID,signalPtr->name+" sinyali DLC'yi taşırdığı için DLC 8 atandı.");
+    }
+    if(signalPtr->length+signalPtr->startBit > dlc*8){
+        dlc=8;
+        this->setWarning(this->messageID,signalPtr->name+" sinyali DLC'yi taşırdığı için DLC 8 atandı.");
+    }
 }
