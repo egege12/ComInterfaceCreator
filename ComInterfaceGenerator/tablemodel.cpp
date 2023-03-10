@@ -2,7 +2,7 @@
 #include <QtAlgorithms>
 unsigned int tablemodel::scolumnID = 1;
 unsigned int tablemodel::lastColumnID = 0;
-QVector<bool> tablemodel::columnNumber ={false,false,false,false,false,false,false,false};
+QVector<bool> tablemodel::columnNumber ={false,false,false,false,false,false,false,false,false,false};
 bool tablemodel::variableLessThan(const QList<QString>& a, const QList<QString>& b)
 {
     bool isNumber1,isNumber2;
@@ -50,7 +50,7 @@ QVariant tablemodel::data(const QModelIndex &index, int role) const
         return table.at(index.row()).at(2);
     case MessageName:
     {
-        if(table.at(0).at(0) =="Name")
+        if(table.at(0).at(0) =="İsim")
             return table.at(index.row()).at(0);
         else
             return table.at(index.row()).at(1);

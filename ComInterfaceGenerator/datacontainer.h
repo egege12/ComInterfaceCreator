@@ -32,6 +32,7 @@ public:
     QString getComment();
     bool getIfSelected();
     bool getIfExtended();
+    bool getIfNotSelectable();
     unsigned short getDLC();
     static const QList<QString> getWarningList();
     static const QList<QString> getMsgWarningList(QString ID);
@@ -41,6 +42,7 @@ public:
     void setmessageID(QString messageID);
     void setDLC(unsigned short DLC);
     void setSelected();
+    void setNotSelectable();
     void setInserted();
     void setMsTimeOut(QString msTimeout);
     void setMsCycleTime(QString msCycleTime);
@@ -62,6 +64,7 @@ private:
     bool isExtended;
     bool isSelected;
     bool isInserted;
+    bool isNotSelectable;
     QList<signal*> signalList;
     void signalChecker(signal *signalPtr);
 

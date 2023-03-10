@@ -88,7 +88,7 @@ QList<QList<QString>> DBCHandler::messagesList()
 	QList<QList<QString>> data;
     if (isAllInserted){
         QList<QList<QString>> data;
-        data.append({"  ","Name","ID(HEX)","DLC","CycleTime[ms]","Timeout[ms]"});
+        data.append({"  ","İsim","ID(HEX)","DLC","Çevrim Pryd.[ms]","Zaman Aşımı[ms]"});
         foreach(dataContainer *const curValue , comInterface){
             data.append({curValue->getIfSelected() ? "X" : "O" ,curValue->getName(),curValue->getID(),QString::number(curValue->getDLC()),curValue->getMsCycleTime(),curValue->getMsTimeOut()});
         }
@@ -102,9 +102,9 @@ QList<QList<QString> > DBCHandler::signalsList()
     if (isAllInserted){
 
         
-        dataSignal.append({"Name","StartBit","Length","Resolution","Offset","MinValue","MaxValue","App. DataType","Com. DataType","Comment"});
+        dataSignal.append({"İsim","Başlangıç","Boyut","Ölçek","Ofset","Minimum","Maksimum","Varsayılan","J1939","Uyg. DataType","Hbr. DataType","Yorum"});
         for ( const dataContainer::signal *data : *comInterface.value(this->displayReqSignalID)->getSignalList()){
-            dataSignal.append({data->name,QString::number(data->startBit),QString::number(data->length),QString::number(data->resolution),QString::number(data->offset),QString::number(data->minValue),QString::number(data->maxValue),data->appDataType,data->comDataType,data->comment});
+            dataSignal.append({data->name,QString::number(data->startBit),QString::number(data->length),QString::number(data->resolution),QString::number(data->offset),QString::number(data->minValue),QString::number(data->maxValue),QString::number(data->defValue),data->isJ1939?"+":"-",data->appDataType,data->comDataType,data->comment});
         }
         qInfo()<<"Signal List turned signal"<<displayReqSignalID;
         return dataSignal;
@@ -500,7 +500,7 @@ void DBCHandler::setTmOutCycleTmWarnings()
     }
 
 }
-
+//USE ITERATOR
 void DBCHandler::checkRepatedSignal()
 {
     for (dataContainer * curMessage : comInterface){

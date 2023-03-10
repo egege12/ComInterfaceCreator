@@ -69,6 +69,11 @@ bool dataContainer::getIfExtended()
     return this->isExtended;
 }
 
+bool dataContainer::getIfNotSelectable()
+{
+    return this->isNotSelectable;
+}
+
 unsigned short dataContainer::getDLC()
 {
     return this->dlc;
@@ -113,6 +118,11 @@ void dataContainer::setDLC(unsigned short DLC)
 void dataContainer::setSelected()
 {
     this->isSelected = !this->isSelected;
+}
+
+void dataContainer::setNotSelectable()
+{
+    this->isNotSelectable=true;
 }
 
 void dataContainer::setInserted()
@@ -180,7 +190,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
         }
     }else if (signalPtr->length < 8){
         signalPtr->comDataType = "BYTE";
-        if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")){
+        if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
             signalPtr->appDataType = "REAL";
             signalPtr->convMethod="toREAL";
         }else if(signalPtr->name.contains("N_")){
@@ -198,7 +208,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
     }else if (signalPtr->length == 8){
         if((signalPtr->startBit == 0 )||(signalPtr->startBit == 8 )||(signalPtr->startBit == 16 )||(signalPtr->startBit == 24 )||(signalPtr->startBit == 32 )||(signalPtr->startBit == 40 )||(signalPtr->startBit == 48 )||(signalPtr->startBit == 56 )){
             signalPtr->comDataType = "BYTE";
-            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")){
+            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "REAL";
                 signalPtr->convMethod="xtoREAL";
             }else if(signalPtr->name.contains("N_")){
@@ -214,7 +224,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             }
         }else{
             signalPtr->comDataType = "BYTE";
-            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")){
+            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "REAL";
                 signalPtr->convMethod="toREAL";
             }else if(signalPtr->name.contains("N_")){
@@ -235,7 +245,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
     }else if (signalPtr->length <  16){
         if((signalPtr->startBit == 0 )||(signalPtr->startBit == 8 )||(signalPtr->startBit == 16 )||(signalPtr->startBit == 24 )||(signalPtr->startBit == 32 )||(signalPtr->startBit == 40 )||(signalPtr->startBit == 48 )){
             signalPtr->comDataType = "WORD";
-            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")){
+            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "REAL";
                 signalPtr->convMethod="toREAL";
             }else if(signalPtr->name.contains("N_")){
@@ -253,7 +263,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             this->setWarning(this->messageID,signalPtr->name+" sinyali veri boyutu 8 ve katları değil,standart olmayan veri transferi");
         }else{
             signalPtr->comDataType = "WORD";
-            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")){
+            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "REAL";
                 signalPtr->convMethod="toREAL";
             }else if(signalPtr->name.contains("N_")){
@@ -274,7 +284,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
     }else if (signalPtr->length == 16){
         if((signalPtr->startBit == 0 )||(signalPtr->startBit == 8 )||(signalPtr->startBit == 16 )||(signalPtr->startBit == 24 )||(signalPtr->startBit == 32 )||(signalPtr->startBit == 40 )||(signalPtr->startBit == 48 )){
             signalPtr->comDataType = "WORD";
-            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")){
+            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "REAL";
                 signalPtr->convMethod="xtoREAL";
             }else if(signalPtr->name.contains("N_")){
@@ -289,7 +299,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             }
         }else{
             signalPtr->comDataType = "WORD";
-            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")){
+            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "REAL";
                 signalPtr->convMethod="toREAL";
             }else if(signalPtr->name.contains("N_")){
@@ -309,7 +319,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
     }else if (signalPtr->length < 32){
         if((signalPtr->startBit == 0 )||(signalPtr->startBit == 8 )||(signalPtr->startBit == 16 )||(signalPtr->startBit == 24 )||(signalPtr->startBit == 32 )){
             signalPtr->comDataType = "DWORD";
-            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")){
+            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "REAL";
                 signalPtr->convMethod="toREAL";
             }else if(signalPtr->name.contains("N_")){
@@ -327,7 +337,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             this->setWarning(this->messageID,signalPtr->name+" sinyali veri boyutu 8 ve katları değil,standart olmayan veri transferi");
         }else{
             signalPtr->comDataType = "DWORD";
-            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")){
+            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "REAL";
                 signalPtr->convMethod="toREAL";
             }else if(signalPtr->name.contains("N_")){
@@ -349,7 +359,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
     }else if (signalPtr->length == 32){
         if((signalPtr->startBit == 0 )||(signalPtr->startBit == 8 )||(signalPtr->startBit == 16 )||(signalPtr->startBit == 24 )||(signalPtr->startBit == 32 )){
             signalPtr->comDataType = "DWORD";
-            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")){
+            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "REAL";
                 signalPtr->convMethod="xtoREAL";
             }else if(signalPtr->name.contains("N_")){
@@ -365,7 +375,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             }
         }else{
             signalPtr->comDataType = "DWORD";
-            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")){
+            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "REAL";
                 signalPtr->convMethod="toREAL";
             }else if(signalPtr->name.contains("N_")){
@@ -385,7 +395,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
     }else if (signalPtr->length < 64){
         if((signalPtr->startBit == 0 )||(signalPtr->startBit == 8 )||(signalPtr->startBit == 16 )||(signalPtr->startBit == 24 )){
             signalPtr->comDataType = "LWORD";
-            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")){
+            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "LREAL";
                 signalPtr->convMethod="toLREAL";
             }else if(signalPtr->name.contains("N_")){
@@ -402,7 +412,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             this->setWarning(this->messageID,signalPtr->name+" sinyali veri boyutu 8 ve katları değil,standart olmayan veri transferi");
         }else{
             signalPtr->comDataType = "LWORD";
-            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")){
+            if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "LREAL";
                 signalPtr->convMethod="toLREAL";
             }else if(signalPtr->name.contains("N_")){
@@ -421,7 +431,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
         }
     }else if (signalPtr->length == 64){
         signalPtr->comDataType = "LWORD";
-        if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")){
+        if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
             signalPtr->appDataType = "LREAL";
             signalPtr->convMethod="xtoLREAL";
         }else if(signalPtr->name.contains("N_")){
@@ -475,14 +485,32 @@ void dataContainer::signalChecker(signal *signalPtr)
             }
              this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri atamasu veri tipi kapasitesi baz alınarak yapılmış, mantıksal değişken değer aralığı hesaplanması önerilir.");
         }
+    }else{
+        if(signalPtr->isJ1939){
+            if(signalPtr->maxValue > (((2^signalPtr->length)-1) * 0.988598)){
+                signalPtr->maxValue = ((2^signalPtr->length)-1)* 0.988598;
+                this->setWarning(this->messageID,signalPtr->name+" sinyali olabilecek maksimum değerden büyük olduğu için mümkün maksimum değer atandı.");
+            }
+        }else{
+            if(signalPtr->maxValue > (2^signalPtr->length)-1){
+                signalPtr->maxValue = (2^signalPtr->length)-1;
+                this->setWarning(this->messageID,signalPtr->name+" sinyali olabilecek maksimum değerden büyük olduğu için mümkün maksimum değer atandı.");
+            }
+        }
     }
+
 
     if(signalPtr->offset >=0 && signalPtr->minValue <0){
         this->setWarning(this->messageID,signalPtr->name+" sinyali offset verilmeden negatif minimum aralık tanımlanmış, minimum değer 0 atandı.");
         signalPtr->minValue = 0;
     }
     if(signalPtr->length > (64 - signalPtr->startBit)){
-        this->setWarning(this->messageID,signalPtr->name+" sinyali için veri boyutu tanım aralığından büyük.");
+        this->setWarning(this->messageID,signalPtr->name+" sinyali için veri boyutu tanım aralığından büyük.Mesaj OpenXML formatı dönüştürülemez.");
+        setNotSelectable();
+    }
+    if(signalPtr->startBit > 64){
+        this->setWarning(this->messageID,signalPtr->name+" sinyali için veri boyutu tanım aralığından büyük.Mesaj OpenXML formatı dönüştürülemez.");
+        setNotSelectable();
     }
 
 }

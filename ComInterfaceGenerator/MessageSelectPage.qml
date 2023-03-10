@@ -38,7 +38,7 @@ Rectangle {
             Rectangle {
                 id:messageRectangle
                 height: parent.height
-                width: messageSelPage.width/2
+                width: parent.width*0.495
                 anchors.left:parent.left
                 anchors.leftMargin: 20
                 color:"transparent"
@@ -239,11 +239,10 @@ Rectangle {
             Rectangle{
                 id:tabArea
                 height: parent.height
-                width: messageSelPage.width/2
                 anchors.right:parent.right
                 anchors.rightMargin: 0
                 anchors.left:messageRectangle.right
-                anchors.leftMargin: 0
+                anchors.leftMargin: 10
                 color:"transparent"
 
                 TabBar{
@@ -347,9 +346,11 @@ Rectangle {
                                 tableViewSignals.columnWidths[4] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
                                 tableViewSignals.columnWidths[5] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
                                 tableViewSignals.columnWidths[6] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
-                                tableViewSignals.columnWidths[7] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
+                                tableViewSignals.columnWidths[7] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
                                 tableViewSignals.columnWidths[8] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
-                                tableViewSignals.columnWidths[9] = Math.max(200,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
+                                tableViewSignals.columnWidths[9] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
+                                tableViewSignals.columnWidths[10] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
+                                tableViewSignals.columnWidths[11] = Math.max(200,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
                                 tableViewSignals.forceLayout();
                             }
 
@@ -389,7 +390,7 @@ Rectangle {
                                     visible: (tableViewSignals.width - tableViewSignals.contentWidth < -3) ?
                                                  true : false
                                 }
-                                property var columnWidths: [220, 100, 80, 80,80,80,80,100,100,100]
+                                property var columnWidths: [220, 100, 80, 80,80,80,80,80,80,100,100,100]
                                 columnWidthProvider: function (column) {
                                     return  columnWidths[column]
                                 }
@@ -978,9 +979,8 @@ Rectangle {
                 Image{
                     id:progressDoneImage
                     visible:false
-                    anchors.left: buttonGenerate.right
-                    anchors.rightMargin : 10
-                    anchors.top :buttonGenerate.bottom
+                    anchors.right: buttonGenerate.right
+                    anchors.bottom :buttonGenerate.top
                     anchors.bottomMargin: 10
                     width:50
                     fillMode:Image.PreserveAspectFit
@@ -1041,7 +1041,8 @@ Rectangle {
     }
     Connections{
         target: comObj
-        onProgressChanged : generationProgress.value=comObj.progress
+        onProgressChanged : {generationProgress.value=comObj.progress
+                            console.log("progress changed"+comObj.progress)}
     }
     Connections{
         target:textFieldPreview
