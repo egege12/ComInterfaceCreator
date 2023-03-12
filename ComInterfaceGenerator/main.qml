@@ -49,6 +49,7 @@ Window {
 
                 }
                 Image{
+                    id:headerLogo
                     source:"qrc:/img/img/headerIcon.png"
                     fillMode: Image.PreserveAspectFit
                     height:parent.height-10
@@ -60,6 +61,25 @@ Window {
                     mipmap:true
                 }
 
+
+            }
+            Text{
+                id : textVersion
+                text: qsTr("v1.0.0001")
+                width :80
+                height:20
+                anchors.bottom: parent.bottom
+                anchors.right: parent.right
+                anchors.rightMargin: 0
+                font.pixelSize: 13
+                antialiasing: true
+                font.hintingPreference: Font.PreferNoHinting
+                style: Text.Normal
+                focus: false
+                font.weight: Font.Medium
+                font.family: "Verdana"
+                color: "gray"
+                z:2
             }
         }
 
