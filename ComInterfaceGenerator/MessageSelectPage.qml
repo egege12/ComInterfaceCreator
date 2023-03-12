@@ -47,8 +47,8 @@ Rectangle {
                     tableViewMessages.columnWidths[1] = Math.max(210,(messageRectangle.width - tableViewMessages.columnWidths[0])*.35)
                     tableViewMessages.columnWidths[2] = Math.max(70,(messageRectangle.width - tableViewMessages.columnWidths[0])*.15)
                     tableViewMessages.columnWidths[3] = Math.max(50,(messageRectangle.width - tableViewMessages.columnWidths[0])*.10)
-                    tableViewMessages.columnWidths[4] = Math.max(100,(messageRectangle.width - tableViewMessages.columnWidths[0])*.20)
-                    tableViewMessages.columnWidths[5] = Math.max(90,(messageRectangle.width - tableViewMessages.columnWidths[0])*.20)
+                    tableViewMessages.columnWidths[4] = Math.max(110,(messageRectangle.width - tableViewMessages.columnWidths[0])*.20)
+                    tableViewMessages.columnWidths[5] = Math.max(110,(messageRectangle.width - tableViewMessages.columnWidths[0])*.20)
                     tableViewMessages.forceLayout();
                 }
                 Rectangle{
@@ -175,7 +175,7 @@ Rectangle {
 
 
                     delegate: Rectangle {
-
+                        id:delegatedMessageCell
                         implicitHeight: text.implicitHeight + 2
                         implicitWidth: text.implicitWidth +2
                         color: (heading===true)?"#303030": (selected === true)? ((topLayout.selectedMessage === messageid )? "#7ff27c" :"#1fe81a") : (topLayout.selectedMessage === messageid )? "#decc73" :"#ebedee"
@@ -208,8 +208,12 @@ Rectangle {
                                         listModelWarnings.setList(comObj.getWarningList())
                                     }
 
+
                                 }
                             }
+                            hoverEnabled: true
+                            onEntered: {if (delegatedMessageCell.width < text.implicitWidth){ToolTip.show(tabledata)}}
+                            onExited: ToolTip.hide()
                         }
                         Image{
                             visible: (selectioncolumn===true)? false :((heading===true)? true : false)
@@ -224,7 +228,7 @@ Rectangle {
                         }
                         CheckBox{
 
-                            visible:(selectioncolumn ===true)
+                            visible:(heading===true && selectioncolumn ===true )? (searchactive ===false):(selectioncolumn ===true)
                             checked: (heading===true)? tableViewMessages.isAllSelected:selected
                             //indicator: {width:8; height:8;}
                             onClicked: (heading===true)? comObj.setAllSelected():comObj.setSelected(messageid)
@@ -339,18 +343,18 @@ Rectangle {
                             id:signalRectangle
                             color:"transparent"
                             onWidthChanged: {
-                                tableViewSignals.columnWidths[0] = Math.max(100,signalRectangle.width*.2)
-                                tableViewSignals.columnWidths[1] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
-                                tableViewSignals.columnWidths[2] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
-                                tableViewSignals.columnWidths[3] = Math.max(90,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
-                                tableViewSignals.columnWidths[4] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
-                                tableViewSignals.columnWidths[5] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
-                                tableViewSignals.columnWidths[6] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
-                                tableViewSignals.columnWidths[7] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
+                                tableViewSignals.columnWidths[0] = Math.max(200,signalRectangle.width*.2)
+                                tableViewSignals.columnWidths[1] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
+                                tableViewSignals.columnWidths[2] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
+                                tableViewSignals.columnWidths[3] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
+                                tableViewSignals.columnWidths[4] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
+                                tableViewSignals.columnWidths[5] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
+                                tableViewSignals.columnWidths[6] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
+                                tableViewSignals.columnWidths[7] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
                                 tableViewSignals.columnWidths[8] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
                                 tableViewSignals.columnWidths[9] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
                                 tableViewSignals.columnWidths[10] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
-                                tableViewSignals.columnWidths[11] = Math.max(200,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
+                                tableViewSignals.columnWidths[11] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
                                 tableViewSignals.forceLayout();
                             }
 
@@ -397,7 +401,7 @@ Rectangle {
 
 
                                 delegate: Rectangle {
-
+                                    id:delegatedSignalCell
                                     implicitHeight: textSignal.implicitHeight+2
                                     implicitWidth: textSignal.implicitWidth+2
                                     color: (heading===true)?"#303030": (signalRectangle.selectedSignalName === messagename )? "#decc73":"#ebedee"
@@ -422,6 +426,9 @@ Rectangle {
                                                 signalRectangle.selectedSignalName = messagename
                                             }
                                         }
+                                        hoverEnabled: true
+                                        onEntered: {if (delegatedSignalCell.width < textSignal.implicitWidth){ToolTip.show(tabledata)}}
+                                        onExited: ToolTip.hide()
                                     }
                                     Image{
                                         visible: (heading===true)? true : false
@@ -548,8 +555,14 @@ Rectangle {
                                     delegate:Rectangle{
                                         id:delegateRectangle
                                         implicitHeight: textWarnings.implicitHeight+2
-                                        implicitWidth: textWarnings.implicitWidth+2
+                                        implicitWidth: impwidth*textWarnings.font.pointSize*0.6 +5
                                         color:"transparent"
+                                        Component.onCompleted: {
+                                            if(listViewWarnings.contentWidth < delegateRectangle.implicitWidth){
+                                            listViewWarnings.contentWidth = delegateRectangle.implicitWidth;
+                                            }
+                                        }
+
                                         Text {
                                             id: textWarnings
                                             width:parent.width
@@ -558,14 +571,22 @@ Rectangle {
                                             elide: Text.ElideRight
                                             font.preferShaping: false
                                             color:"#838383"
+
                                         }
                                         MouseArea {
                                             anchors.fill: parent
                                             hoverEnabled: true;
-                                            onEntered: {delegateRectangle.color= "#decc73"; textWarnings.color = "#000000"}
-                                            onExited:{ delegateRectangle.color= "transparent" ; textWarnings.color = "#838383"}
+                                            onEntered: {delegateRectangle.color= "#decc73"; textWarnings.color = "#000000"
+                                            if (listViewWarnings.width < (impwidth*(textWarnings.font.pointSize*0.6) +5)){ToolTip.show(listdata)}}
+                                            onExited:{ delegateRectangle.color= "transparent" ; textWarnings.color = "#838383"
+                                            ToolTip.hide()}
+
                                         }
+
+
                                     }
+
+
 
 
                                 }
@@ -683,8 +704,14 @@ Rectangle {
                                 delegate:Rectangle{
                                     id:delegateRectangleInfo
                                     implicitHeight: textInfos.implicitHeight+2
-                                    implicitWidth: textInfos.implicitWidth+2
+                                    implicitWidth: impwidth*(textInfos.font.pointSize*0.6) +5
                                     color:"transparent"
+                                    Component.onCompleted: {
+                                        if(listViewInfos.contentWidth < (delegateRectangleInfo.implicitWidth)){
+                                           listViewInfos.contentWidth = delegateRectangleInfo.implicitWidth;
+                                        }
+                                    }
+
                                     Text {
                                         id: textInfos
                                         width:parent.width
@@ -698,10 +725,15 @@ Rectangle {
                                         anchors.fill: parent
 
                                         hoverEnabled: true;
-                                        onEntered: {delegateRectangleInfo.color= "#decc73"; textInfos.color = "#000000"}
-                                        onExited:{ delegateRectangleInfo.color= "transparent" ; textInfos.color = generationinfo? "#000000":"#838383"}
+                                        onEntered: {delegateRectangleInfo.color= "#decc73"; textInfos.color = "#000000";
+                                                    if (listViewInfos.width < (impwidth*(textInfos.font.pointSize*0.6) +5)){ToolTip.show(listdata)}}
+                                        onExited:{ delegateRectangleInfo.color= "transparent" ; textInfos.color = generationinfo? "#000000":"#838383";
+                                                    ToolTip.hide()}
                                     }
+
+
                                 }
+
 
 
                             }
@@ -920,7 +952,7 @@ Rectangle {
                 }
 
             }
-            Rectangle{
+            Item{
                 id:areaGenerate
                 height: parent.height
                 width:parent.width*0.3
@@ -956,6 +988,7 @@ Rectangle {
                     id:buttonTurnBack
                     width: 84
                     height: 46
+                    onVisibleChanged: console.log("turnback button visible changed")
                     Text{
                         anchors.centerIn: parent
                         text: qsTr("Geri")
@@ -986,26 +1019,29 @@ Rectangle {
                     fillMode:Image.PreserveAspectFit
                     source:"qrc:/img/img/progressSucces.png"
                 }
-                Rectangle{
+
                     Timer {
                         id:progressDoneTimer
                         interval: 3000;
                         running: true;
                         repeat:true
-                        onTriggered: { progressDoneImage.visible=false}
+                        onTriggered: { progressDoneImage.visible=false
+                                        buttonGenerate.visible=true
+                                                           buttonTurnBack.visible=true
+                                                           generationProgress.visible=false}
                     }
-                }
+
                 ProgressBar{
                     id:generationProgress
                     width:190
                     height: 46
                     anchors.left: buttonTurnBack.left
-                    anchors.top: buttonTurnBack.bottom
-                    visible:visible
+                    anchors.top: buttonTurnBack.top
+                    visible:false
+                    indeterminate: true
 
                 }
             }
-
 
         }
 
@@ -1025,25 +1061,23 @@ Rectangle {
 
         }
     }
-    Connections{
+    /*Connections{
         target: comObj
         onProgressStarted : {buttonGenerate.visible=false
-            buttonTurnBack.visible=false
-            generationProgress.visible=true}
-    }
+                             buttonTurnBack.visible=false
+                             generationProgress.visible=true}
+    }*/
     Connections{
         target: comObj
-        onProgressCompleted : {buttonGenerate.visible=true
-            buttonTurnBack.visible=true
-            generationProgress.visible=false
-            progressDoneTimer.restart()
-            progressDoneImage.visible=true}
+        onProgressCompleted : {
+                               progressDoneImage.visible=true
+                               progressDoneTimer.restart()}
     }
-    Connections{
+    /*Connections{
         target: comObj
         onProgressChanged : {generationProgress.value=comObj.progress
                             console.log("progress changed"+comObj.progress)}
-    }
+    }*/
     Connections{
         target:textFieldPreview
         onTextChanged: comObj.setDutName(textFieldPreview.text)

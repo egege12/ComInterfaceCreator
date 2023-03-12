@@ -9,7 +9,8 @@ class listmodel : public QAbstractListModel
     enum ListRoles{
         ListDataRole = Qt::UserRole+1,
         Selected,
-        GenerationInfos
+        GenerationInfos,
+        ImpWidth
     };
 public:
     explicit listmodel(QObject *parent = nullptr);

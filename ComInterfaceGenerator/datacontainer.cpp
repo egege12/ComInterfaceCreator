@@ -451,12 +451,11 @@ void dataContainer::dataTypeAss(signal *signalPtr)
 dataContainer::~dataContainer()
 {
     --dataContainer::messageCounter;
-    signalCounter = 0;
     for(signal * curSignal : signalList){
         delete curSignal;
+        --dataContainer::signalCounter;
     }
     signalList.clear();
-    warningMessages.clear();
 }
 
 void dataContainer::signalChecker(signal *signalPtr)
@@ -467,7 +466,7 @@ void dataContainer::signalChecker(signal *signalPtr)
                 this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 250 olarak atandı.");
                 signalPtr->maxValue = 250;
             }
-             this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri atamasu veri tipi kapasitesi baz alınarak yapılmış, mantıksal değişken değer aralığı hesaplanması önerilir.");
+             this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri ataması veri tipi kapasitesi baz alınarak yapılmış, mantıksal değişken değer aralığı hesaplanması önerilir.");
         }
     }else if(signalPtr->length == 16){
         if(signalPtr ->maxValue > 64255){
@@ -475,7 +474,7 @@ void dataContainer::signalChecker(signal *signalPtr)
                 this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 64255 olarak atandı.");
                 signalPtr->maxValue = 64255;
             }
-             this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri atamasu veri tipi kapasitesi baz alınarak yapılmış, mantıksal değişken değer aralığı hesaplanması önerilir.");
+             this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri ataması veri tipi kapasitesi baz alınarak yapılmış, mantıksal değişken değer aralığı hesaplanması önerilir.");
         }
     }else if(signalPtr->length == 32){
         if(signalPtr ->maxValue > 4211081215){
@@ -483,7 +482,7 @@ void dataContainer::signalChecker(signal *signalPtr)
                 this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 4211081215 olarak atandı.");
                 signalPtr->maxValue = 4211081215;
             }
-             this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri atamasu veri tipi kapasitesi baz alınarak yapılmış, mantıksal değişken değer aralığı hesaplanması önerilir.");
+             this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri ataması veri tipi kapasitesi baz alınarak yapılmış, mantıksal değişken değer aralığı hesaplanması önerilir.");
         }
     }else{
         if(signalPtr->isJ1939){
@@ -519,5 +518,9 @@ void dataContainer::signalChecker(signal *signalPtr)
     if(signalPtr->length+signalPtr->startBit > dlc*8){
         dlc=8;
         this->setWarning(this->messageID,signalPtr->name+" sinyali DLC'yi taşırdığı için DLC 8 atandı.");
+    }
+    if(signalPtr->minValue > signalPtr->maxValue ){
+        this->setWarning(this->messageID,signalPtr->name+" sinyali minimum değeri maksimum değerden büyük.Mesaj OpenXML formatı dönüştürülemez. ");
+        setNotSelectable();
     }
 }

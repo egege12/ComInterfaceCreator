@@ -68,6 +68,7 @@ DBCHandler::~DBCHandler()
     }
     comInterface.clear();
     setErrCode("Tablo temizlendi");
+    dataContainer::warningMessages.clear();
     dataContainer::setWarning("INFO","Tablo temizlendi");
 
 }
@@ -101,13 +102,10 @@ QList<QList<QString> > DBCHandler::signalsList()
 {
 	 QList<QList<QString>> dataSignal;
     if (isAllInserted){
-
-        
-        dataSignal.append({"İsim","Başlangıç","Boyut","Ölçek","Ofset","Minimum","Maksimum","Varsayılan","J1939","Uyg. DataType","Hbr. DataType","Yorum"});
+        dataSignal.append({"İsim","Başlangıç","Boyut","Ölçek","Ofset","Minimum","Maksimum","Varsayılan","J1939","Uyg. Veri Tipi","Hbr.  Veri Tipi","Yorum"});
         for ( const dataContainer::signal *data : *comInterface.value(this->displayReqSignalID)->getSignalList()){
             dataSignal.append({data->name,QString::number(data->startBit),QString::number(data->length),QString::number(data->resolution),QString::number(data->offset),QString::number(data->minValue),QString::number(data->maxValue),QString::number(data->defValue),data->isJ1939?"+":"-",data->appDataType,data->comDataType,data->comment});
         }
-        qInfo()<<"Signal List turned signal"<<displayReqSignalID;
         return dataSignal;
     }
 }
@@ -125,6 +123,7 @@ void DBCHandler::update()
 
 void DBCHandler::clearData()
 {
+    isAllInserted = false;
     dataContainer::setWarning("INFO",dbcPath+"dosyası kapatıldı");
     isAllInserted = false;
     for(dataContainer * curValue : comInterface){
@@ -133,6 +132,16 @@ void DBCHandler::clearData()
     comInterface.clear();
     setErrCode("Tablo temizlendi");
     dataContainer::setWarning("INFO","Tablo temizlendi");
+    for(structFbdBlock * curValue : fbdBlocks){
+        delete curValue;
+    }
+    fbdBlocks.clear();
+    dutName="null";
+    dutHeader="null";
+    IOType="null";
+    fbNameandObjId.clear();
+    dutObjID="null";
+    pouObjID="null";
 
 }
 
@@ -220,8 +229,10 @@ void DBCHandler::setAllSelected()
         }
         emit selectedStatChanged();
       }else{
+          if(!DBCHandler::allSelected){
           dataContainer::setWarning("INFO",curValue->getID() + "mesajı seçime uygun değil,tümünü seçime dahil edilmedi.");
           setErrCode("Seçilemeyen mesaj/mesajlar var");
+          }
         emit selectedStatChanged();
       }
 
@@ -543,7 +554,7 @@ void DBCHandler::setProgress(qreal newProgress)
     if (m_progress == newProgress)
         return;
     m_progress = newProgress;
-    if(m_progress == 1.0)
+    if(m_progress == 100)
         emit progressCompleted();
     else
         emit progressChanged();
@@ -562,7 +573,7 @@ void DBCHandler::setProgress(qreal newProgress)
 ///******************************************************************************
 void DBCHandler::startToGenerate()
 {
-    setProgress(0.0);
+    setProgress(0);
     qint64 startTimeMs = QDateTime::currentMSecsSinceEpoch();
     if(!DBCHandler::selectedMessageCounter){
         this->setErrCode("En az bir mesaj seçmelisin");
@@ -586,7 +597,7 @@ void DBCHandler::startToGenerate()
                         throw QString("XML oluşturulurken bir şeyler yanlış gitti!");
                     }else
                         xmlFile->close();
-                    setProgress(1.0);
+                    setProgress(100);
                     dataContainer::setWarning("INFO",this->dutHeader+" oluşturuldu. Oluşturma süresi:"+QString::number((QDateTime::currentMSecsSinceEpoch())-startTimeMs)+"ms");
                     emit infoListChanged();
                 }
@@ -639,7 +650,7 @@ bool DBCHandler::createXml_STG1(QFile *xmlFile)
     instruction = doc.createProcessingInstruction( "xml", "version = \'1.0\' encoding=\'utf-8\'" );
     doc.appendChild( instruction );
     //****************************************************
-    setProgress(0.1);
+    setProgress(10);
     //<project xmlns="http://www.plcopen.org/xml/tc6_0200">
     QDomElement elemProject = doc.createElement( "project" );
     attr = doc.createAttribute( "xmlns" );//Add the text NAME in the USERINFO element
@@ -735,7 +746,7 @@ bool DBCHandler::createXml_STG1(QFile *xmlFile)
         }
         //END OF "ContentHeader"
     }
-    setProgress(0.2);
+    setProgress(20);
     {
         //START OF "types"
         QDomElement types = doc.createElement("types");
@@ -766,20 +777,20 @@ bool DBCHandler::createXml_STG1(QFile *xmlFile)
         dataType.appendChild(addData);
         dataTypes.appendChild(dataType);
         types.appendChild(dataTypes);
-        setProgress(0.3);
+        setProgress(30);
         if((this->IOType == "II")){
             this->generateIIPous(&pous,doc);
-            setProgress(0.4);
+            setProgress(40);
             this->generatePouFpd(&pous,doc);
-            setProgress(0.5);
+            setProgress(60);
         }
         else{
             this->generateHandlers(&pous,doc);
-            setProgress(0.4);
+            setProgress(40);
             this->generateIOPous(&pous,doc);
-            setProgress(0.5);
+            setProgress(50);
             this->generatePouFpd(&pous,doc);
-            setProgress(0.6);
+            setProgress(60);
         }
         types.appendChild(pous);
         elemProject.appendChild(types);
@@ -794,7 +805,7 @@ bool DBCHandler::createXml_STG1(QFile *xmlFile)
         instances.appendChild(configurations);
         //END OF "instances"
     }
-    setProgress(0.6);
+    setProgress(60);
     {
         //START OF "addData"
         QDomElement addData = doc.createElement("addData");
@@ -830,7 +841,7 @@ bool DBCHandler::createXml_STG1(QFile *xmlFile)
             object.setAttributeNode(attr);
             folder2.appendChild(object);
         }
-        setProgress(0.7);
+        setProgress(70);
         //DUTs
         ProjectStructure.appendChild(folder1);
         folder1 = doc.createElement("Folder");
@@ -846,7 +857,7 @@ bool DBCHandler::createXml_STG1(QFile *xmlFile)
         folder2.setAttributeNode(attr);
         folder1.appendChild(folder2);
         ProjectStructure.appendChild(folder1);
-         setProgress(0.8);
+         setProgress(80);
         //Pous
         folder1 = doc.createElement("Folder");
         attr= doc.createAttribute("Name");
@@ -861,7 +872,7 @@ bool DBCHandler::createXml_STG1(QFile *xmlFile)
         folder2.setAttributeNode(attr);
         folder1.appendChild(folder2);
         ProjectStructure.appendChild(folder1);
-        setProgress(0.9);
+        setProgress(90);
         //END OF "addData"
     }
 
@@ -3081,6 +3092,8 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
     return ST;
 
 }
+
+
 void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
 {
     QDomAttr attr;

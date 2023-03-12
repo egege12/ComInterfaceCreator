@@ -11,7 +11,6 @@ int main(int argc, char *argv[])
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif
     QGuiApplication app(argc, argv);
-
     //qmlregistertypes
 
    qmlRegisterType<tablemodel>("TableModel",0, 1, "TableModel");
@@ -19,8 +18,8 @@ int main(int argc, char *argv[])
    qmlRegisterType<listmodel>("ListModel1",0,1,"ListModelWarnings");
    qmlRegisterType<listmodel>("ListModel2",0,1,"ListModelInfos");
     //class definitions
-
-    DBCHandler interface(&app) ;
+   DBCHandler interface ;
+    //QScopedPointer<DBCHandler> interface(new DBCHandler())
     tablemodel table1,table2;
     QQmlApplicationEngine engine;
     const QUrl url(QStringLiteral("qrc:/main.qml"));

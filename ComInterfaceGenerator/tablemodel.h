@@ -16,13 +16,16 @@ class tablemodel : public QAbstractTableModel
         Selected,
         SelectionColumn,
         SortHeader,
-        ActiveSortHeader
+        ActiveSortHeader,
+        SearchActive
     };
     static unsigned int scolumnID;
     static unsigned int lastColumnID;
     static QVector<bool> columnNumber;
     static bool variableLessThan(const QList<QString>& a, const QList<QString>& b);
     static bool variableHigherThan(const QList<QString>& a, const QList<QString>& b);
+
+    bool searchActive;
 
 public:
 

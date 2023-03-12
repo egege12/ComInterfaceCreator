@@ -13,11 +13,13 @@
 #include <QDomDocument>
 #include <QDateTime>
 #include <random>
+
 typedef QMap<QString,dataContainer*>  interface;
 typedef QList<QList<QString>> fbType;
 class DBCHandler : public QObject
 {
     Q_OBJECT
+
 
 public:
 
@@ -39,7 +41,7 @@ public:
 
 /*PROPERTIES STARTS*/
     Q_PROPERTY(QString errCode READ errCode WRITE setErrCode NOTIFY errCodeChanged)
-    Q_PROPERTY(qreal progress READ progress WRITE setProgress NOTIFY progressChanged)
+    Q_PROPERTY(int progress READ progress WRITE setProgress NOTIFY progressChanged)
 /*PROPERTIES ENDS*/
 /*ERROR CODE- It stored as texts but will be converted into database for language*/
     QString errCode() const;
@@ -71,6 +73,9 @@ public slots:
     QList<QString> getMsgWarningList();
     QList<QString> getInfoList();
     static bool getAllSelected();
+    //Worker thread functions
+
+
     /*QList<QString> getInfoList();*/
 signals:
 
@@ -86,7 +91,10 @@ signals:
     void progressStarted();
     void infoListChanged();
 
+
+
 private:
+
     //Private Variables starts
     //***********************************
     interface comInterface;

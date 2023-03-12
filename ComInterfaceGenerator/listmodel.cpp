@@ -19,6 +19,8 @@ QVariant listmodel::data(const QModelIndex &index, int role) const
         return list.at(index.row());
     case GenerationInfos:
         return list.at(index.row()).contains("oluşturuldu");
+    case ImpWidth:
+        return list.at(index.row()).length();
      default:
         break;
     }
@@ -31,6 +33,7 @@ QHash<int, QByteArray> listmodel::roleNames() const
     roles[ListDataRole] = "listdata";
     roles[Selected] = "selected";
     roles[GenerationInfos] = "generationinfo";
+    roles[ImpWidth]="impwidth";
 
     return roles;
 }
@@ -39,7 +42,6 @@ void listmodel::setList(QList<QString> list)
 {
     beginResetModel();
     this->list.clear();
-    qInfo()<<"list appended";
     std::reverse(list.begin(),list.end());
     this->list.append(list);
     endResetModel();

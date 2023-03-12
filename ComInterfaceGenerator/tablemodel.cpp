@@ -29,6 +29,7 @@ tablemodel::tablemodel(QAbstractTableModel *parent)
     : QAbstractTableModel{parent}
 {
     table.append({" "," "," "," "});
+    searchActive=false;
 }
 
 int tablemodel::rowCount(const QModelIndex &) const
@@ -63,6 +64,8 @@ QVariant tablemodel::data(const QModelIndex &index, int role) const
         return index.column() ==tablemodel::lastColumnID;
     case SortHeader:
         return (index.row() ==0 ) && tablemodel::columnNumber.at(tablemodel::lastColumnID) && index.column() ==tablemodel::lastColumnID;
+    case SearchActive:
+        return searchActive;
     case HeadingRole:
         if (index.row() ==0 ){
                 tablemodel::scolumnID=index.column();
@@ -90,6 +93,7 @@ QHash<int, QByteArray> tablemodel::roleNames() const
     roles[SortHeader]="sortheader";
     roles[ActiveSortHeader]="activesortheader";
     roles[SelectionColumn]="selectioncolumn";
+    roles[SearchActive]="searchactive";
     return roles;
 }
 
@@ -102,7 +106,6 @@ void tablemodel::setTable(QList<QList<QString> > table)
 {
     beginResetModel();
     this->table.clear();
-    qInfo()<<"table appended";
     this->table.append(table);
     endResetModel();
     emit this->tableChanged();
@@ -164,13 +167,15 @@ void tablemodel::search(QString text)
     QList<QList<QString>> searchTable;
     searchTable.append(tablebackup.at(0));
     if(text.isEmpty()){
+        searchActive =false;
         beginResetModel();
         table=tablebackup;
         endResetModel();
     }else{
+        searchActive =true;
         for(rowItr=tablebackup.begin();rowItr!=tablebackup.end();rowItr++){
             for(columnItr=rowItr->begin();columnItr!=rowItr->end();columnItr++){
-                if(columnItr->contains(text,Qt::CaseInsensitive)){
+                if(((columnItr->contains(text,Qt::CaseInsensitive))) && (rowItr->at(3)!="DLC")){
                     searchTable.append(*rowItr);
                     break;
                 }
