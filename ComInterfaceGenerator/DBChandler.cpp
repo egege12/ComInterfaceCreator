@@ -581,6 +581,8 @@ void DBCHandler::startToGenerate()
         this->setErrCode("En az bir mesaj seçmelisin");
     }else if(!isAllInserted){
         this->setErrCode("Veri tabanı okunamadı");
+    }else if(!(dutHeader.contains("II") || dutHeader.contains("IO") || dutHeader.contains("io")|| dutHeader.contains("ii"))){
+        this->setErrCode("DUT adı II veya IO etiketini içermeli");
     }else{
         emit this->procesStarted();
         try {
