@@ -108,8 +108,24 @@ void tablemodel::setTable(QList<QList<QString> > table)
     this->table.clear();
     this->table.append(table);
     endResetModel();
-    emit this->tableChanged();
     this->tablebackup = this->table;
+    unsigned int countRow=0;
+    unsigned int countSelectedRow=0;
+    foreach(QList<QString> row,this->table){
+        countRow++;
+        if(row.at(0).contains("X")){
+            countSelectedRow++;
+        }
+    }
+    if(table.at(0).at(3)=="DLC"){
+        if(countSelectedRow!=0)
+            this->infoText=QString::number(countRow-1)+" mesaj listeleniyor."+QString::number(countSelectedRow)+" mesaj seçili.";
+        else
+            this->infoText=QString::number(countRow-1)+" mesaj listeleniyor.Hiçbir mesaj seçili değil.";
+    }else{
+        this->infoText=QString::number(countRow-1)+" sinyal listeleniyor.";
+    }
+    emit this->tableChanged();
 }
 
 void tablemodel::updateTable(QList<QList<QString> > table) /*CID#0007*/
@@ -134,6 +150,26 @@ void tablemodel::updateTable(QList<QList<QString> > table) /*CID#0007*/
     }
   }
   endResetModel();
+  unsigned int countRow=0;
+  unsigned int countSelectedRow=0;
+  foreach(QList<QString> row,this->table){
+      countRow++;
+      if(row.at(0).contains("X")){
+          countSelectedRow++;
+      }
+  }
+  if(table.at(0).at(3)=="DLC"){
+      if(countSelectedRow!=0)
+          if(countSelectedRow!=0)
+              this->infoText=QString::number(countRow-1)+" mesaj listeleniyor."+QString::number(countSelectedRow)+" mesaj seçili.";
+          else
+              this->infoText=QString::number(countRow-1)+" mesaj listeleniyor.Hiçbir mesaj seçili değil.";
+      else
+          this->infoText=QString::number(countRow-1)+" mesaj listeleniyor.Hiçbir mesaj seçili değil.";
+  }else{
+      this->infoText=QString::number(countRow-1)+" sinyal listeleniyor";
+  }
+  emit this->tableChanged();
 }
 
 void tablemodel::sortColumn()
@@ -185,7 +221,29 @@ void tablemodel::search(QString text)
         table=searchTable;
         endResetModel();
     }
+    unsigned int countRow=0;
+    unsigned int countSelectedRow=0;
+    foreach(QList<QString> row,this->table){
+        countRow++;
+        if(row.at(0).contains("X")){
+            countSelectedRow++;
+        }
+    }
+    if(table.at(0).at(3)=="DLC"){
+        if(countSelectedRow!=0)
+            this->infoText=QString::number(countRow-1)+" mesaj listeleniyor."+QString::number(countSelectedRow)+" mesaj seçili.";
+        else
+            this->infoText=QString::number(countRow-1)+" mesaj listeleniyor.Hiçbir mesaj seçili değil.";
+    }else{
+        this->infoText=QString::number(countRow-1)+" sinyal listeleniyor";
+    }
+    emit this->tableChanged();
 
 
+}
+
+QString tablemodel::getInfoText()
+{
+    return this->infoText;
 }
 

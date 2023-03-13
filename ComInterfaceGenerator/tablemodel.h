@@ -26,6 +26,7 @@ class tablemodel : public QAbstractTableModel
     static bool variableHigherThan(const QList<QString>& a, const QList<QString>& b);
 
     bool searchActive;
+    QString infoText;
 
 public:
 
@@ -55,6 +56,7 @@ public slots:
     void sortColumn();
     void sortColumnPrivate();
     void search(QString text);
+    QString getInfoText();
 };
 
 #endif // TABLEMODEL_H

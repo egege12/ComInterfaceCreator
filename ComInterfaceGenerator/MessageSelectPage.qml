@@ -132,6 +132,23 @@ Rectangle {
 
 
                     }
+                    Text{
+                        id : textMessageHeaderInfoText
+                        text: qsTr("...")
+                        height:20
+                        anchors.bottom: parent.bottom
+                        anchors.right: parent.right
+                        anchors.rightMargin: 0
+                        font.pixelSize: 10
+                        antialiasing: true
+                        font.hintingPreference: Font.PreferNoHinting
+                        style: Text.Normal
+                        elide: Text.ElideRight
+                        focus: false
+                        font.weight: Font.Medium
+                        font.family: "Verdana"
+                        color:"gray"
+                    }
 
                 }
 
@@ -333,6 +350,23 @@ Rectangle {
                                 font.pixelSize: 16
                                 font.family: "Verdana"
                                 elide: Text.ElideRight
+                            }
+                            Text{
+                                id : textSignalsHeaderInfoText
+                                text: qsTr("...")
+                                height:20
+                                anchors.bottom: parent.bottom
+                                anchors.right: parent.right
+                                anchors.rightMargin: 0
+                                font.pixelSize: 10
+                                antialiasing: true
+                                font.hintingPreference: Font.PreferNoHinting
+                                style: Text.Normal
+                                elide: Text.ElideRight
+                                focus: false
+                                font.weight: Font.Medium
+                                font.family: "Verdana"
+                                color:"gray"
                             }
                         }
                         Rectangle {
@@ -555,7 +589,7 @@ Rectangle {
                                     delegate:Rectangle{
                                         id:delegateRectangle
                                         implicitHeight: textWarnings.implicitHeight+2
-                                        implicitWidth: impwidth*textWarnings.font.pointSize*0.6 +5
+                                        implicitWidth: impwidth*textWarnings.font.pointSize*0.6 + 5
                                         color:"transparent"
                                         Component.onCompleted: {
                                             if(listViewWarnings.contentWidth < delegateRectangle.implicitWidth){
@@ -565,10 +599,8 @@ Rectangle {
 
                                         Text {
                                             id: textWarnings
-                                            width:parent.width
                                             text: listdata
                                             font.pointSize: 10
-                                            elide: Text.ElideRight
                                             font.preferShaping: false
                                             color:"#838383"
 
@@ -1108,6 +1140,14 @@ Rectangle {
     Connections{
         target:comObj
         onInfoListChanged: listModelInfos.setList(comObj.getInfoList())
+    }
+    Connections{
+        target:tableMessages
+        onTableChanged: textMessageHeaderInfoText.text= tableMessages.getInfoText();
+    }
+    Connections{
+        target:tableSignals
+        onTableChanged: textSignalsHeaderInfoText.text= tableSignals.getInfoText();
     }
 
 }

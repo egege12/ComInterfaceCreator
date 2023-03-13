@@ -1,6 +1,7 @@
 #include "datacontainer.h"
 #include <QDebug>
 #include <QDateTime>
+#include <QtMath>
 unsigned long long dataContainer::messageCounter = 0;
 unsigned long long dataContainer::signalCounter = 0;
 QMap<QString,QList<QString>> dataContainer::warningMessages ={};
@@ -12,6 +13,7 @@ dataContainer::dataContainer(QObject *parent)
     this->isSelected = false;
     this->isCycleTmSet = false;
     this->isTmOutSet = false;
+    this->isNotSelectable=false;
     this->msTimeout ="2500";
     this->msCycleTime ="100";
     this->comment="No Comment";
@@ -486,13 +488,13 @@ void dataContainer::signalChecker(signal *signalPtr)
         }
     }else{
         if(signalPtr->isJ1939){
-            if(signalPtr->maxValue > (((2^signalPtr->length)-1) * 0.988598)){
-                signalPtr->maxValue = ((2^signalPtr->length)-1)* 0.988598;
+            if(signalPtr->maxValue > ((qPow(2,signalPtr->length)) * 0.988598)){
+                signalPtr->maxValue = ((qPow(2,signalPtr->length))-1)* 0.988598;
                 this->setWarning(this->messageID,signalPtr->name+" sinyali olabilecek maksimum değerden büyük olduğu için mümkün maksimum değer atandı.");
             }
         }else{
-            if(signalPtr->maxValue > (2^signalPtr->length)-1){
-                signalPtr->maxValue = (2^signalPtr->length)-1;
+            if(signalPtr->maxValue > (qPow(2,signalPtr->length))-1){
+                signalPtr->maxValue = (qPow(2,signalPtr->length))-1;
                 this->setWarning(this->messageID,signalPtr->name+" sinyali olabilecek maksimum değerden büyük olduğu için mümkün maksimum değer atandı.");
             }
         }
@@ -508,17 +510,18 @@ void dataContainer::signalChecker(signal *signalPtr)
         setNotSelectable();
     }
     if(signalPtr->startBit > dlc*8){
-        this->setWarning(this->messageID,signalPtr->name+" sinyali için veri boyutu tanım aralığından büyük.Mesaj OpenXML formatı dönüştürülemez.");
+        this->setWarning(this->messageID,signalPtr->name+" sinyali için veri boyutu DLC tanım aralığından büyük.Mesaj OpenXML formatı dönüştürülemez.");
         setNotSelectable();
     }
     if(signalPtr->length+signalPtr->startBit > dlc*8){
         dlc=8;
         this->setWarning(this->messageID,signalPtr->name+" sinyali DLC'yi taşırdığı için DLC 8 atandı.");
     }
-    if(signalPtr->length+signalPtr->startBit > dlc*8){
-        dlc=8;
-        this->setWarning(this->messageID,signalPtr->name+" sinyali DLC'yi taşırdığı için DLC 8 atandı.");
+    if(dlc>8){
+        this->setWarning(this->messageID,signalPtr->name+" LIB500 kütüphanesi DLC 8'den büyük mesajlar için çalıştırılamaz.Mesaj OpenXML formatı dönüştürülemez.");
+        setNotSelectable();
     }
+
     if(signalPtr->minValue > signalPtr->maxValue ){
         this->setWarning(this->messageID,signalPtr->name+" sinyali minimum değeri maksimum değerden büyük.Mesaj OpenXML formatı dönüştürülemez. ");
         setNotSelectable();

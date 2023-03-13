@@ -65,7 +65,7 @@ Window {
             }
             Text{
                 id : textVersion
-                text: qsTr("v1.0.0001")
+                text: qsTr("v1.0.0003")
                 width :80
                 height:20
                 anchors.bottom: parent.bottom

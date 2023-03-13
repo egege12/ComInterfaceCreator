@@ -598,6 +598,13 @@ void DBCHandler::startToGenerate()
                     }else
                         xmlFile->close();
                     setProgress(100);
+                    QString infoText;
+                    for(dataContainer *const curValue : comInterface){
+                        if(curValue->getIfSelected()){
+                            infoText.append(curValue->getID()+"|");
+                        }
+                    }
+                    dataContainer::setWarning("INFO",this->dutHeader+" mesajları : "+infoText);
                     dataContainer::setWarning("INFO",this->dutHeader+" oluşturuldu. Oluşturma süresi:"+QString::number((QDateTime::currentMSecsSinceEpoch())-startTimeMs)+"ms");
                     emit infoListChanged();
                 }
