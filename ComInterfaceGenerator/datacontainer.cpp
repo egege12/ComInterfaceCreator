@@ -521,48 +521,153 @@ dataContainer::~dataContainer()
 void dataContainer::signalChecker(signal *signalPtr)
 {
     if(signalPtr->length == 8){
-        if(signalPtr ->maxValue > 250){
-            if(signalPtr ->isJ1939){
-                this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 250 olarak atandı.");
-                signalPtr->maxValue = 250;
+        if(signalPtr ->isJ1939){
+            if( signalPtr ->offset != 0 ){
+                    this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 250*ölçek olarak atandı.");
+                    signalPtr->minValue =  signalPtr ->offset ;
+                    this->setWarning(this->messageID,signalPtr->name+" minimum değerine ofset değeri atandı.");
+            }else{
+                if(signalPtr -> minValue < 0) {
+                    signalPtr -> offset = -250* signalPtr ->resolution/2;
+                    signalPtr -> minValue = -250* signalPtr ->resolution/2;
+                    this->setWarning(this->messageID,signalPtr->name+" minimum değer ve ofset değeri atandı.");
+                }
             }
-             this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri ataması veri tipi kapasitesi baz alınarak yapılmış, mantıksal değişken değer aralığı hesaplanması önerilir.");
+            if(signalPtr ->maxValue > 250 * signalPtr ->resolution + signalPtr ->offset ){
+                this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 250*ölçek olarak atandı.");
+                signalPtr->maxValue =  250 * signalPtr ->resolution + signalPtr ->offset;
+            }
+
+        }else{
+            if( signalPtr ->offset != 0 ){
+
+                    this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 250*ölçek olarak atandı.");
+                    signalPtr->minValue =  signalPtr ->offset ;
+                    this->setWarning(this->messageID,signalPtr->name+" minimum değerine ofset değeri atandı.");
+            }else{
+                if(signalPtr -> minValue < 0) {
+                    signalPtr -> offset = -254* signalPtr ->resolution/2;
+                    signalPtr -> minValue = -254* signalPtr ->resolution/2;
+                    this->setWarning(this->messageID,signalPtr->name+" minimum değer ve ofset değeri atandı.");
+                }
+            }
+            if(signalPtr ->maxValue > 254 * signalPtr ->resolution + signalPtr ->offset){
+                this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri ölçek ve ofset dışında, 254*ÖLÇEK-OFSET yapıldı");
+                signalPtr->maxValue =  254 * signalPtr ->resolution + signalPtr ->offset;
+            }
         }
     }else if(signalPtr->length == 16){
-        if(signalPtr ->maxValue > 64255){
-            if(signalPtr ->isJ1939){
-                this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 64255 olarak atandı.");
-                signalPtr->maxValue = 64255;
+        if(signalPtr ->isJ1939){
+            if( signalPtr ->offset != 0 ){
+
+                    this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 250*ölçek olarak atandı.");
+                    signalPtr->minValue =  signalPtr ->offset ;
+                    this->setWarning(this->messageID,signalPtr->name+" minimum değerine ofset değeri atandı.");
+            }else{
+                if(signalPtr -> minValue < 0) {
+                    signalPtr -> offset = -64255* signalPtr ->resolution/2;
+                    signalPtr -> minValue = -64255* signalPtr ->resolution/2;
+                    this->setWarning(this->messageID,signalPtr->name+" minimum değer ve ofset değeri atandı.");
+                }
             }
-             this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri ataması veri tipi kapasitesi baz alınarak yapılmış, mantıksal değişken değer aralığı hesaplanması önerilir.");
+            if(signalPtr ->maxValue > 64255 * signalPtr ->resolution + signalPtr ->offset ){
+                this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 64255*ölçek olarak atandı.");
+                signalPtr->maxValue =  64255 * signalPtr ->resolution + signalPtr ->offset;
+            }
+        }else{
+            if( signalPtr ->offset != 0 ){
+
+                    this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 250*ölçek olarak atandı.");
+                    signalPtr->minValue =  signalPtr ->offset ;
+                    this->setWarning(this->messageID,signalPtr->name+" minimum değerine ofset değeri atandı.");
+            }else{
+                if(signalPtr -> minValue < 0) {
+                    signalPtr -> offset = -65535* signalPtr ->resolution/2;
+                    signalPtr -> minValue = -65535* signalPtr ->resolution/2;
+                    this->setWarning(this->messageID,signalPtr->name+" minimum değer ve ofset değeri atandı.");
+                }
+            }
+            if(signalPtr ->maxValue > 65535 * signalPtr ->resolution + signalPtr ->offset){
+                this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri ölçek ve ofset dışında, 65534*ÖLÇEK-OFSET yapıldı");
+                signalPtr->maxValue =  65534 * signalPtr ->resolution + signalPtr ->offset;
+            }
         }
     }else if(signalPtr->length == 32){
-        if(signalPtr ->maxValue > 4211081215){
-            if(signalPtr ->isJ1939){
-                this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 4211081215 olarak atandı.");
-                signalPtr->maxValue = 4211081215;
+        if(signalPtr ->isJ1939){
+            if( signalPtr ->offset != 0 ){
+
+                    this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 250*ölçek olarak atandı.");
+                    signalPtr->minValue =  signalPtr ->offset ;
+                    this->setWarning(this->messageID,signalPtr->name+" minimum değerine ofset değeri atandı.");
+            }else{
+                if(signalPtr -> minValue < 0) {
+                    signalPtr -> offset = -4211081215* signalPtr ->resolution/2;
+                    signalPtr -> minValue = -4211081215* signalPtr ->resolution/2;
+                    this->setWarning(this->messageID,signalPtr->name+" minimum değer ve ofset değeri atandı.");
+                }
             }
-             this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri ataması veri tipi kapasitesi baz alınarak yapılmış, mantıksal değişken değer aralığı hesaplanması önerilir.");
+            if(signalPtr ->maxValue > 4211081215 * signalPtr ->resolution + signalPtr ->offset ){
+                this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 4211081215*ölçek olarak atandı.");
+                signalPtr->maxValue =  4211081215 * signalPtr ->resolution + signalPtr ->offset;
+            }
+        }else{
+            if( signalPtr ->offset != 0 ){
+
+                    this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 250*ölçek olarak atandı.");
+                    signalPtr->minValue =  signalPtr ->offset ;
+                    this->setWarning(this->messageID,signalPtr->name+" minimum değerine ofset değeri atandı.");
+            }else{
+                if(signalPtr -> minValue < 0) {
+                    signalPtr -> offset = -4294967294* signalPtr ->resolution/2;
+                    signalPtr -> minValue = -4294967294* signalPtr ->resolution/2;
+                    this->setWarning(this->messageID,signalPtr->name+" minimum değer ve ofset değeri atandı.");
+                }
+            }
+            if(signalPtr ->maxValue > 4294967294 * signalPtr ->resolution + signalPtr ->offset){
+                this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri ölçek ve ofset dışında, 4294967294*ÖLÇEK-OFSET yapıldı");
+                signalPtr->maxValue =  4294967294 * signalPtr ->resolution + signalPtr ->offset;
+            }
         }
     }else{
         if(signalPtr->isJ1939){
-            if(signalPtr->maxValue > ((qPow(2,signalPtr->length)) * 0.988598)){
-                signalPtr->maxValue = ((qPow(2,signalPtr->length))-1)* 0.988598;
-                this->setWarning(this->messageID,signalPtr->name+" sinyali olabilecek maksimum değerden büyük olduğu için mümkün maksimum değer atandı.");
+            if( signalPtr ->offset != 0 ){
+
+                    this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 250*ölçek olarak atandı.");
+                    signalPtr->minValue =  signalPtr ->offset ;
+                    this->setWarning(this->messageID,signalPtr->name+" minimum değerine ofset değeri atandı.");
+            }else{
+                if(signalPtr -> minValue < 0) {
+                    signalPtr -> offset = -(((qPow(2,signalPtr->length))-1) * 0.988598)* signalPtr ->resolution/2;
+                    signalPtr -> minValue = -(((qPow(2,signalPtr->length))-1) * 0.988598)* signalPtr ->resolution/2;
+                    this->setWarning(this->messageID,signalPtr->name+" minimum değer ve ofset değeri atandı.");
+                }
+            }
+            if(signalPtr->maxValue > (((qPow(2,signalPtr->length))-1) * 0.988598)* signalPtr ->resolution + signalPtr ->offset){
+                signalPtr->maxValue = (((qPow(2,signalPtr->length))-1) * 0.988598)* signalPtr ->resolution + signalPtr ->offset;
+                this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri olabilecek değerden büyük olduğu için mümkün maksimum değer atandı.");
             }
         }else{
-            if(signalPtr->maxValue > (qPow(2,signalPtr->length))-1){
-                signalPtr->maxValue = (qPow(2,signalPtr->length))-1;
-                this->setWarning(this->messageID,signalPtr->name+" sinyali olabilecek maksimum değerden büyük olduğu için mümkün maksimum değer atandı.");
+            if( signalPtr ->offset != 0 ){
+
+                    this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 250*ölçek olarak atandı.");
+                    signalPtr->minValue =  signalPtr ->offset ;
+                    this->setWarning(this->messageID,signalPtr->name+" minimum değerine ofset değeri atandı.");
+            }else{
+                if(signalPtr -> minValue < 0) {
+                    signalPtr -> offset = -((qPow(2,signalPtr->length))-1)* signalPtr ->resolution/2;
+                    signalPtr -> minValue = -((qPow(2,signalPtr->length))-1)* signalPtr ->resolution/2;
+                    this->setWarning(this->messageID,signalPtr->name+" minimum değer ve ofset değeri atandı.");
+                }
+            }
+            if(signalPtr->maxValue > ((qPow(2,signalPtr->length))-1) * signalPtr ->resolution + signalPtr ->offset){
+                signalPtr->maxValue = ((qPow(2,signalPtr->length))-1) * signalPtr ->resolution + signalPtr ->offset;
+                this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri olabilecek değerden büyük olduğu için mümkün maksimum değer atandı.");
             }
         }
     }
 
 
-    if(signalPtr->offset >=0 && signalPtr->minValue <0){
-        this->setWarning(this->messageID,signalPtr->name+" sinyali offset verilmeden negatif minimum aralık tanımlanmış, minimum değer 0 atandı.");
-        signalPtr->minValue = 0;
-    }
+
     if(signalPtr->length > (dlc*8 - signalPtr->startBit)){
         this->setWarning(this->messageID,signalPtr->name+" sinyali için veri boyutu tanım aralığından büyük.Mesaj OpenXML formatı dönüştürülemez.");
         setNotSelectable();
@@ -572,8 +677,8 @@ void dataContainer::signalChecker(signal *signalPtr)
         setNotSelectable();
     }
     if(signalPtr->length+signalPtr->startBit > dlc*8){
-        dlc=8;
-        this->setWarning(this->messageID,signalPtr->name+" sinyali DLC'yi taşırdığı için DLC 8 atandı.");
+        this->setWarning(this->messageID,signalPtr->name+" sinyali DLC'yi taşırdığı mesaj OpenXML formatı dönüştürülemez.");
+        setNotSelectable();
     }
     if(dlc>8){
         this->setWarning(this->messageID,signalPtr->name+" LIB500 kütüphanesi DLC 8'den büyük mesajlar için çalıştırılamaz.Mesaj OpenXML formatı dönüştürülemez.");

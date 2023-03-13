@@ -104,7 +104,7 @@ QList<QList<QString> > DBCHandler::signalsList()
     if (isAllInserted){
         dataSignal.append({"İsim","Başlangıç","Boyut","Ölçek","Ofset","Minimum","Maksimum","Varsayılan","J1939","Uyg. Veri Tipi","Hbr.  Veri Tipi","Yorum"});
         for ( const dataContainer::signal *data : *comInterface.value(this->displayReqSignalID)->getSignalList()){
-            dataSignal.append({data->name,QString::number(data->startBit),QString::number(data->length),QString::number(data->resolution),QString::number(data->offset),QString::number(data->minValue),QString::number(data->maxValue),QString::number(data->defValue),data->isJ1939?"+":"-",data->appDataType,data->comDataType,data->comment});
+            dataSignal.append({data->name,QString::number(data->startBit),QString::number(data->length),QString::number(data->resolution),QString::number(data->offset),QString::number(data->minValue,'g',(data->length>32)? 20:15),QString::number(data->maxValue,'g',(data->length>32)? 20:15),QString::number(data->defValue,'g',(data->length>32)? 20:15),data->isJ1939?"+":"-",data->appDataType,data->comDataType,data->comment});
         }
         return dataSignal;
     }
@@ -923,7 +923,7 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
                         value.setAttributeNode(attr);
                         QDomElement simpleValue = doc.createElement("simpleValue");
                         attr = doc.createAttribute("value");
-                        attr.setValue(QString::number(curSignal->maxValue));
+                        attr.setValue(QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15));
                         simpleValue.setAttributeNode(attr);
                         value.appendChild(simpleValue);
                         structValue.appendChild(value);
@@ -935,7 +935,7 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
                         value.setAttributeNode(attr);
                         QDomElement simpleValue = doc.createElement("simpleValue");
                         attr = doc.createAttribute("value");
-                        attr.setValue(QString::number(curSignal->minValue));
+                        attr.setValue(QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15));
                         simpleValue.setAttributeNode(attr);
                         value.appendChild(simpleValue);
                         structValue.appendChild(value);
@@ -971,7 +971,7 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
                         value.setAttributeNode(attr);
                         QDomElement simpleValue = doc.createElement("simpleValue");
                         attr = doc.createAttribute("value");
-                        attr.setValue(QString::number(curSignal->defValue));
+                        attr.setValue(QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15));
                         simpleValue.setAttributeNode(attr);
                         value.appendChild(simpleValue);
                         structValue.appendChild(value);
@@ -983,7 +983,7 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
                         value.setAttributeNode(attr);
                         QDomElement simpleValue = doc.createElement("simpleValue");
                         attr = doc.createAttribute("value");
-                        attr.setValue(QString::number(curSignal->defValue));
+                        attr.setValue(QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15));
                         simpleValue.setAttributeNode(attr);
                         value.appendChild(simpleValue);
                         structValue.appendChild(value);
