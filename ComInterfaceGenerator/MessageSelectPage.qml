@@ -45,9 +45,9 @@ Rectangle {
                 onWidthChanged: {
                     tableViewMessages.columnWidths[0] = 20
                     tableViewMessages.columnWidths[1] = Math.max(210,(messageRectangle.width - tableViewMessages.columnWidths[0])*.35)
-                    tableViewMessages.columnWidths[2] = Math.max(70,(messageRectangle.width - tableViewMessages.columnWidths[0])*.15)
-                    tableViewMessages.columnWidths[3] = Math.max(50,(messageRectangle.width - tableViewMessages.columnWidths[0])*.10)
-                    tableViewMessages.columnWidths[4] = Math.max(110,(messageRectangle.width - tableViewMessages.columnWidths[0])*.20)
+                    tableViewMessages.columnWidths[2] = Math.max(60,(messageRectangle.width - tableViewMessages.columnWidths[0])*.15)
+                    tableViewMessages.columnWidths[3] = Math.max(40,(messageRectangle.width - tableViewMessages.columnWidths[0])*.10)
+                    tableViewMessages.columnWidths[4] = Math.max(120,(messageRectangle.width - tableViewMessages.columnWidths[0])*.20)
                     tableViewMessages.columnWidths[5] = Math.max(110,(messageRectangle.width - tableViewMessages.columnWidths[0])*.20)
                     tableViewMessages.forceLayout();
                 }

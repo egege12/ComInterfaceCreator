@@ -6,6 +6,8 @@ unsigned long long dataContainer::messageCounter = 0;
 unsigned long long dataContainer::signalCounter = 0;
 QMap<QString,QList<QString>> dataContainer::warningMessages ={};
 QList<QString> dataContainer::infoMessages ={};
+
+
 dataContainer::dataContainer(QObject *parent)
 {
     ++dataContainer::messageCounter;
@@ -195,6 +197,10 @@ void dataContainer::dataTypeAss(signal *signalPtr)
         if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
             signalPtr->appDataType = "REAL";
             signalPtr->convMethod="toREAL";
+        }else if((signalPtr->resolution != 1)||(signalPtr->offset != 0)){
+            signalPtr->appDataType = "REAL";
+            signalPtr->convMethod="toREAL";
+            this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ veya W_ işareti bulunmalı");
         }else if(signalPtr->name.contains("N_")){
             signalPtr->appDataType = "USINT";
             signalPtr->convMethod="toUSINT";
@@ -213,6 +219,10 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "REAL";
                 signalPtr->convMethod="xtoREAL";
+            }else if((signalPtr->resolution != 1)||(signalPtr->offset != 0)){
+                signalPtr->appDataType = "REAL";
+                signalPtr->convMethod="xtoREAL";
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ veya W_ işareti bulunmalı");
             }else if(signalPtr->name.contains("N_")){
                 signalPtr->appDataType = "USINT";
                 signalPtr->convMethod="xtoUSINT";
@@ -229,6 +239,10 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "REAL";
                 signalPtr->convMethod="toREAL";
+            }else if((signalPtr->resolution != 1)||(signalPtr->offset != 0)){
+                signalPtr->appDataType = "REAL";
+                signalPtr->convMethod="toREAL";
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ veya W_ işareti bulunmalı");
             }else if(signalPtr->name.contains("N_")){
                 signalPtr->appDataType = "USINT";
                 signalPtr->convMethod="toUSINT";
@@ -250,6 +264,10 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "REAL";
                 signalPtr->convMethod="toREAL";
+            }else if((signalPtr->resolution != 1)||(signalPtr->offset != 0)){
+                signalPtr->appDataType = "REAL";
+                signalPtr->convMethod="toREAL";
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ veya W_ işareti bulunmalı");
             }else if(signalPtr->name.contains("N_")){
                 signalPtr->appDataType = "UINT";
                 signalPtr->convMethod="toUINT";
@@ -268,6 +286,10 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "REAL";
                 signalPtr->convMethod="toREAL";
+            }else if((signalPtr->resolution != 1)||(signalPtr->offset != 0)){
+                signalPtr->appDataType = "REAL";
+                signalPtr->convMethod="toREAL";
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ veya W_ işareti bulunmalı");
             }else if(signalPtr->name.contains("N_")){
                 signalPtr->appDataType = "UINT";
                 signalPtr->convMethod="toUINT";
@@ -289,6 +311,10 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "REAL";
                 signalPtr->convMethod="xtoREAL";
+            }else if((signalPtr->resolution != 1)||(signalPtr->offset != 0)){
+                signalPtr->appDataType = "REAL";
+                signalPtr->convMethod="xtoREAL";
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ veya W_ işareti bulunmalı");
             }else if(signalPtr->name.contains("N_")){
                 signalPtr->appDataType = "UINT";
                 signalPtr->convMethod="xtoUINT";
@@ -304,6 +330,10 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "REAL";
                 signalPtr->convMethod="toREAL";
+            }else if((signalPtr->resolution != 1)||(signalPtr->offset != 0)){
+                signalPtr->appDataType = "REAL";
+                signalPtr->convMethod="toREAL";
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ veya W_ işareti bulunmalı");
             }else if(signalPtr->name.contains("N_")){
                 signalPtr->appDataType = "UINT";
                 signalPtr->convMethod="toUINT";
@@ -324,6 +354,10 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "REAL";
                 signalPtr->convMethod="toREAL";
+            }else if((signalPtr->resolution != 1)||(signalPtr->offset != 0)){
+                signalPtr->appDataType = "REAL";
+                signalPtr->convMethod="toREAL";
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ veya W_ işareti bulunmalı");
             }else if(signalPtr->name.contains("N_")){
                 signalPtr->appDataType = "UDINT";
                 signalPtr->convMethod="toUDINT";
@@ -342,6 +376,10 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "REAL";
                 signalPtr->convMethod="toREAL";
+            }else if((signalPtr->resolution != 1)||(signalPtr->offset != 0)){
+                signalPtr->appDataType = "REAL";
+                signalPtr->convMethod="toREAL";
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ veya W_ işareti bulunmalı");
             }else if(signalPtr->name.contains("N_")){
                 signalPtr->appDataType = "UDINT";
                 signalPtr->convMethod="toUDINT";
@@ -364,6 +402,10 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "REAL";
                 signalPtr->convMethod="xtoREAL";
+            }else if((signalPtr->resolution != 1)||(signalPtr->offset != 0)){
+                signalPtr->appDataType = "REAL";
+                signalPtr->convMethod="xtoREAL";
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ veya W_ işareti bulunmalı");
             }else if(signalPtr->name.contains("N_")){
                 signalPtr->appDataType = "UDINT";
                 signalPtr->convMethod="xtoUDINT";
@@ -380,6 +422,10 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "REAL";
                 signalPtr->convMethod="toREAL";
+            }else if((signalPtr->resolution != 1)||(signalPtr->offset != 0)){
+                signalPtr->appDataType = "REAL";
+                signalPtr->convMethod="toREAL";
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ veya W_ işareti bulunmalı");
             }else if(signalPtr->name.contains("N_")){
                 signalPtr->appDataType = "UDINT";
                 signalPtr->convMethod="toUDINT";
@@ -400,6 +446,10 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "LREAL";
                 signalPtr->convMethod="toLREAL";
+            }else if((signalPtr->resolution != 1)||(signalPtr->offset != 0)){
+                signalPtr->appDataType = "LREAL";
+                signalPtr->convMethod="toLREAL";
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ veya W_ işareti bulunmalı");
             }else if(signalPtr->name.contains("N_")){
                 signalPtr->appDataType = "ULINT";
                 signalPtr->convMethod="toULINT";
@@ -417,6 +467,10 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
                 signalPtr->appDataType = "LREAL";
                 signalPtr->convMethod="toLREAL";
+            }else if((signalPtr->resolution != 1)||(signalPtr->offset != 0)){
+                signalPtr->appDataType = "LREAL";
+                signalPtr->convMethod="toLREAL";
+                this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ veya W_ işareti bulunmalı");
             }else if(signalPtr->name.contains("N_")){
                 signalPtr->appDataType = "ULINT";
                 signalPtr->convMethod="toULINT";
@@ -433,9 +487,13 @@ void dataContainer::dataTypeAss(signal *signalPtr)
         }
     }else if (signalPtr->length == 64){
         signalPtr->comDataType = "LWORD";
-        if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
+        if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")){
             signalPtr->appDataType = "LREAL";
             signalPtr->convMethod="xtoLREAL";
+        }else if((signalPtr->resolution != 1)||(signalPtr->offset != 0)){
+            signalPtr->appDataType = "LREAL";
+            signalPtr->convMethod="xtoLREAL";
+            this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ veya W_ işareti bulunmalı");
         }else if(signalPtr->name.contains("N_")){
             signalPtr->appDataType = "ULINT";
             signalPtr->convMethod="xtoULINT";

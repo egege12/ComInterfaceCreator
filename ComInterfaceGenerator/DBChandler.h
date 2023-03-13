@@ -14,6 +14,8 @@
 #include <QDateTime>
 #include <random>
 
+
+
 typedef QMap<QString,dataContainer*>  interface;
 typedef QList<QList<QString>> fbType;
 class DBCHandler : public QObject

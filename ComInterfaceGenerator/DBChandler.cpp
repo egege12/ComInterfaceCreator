@@ -142,6 +142,7 @@ void DBCHandler::clearData()
     fbNameandObjId.clear();
     dutObjID="null";
     pouObjID="null";
+    DBCHandler::selectedMessageCounter=0;
 
 }
 
@@ -375,7 +376,7 @@ bool DBCHandler::parseMessages(QFile *ascFile)
     }
 
     this->isAllInserted = true;
-    //checkRepatedSignal();
+    checkRepatedSignal();
     return true;
 }
 //BO_ <ID> <Message_name>: <DLC> Vector__XXX -> for messages
@@ -524,25 +525,26 @@ void DBCHandler::setTmOutCycleTmWarnings()
     }
 
 }
-//USE ITERATOR
+
 void DBCHandler::checkRepatedSignal()
 {
-    for (dataContainer * curMessage : comInterface){
-        for( dataContainer::signal * curSignal : *curMessage->getSignalList()){
-            for (dataContainer * curMessageNested : comInterface){
-                for( dataContainer::signal * curSignalNested : *curMessageNested->getSignalList()){
-                    if(curSignalNested->name == curSignal->name){
-                        dataContainer::setWarning(curMessage->getID(),curMessageNested->getName()+" mesajında tanımlı "+curSignal->name+" sinyal ile aynı isimde sinyal var");
-                        dataContainer::setWarning(curMessageNested->getID(),curMessage->getName()+" mesajında tanımlı "+curSignal->name+" sinyal ile aynı isimde sinyal var");
-                        curSignalNested->name=curSignalNested->name+"_"+curMessageNested->getID();
-                        curSignal->name=curSignal->name+"_"+curMessage->getID();
-                        emit selectedViewChanged(); //signal list changed
+    interface::Iterator iteInterface1;
+    interface::Iterator iteInterface2;
+
+    for(iteInterface1=comInterface.begin();iteInterface1!=comInterface.end();iteInterface1++){
+        for(dataContainer::signal * curSignal1 : *iteInterface1.value()->getSignalList()){
+            for(iteInterface2=comInterface.begin();iteInterface2!=comInterface.end();iteInterface2++){
+                for(dataContainer::signal * curSignal2 : *iteInterface2.value()->getSignalList()){
+                    if((curSignal1->name.contains(curSignal2->name)) && (iteInterface2.value()->getID() != iteInterface1.value()->getID())){
+                        dataContainer::setWarning(iteInterface2.value()->getID(),curSignal2->name+" sinyali "+iteInterface1.value()->getID()+" mesajında da yer aldığı için etiketlendi.");
+                        curSignal2->name= curSignal2->name+"_"+iteInterface2.value()->getID();
                     }
                 }
             }
         }
     }
 }
+
 
 qreal DBCHandler::progress() const
 {
@@ -615,9 +617,9 @@ void DBCHandler::startToGenerate()
         }
     }
     fbNameandObjId.clear();
-
     //do here
 }
+
 
 QList<QString> DBCHandler::getWarningList()
 {
@@ -1120,6 +1122,45 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
             strucT->appendChild(variable);
         }
 
+    }else if (dutName.contains("IO")||dutName.contains("io")){
+        bool flagBlankSpace=true;
+        foreach(dataContainer *const curValue , comInterface){
+            if(curValue->getIfSelected()){
+
+                QDomElement variable = doc.createElement("variable");
+                attr = doc.createAttribute("name");
+                attr.setValue("S_SentOk_"+curValue->getName()+"_0X"+curValue->getID());
+                variable.setAttributeNode(attr);
+                { //type and derived element with name attribute
+                    QDomElement type = doc.createElement("type");
+                    QDomElement BOOL = doc.createElement("BOOL");
+                    type.appendChild(BOOL);
+                    variable.appendChild(type);
+                }
+                {//Documentation
+
+                    QDomElement documentation=doc.createElement("documentation");
+                    QDomElement xhtml = doc.createElement("xhtml");
+                    attr=doc.createAttribute("xmlns");
+                    attr.setValue("http://www.w3.org/1999/xhtml");
+                    xhtml.setAttributeNode(attr);
+                    {
+                        QString comment;
+                        if(flagBlankSpace){
+                            comment.append("\n\nMessage sent SIGNALS\n");
+                            flagBlankSpace=false;
+                        }
+
+                        comment.append("Message sent status provided by LIB500 ");
+                        text =doc.createTextNode(comment);
+                        xhtml.appendChild(text);
+                    }
+                    documentation.appendChild(xhtml);
+                    variable.appendChild(documentation);
+                }
+                strucT->appendChild(variable);
+            }
+        }
     }
     // CAN_Init register for DUT
     {
@@ -2135,7 +2176,7 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
                     type.appendChild(BOOL);
                     variable.appendChild(type);
                     outputVars.appendChild(variable);
-                    newBlock->outputVars.append({"S_Msg_Snt_Ok","MESSAGESENTOK","BOOL"," "});
+                    newBlock->outputVars.append({"S_Msg_Snt_Ok","GVL."+dutHeader+".S_SentOk_"+curMessage->getName()+"_0X"+curMessage->getID(),"BOOL"," "});
                 }
                 interface.appendChild(outputVars);
             }
