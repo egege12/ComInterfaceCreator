@@ -384,11 +384,12 @@ Rectangle {
                                 tableViewSignals.columnWidths[4] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
                                 tableViewSignals.columnWidths[5] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
                                 tableViewSignals.columnWidths[6] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.1)
-                                tableViewSignals.columnWidths[7] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
-                                tableViewSignals.columnWidths[8] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
+                                tableViewSignals.columnWidths[7] = Math.max(120,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
+                                tableViewSignals.columnWidths[8] = Math.max(70,(signalRectangle.width-tableViewSignals.columnWidths[0])*.066)
                                 tableViewSignals.columnWidths[9] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
-                                tableViewSignals.columnWidths[10] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
-                                tableViewSignals.columnWidths[11] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
+                                tableViewSignals.columnWidths[10] = Math.max(110,(signalRectangle.width-tableViewSignals.columnWidths[0])*.066)
+                                tableViewSignals.columnWidths[11] = Math.max(90,(signalRectangle.width-tableViewSignals.columnWidths[0])*.066)
+                                tableViewSignals.columnWidths[12] = Math.max(200,(signalRectangle.width-tableViewSignals.columnWidths[0])*.133)
                                 tableViewSignals.forceLayout();
                             }
 
@@ -428,7 +429,7 @@ Rectangle {
                                     visible: (tableViewSignals.width - tableViewSignals.contentWidth < -3) ?
                                                  true : false
                                 }
-                                property var columnWidths: [220, 100, 80, 80,80,80,80,80,80,100,100,100]
+                                property var columnWidths: [220, 100, 80, 80,80,80,80,80,80,100,100,100,120]
                                 columnWidthProvider: function (column) {
                                     return  columnWidths[column]
                                 }
@@ -810,14 +811,80 @@ Rectangle {
                     font.family: "Verdana"
                 }
                 Text{
-                    id : textHeaderDutCombo
-                    text: qsTr("DUT Ünite İsimlendirmesi")
+                    id : textHeaderCanCombo
+                    text: qsTr("CAN Hattı")
                     width :80
                     height:20
                     anchors.top: textConfig.bottom
                     anchors.topMargin: 10
                     anchors.left:textConfig.left
                     anchors.leftMargin:5
+                    font.pixelSize: 14
+                    antialiasing: true
+                    font.hintingPreference: Font.PreferNoHinting
+                    style: Text.Normal
+                    focus: false
+                    font.weight: Font.Medium
+                    font.family: "Verdana"
+
+                }
+                ComboBox{
+                    id:canComboBox
+                    width: 200
+                    height: 46
+                    displayText : "Seçim Yapınız"
+                    editable:false
+                    anchors.top: textHeaderCanCombo.bottom
+                    anchors.topMargin: 5
+                    anchors.left:textHeaderCanCombo.left
+                    anchors.leftMargin: 5
+                    model:
+                        [
+                        "CAN0"           ,
+                        "CAN1"           ,
+                        "CAN2"           ,
+                        "CAN3"           ,
+                        "CAN4"           ,
+                        "CAN5"           ,
+                        "CAN6"           ,
+                        ]
+                    onActivated: {
+                        displayText=currentText;
+                        comObj.setCANLine(currentText);
+                    }
+                }
+                Rectangle{
+                    id: seperator0
+                    width :5
+                    height:100
+                    radius: 100
+                    anchors.top: textHeaderCanCombo.top
+                    anchors.left:textHeaderCanCombo.left
+                    anchors.leftMargin: 210
+                    color :"#ebedee"
+                    gradient: Gradient {
+                        GradientStop {
+                            position: 0
+                            color: "#c1c1c1"
+                        }
+
+                        GradientStop {
+                            position: 0.6
+                            color: "#ebedee"
+                        }
+                        orientation: Gradient.Horizontal
+                    }
+                }
+
+                Text{
+                    id : textHeaderDutCombo
+                    text: qsTr("DUT Ünite İsimlendirmesi")
+                    width :80
+                    height:20
+                    anchors.top: textHeaderCanCombo.top
+                    anchors.topMargin: 0
+                    anchors.left:textHeaderCanCombo.left
+                    anchors.leftMargin:220
                     font.pixelSize: 14
                     antialiasing: true
                     font.hintingPreference: Font.PreferNoHinting
@@ -981,6 +1048,44 @@ Rectangle {
                     font.pixelSize: 28
 
                     text: parent.dutIOHeader+parent.dutUnitHeader+"_T"
+                }
+                Switch {
+                    id: switchTest
+                    text: qsTr("Test modu")
+                    anchors.left:textFieldPreview.right
+                    anchors.leftMargin:15
+                    anchors.verticalCenter: textFieldPreview.verticalCenter
+                    indicator: Rectangle {
+                        implicitWidth: 48
+                        implicitHeight: 26
+                        x: switchTest.leftPadding
+                        y: parent.height / 2 - height / 2
+                        radius: 13
+                        color: switchTest.checked ? "#17a81a" : "#ffffff"
+                        border.color: switchTest.checked ? "#17a81a" : "#cccccc"
+
+                        Rectangle {
+                            x: switchTest.checked ? parent.width - width : 0
+                            width: 26
+                            height: 26
+                            radius: 13
+                            color: switchTest.down ? "#cccccc" : "#ffffff"
+                            border.color: switchTest.checked ? (switchTest.down ? "#17a81a" : "#21be2b") : "#999999"
+                        }
+                    }
+
+                    contentItem: Text {
+                        text: switchTest.text
+                        font: switchTest.font
+                        opacity: enabled ? 1.0 : 0.3
+                        color: switchTest.down ? "#17a81a" : "#21be2b"
+                        verticalAlignment: Text.AlignVCenter
+                        leftPadding: switchTest.indicator.width + switchTest.spacing
+                    }
+                    onCheckedChanged: {
+                            comObj.setTestMode(switchTest.checked);
+                    }
+
                 }
 
             }

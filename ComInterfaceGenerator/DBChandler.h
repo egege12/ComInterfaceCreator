@@ -67,6 +67,8 @@ public slots:
     void setFolderLoc(QString folderLoc);
     void setDutName(QString dutName);
     void setIOType(QString setIOType);
+    void setCANLine(QString canName);
+    void setTestMode(bool checkStat);
     //Tableview format nested vectors
     QList<QList<QString>> messagesList();
     QList<QList<QString>> signalsList();
@@ -113,6 +115,8 @@ private:
     fbType fbNameandObjId;
     QString dutObjID;
     QString pouObjID;
+    QString canLine;
+    bool  enableTest;
     //***********************************
     //Private Variables ends
     //Private methods starts

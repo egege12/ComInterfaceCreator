@@ -4,6 +4,7 @@
 #include <QtGlobal>
 #include <QRegularExpression>
 #include <QUuid>
+#include <QHostInfo>
 
 unsigned long long DBCHandler::selectedMessageCounter = 0;
 unsigned DBCHandler::counterfbBYTETOWORD = 0;
@@ -42,7 +43,8 @@ DBCHandler::DBCHandler(QObject *parent)
             dataContainer::setWarning("INFO","Kayıt defteri bulunamadı");
     }
 
-
+    this->canLine = "CAN0";
+    this->enableTest=false;
 
     dataContainer::setWarning("INFO","Program başlatıldı");
 }
@@ -102,9 +104,9 @@ QList<QList<QString> > DBCHandler::signalsList()
 {
 	 QList<QList<QString>> dataSignal;
     if (isAllInserted){
-        dataSignal.append({"İsim","Başlangıç","Boyut","Ölçek","Ofset","Minimum","Maksimum","Varsayılan","J1939","Uyg. Veri Tipi","Hbr.  Veri Tipi","Yorum"});
+        dataSignal.append({"İsim","Başlangıç","Boyut","Ölçek","Ofset","Minimum","Maksimum","Varsayılan","J1939","Uyg. Veri Tipi","Hbr.  Veri Tipi","Birim","Yorum"});
         for ( const dataContainer::signal *data : *comInterface.value(this->displayReqSignalID)->getSignalList()){
-            dataSignal.append({data->name,QString::number(data->startBit),QString::number(data->length),QString::number(data->resolution),QString::number(data->offset),QString::number(data->minValue,'g',(data->length>32)? 20:15),QString::number(data->maxValue,'g',(data->length>32)? 20:15),QString::number(data->defValue,'g',(data->length>32)? 20:15),data->isJ1939?"+":"-",data->appDataType,data->comDataType,data->comment});
+            dataSignal.append({data->name,QString::number(data->startBit),QString::number(data->length),QString::number(data->resolution),QString::number(data->offset),QString::number(data->minValue,'g',(data->length>32)? 20:15),QString::number(data->maxValue,'g',(data->length>32)? 20:15),QString::number(data->defValue,'g',(data->length>32)? 20:15),data->isJ1939?"+":"-",data->appDataType,data->comDataType,data->unit.toUtf8(),data->comment.toUtf8()});
         }
         return dataSignal;
     }
@@ -267,6 +269,16 @@ void DBCHandler::setIOType(QString setIOType)
     this->IOType = setIOType;
 }
 
+void DBCHandler::setCANLine(QString canName){
+    this->canLine = "GVL.IC.Obj_"+canName;
+}
+
+void DBCHandler::setTestMode(bool checkStat)
+{
+    this->enableTest = checkStat;
+    qInfo()<< ((this->enableTest)?"Test mode on":"Test mode off");
+}
+
 bool DBCHandler::parseMessages(QFile *ascFile)
 {
     QTextStream  *lines = new QTextStream(ascFile);
@@ -313,15 +325,9 @@ bool DBCHandler::parseMessages(QFile *ascFile)
             curSignal.minValue = parseMinValue(getBetween("[","]",curLine));
             curSignal.maxValue = parseMaxValue(getBetween("[","]",curLine));
             QString commentContainer = parseComment(curLine);
-            curSignal.comment = commentContainer;
-            curSignal.isJ1939 = commentContainer.contains(QString("j1939"),Qt::CaseInsensitive) ;
-            /*Defualt value*/
-            if(commentContainer.contains(QString("defValue"),Qt::CaseInsensitive)){
-                curSignal.defValue=this->getBetween("defValue","**",commentContainer).toDouble();
-            }else{
-                dataContainer::setWarning(messageID,curSignal.name+" sinyali için varsayılan değer atanmadığı için 0 atandı,<defValue:XXXXX**> ile atama yapın.");
-                curSignal.defValue=0.0;
-            }
+            curSignal.unit = commentContainer.toUtf8();
+            curSignal.isJ1939 = false; // get default , it set on comment
+            curSignal.defValue=0.0; // get default , it set on comment
             addSignalToMessage (messageID,curSignal);
  /*Append and manupulate message comments*/
 /************************************************/
@@ -348,6 +354,31 @@ bool DBCHandler::parseMessages(QFile *ascFile)
                       for( dataContainer::signal * curSignal : *comInterface.value(ID)->getSignalList()){
                         curSignal->isJ1939 = true;
                       }
+            }
+        }else if((curLine.contains("CM_"))&& curLine.contains("SG_")){
+
+            QString commentContainer = getBetween("\"","\";",curLine);
+            QStringList commentLine = curLine.split(" ");
+            QString targetID;
+            if(commentLine.at(2).toUInt()>2047){
+                targetID = QString::number((commentLine.at(2).toUInt())-2147483648,16).toUpper();
+            }else{
+                targetID = QString::number(commentLine.at(2).toUInt(),16).toUpper();
+            }
+            double defValue;
+            if(commentContainer.contains(QString("defValue"),Qt::CaseInsensitive)){
+                defValue=this->getBetween("defValue","**",commentContainer.remove("=").remove(":")).toDouble();
+            }else{
+                defValue=0.0;
+            }
+            if(comInterface.contains(targetID)){
+                for( dataContainer::signal * curSignal : *comInterface.value(targetID)->getSignalList()){
+                    if( curSignal->name.contains(commentLine.at(3))){
+                        curSignal->comment=commentContainer;
+                        curSignal->isJ1939 = commentContainer.contains(QString("j1939"),Qt::CaseInsensitive) ;
+                        curSignal->defValue= defValue;
+                    }
+                }
             }
 
         }else{
@@ -535,7 +566,7 @@ void DBCHandler::checkRepatedSignal()
         for(dataContainer::signal * curSignal1 : *iteInterface1.value()->getSignalList()){
             for(iteInterface2=comInterface.begin();iteInterface2!=comInterface.end();iteInterface2++){
                 for(dataContainer::signal * curSignal2 : *iteInterface2.value()->getSignalList()){
-                    if((curSignal1->name.contains(curSignal2->name)) && (iteInterface2.value()->getID() != iteInterface1.value()->getID())){
+                    if((curSignal1->name.contains(curSignal2->name,Qt::CaseInsensitive)) && (iteInterface2.value()->getID() != iteInterface1.value()->getID())){
                         dataContainer::setWarning(iteInterface2.value()->getID(),curSignal2->name+" sinyali "+iteInterface1.value()->getID()+" mesajında da yer aldığı için etiketlendi.");
                         curSignal2->name= curSignal2->name+"_"+iteInterface2.value()->getID();
                     }
@@ -621,8 +652,6 @@ void DBCHandler::startToGenerate()
     fbNameandObjId.clear();
     //do here
 }
-
-
 QList<QString> DBCHandler::getWarningList()
 {
     return dataContainer::getWarningList();
@@ -631,22 +660,14 @@ QList<QString> DBCHandler::getMsgWarningList()
 {
     return dataContainer::getMsgWarningList(displayReqSignalID);
 }
-
 QList<QString> DBCHandler::getInfoList()
 {
     return dataContainer::getInfoList();
 }
-
 bool DBCHandler::getAllSelected()
 {
     return DBCHandler::allSelected;
 }
-
-/*QList<QString> DBCHandler::getInfoList()
-{
-    return dataContainer::getInfoList();
-}*/
-
 bool DBCHandler::createXml_STG1(QFile *xmlFile)
 {
     QTextStream out(xmlFile);
@@ -890,7 +911,6 @@ bool DBCHandler::createXml_STG1(QFile *xmlFile)
     doc.save(out, 4);
     return true;
 }
-
 void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
 {
     QDomAttr attr;
@@ -988,7 +1008,7 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
                         value.appendChild(simpleValue);
                         structValue.appendChild(value);
                     }
-                    {
+                    if((curSignal->appDataType)!="BOOL"){
                         QDomElement value = doc.createElement("value");
                         attr = doc.createAttribute("member");
                         attr.setValue("J1939");
@@ -1264,7 +1284,7 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                     type.appendChild(pointer);
                     variable.appendChild(type);
                     inputVars.appendChild(variable);
-                    newBlock->inputVars.append({"Ptr_Obj_Can","ADR(DUMMY_ADRESS)","POINTER TO tCan"," "});
+                    newBlock->inputVars.append({"Ptr_Obj_Can","ADR("+canLine+")","POINTER TO tCan"," "});
 
                 }
                 /*Start to generate variables*/
@@ -1761,7 +1781,7 @@ void DBCHandler::generateIIST(QString *const ST,dataContainer *const curMessage)
                "**********************************************************************\n"
                "Name					: _FB_"+dutHeader+"_"+curMessage->getName()+"_"+curMessage->getID()+"\n"
                "POU Type				: FB\n"
-               "Created by              : COMMUNICATION INTERFACE GENERATOR , BZK.\n"
+               "Created by              : COMMUNICATION INTERFACE GENERATOR("+QHostInfo::localHostName()+") , BZK.\n"
                "Creation Date 			: "+creationDate.toString(Qt::DateFormat::ISODate)+"\n"
                "Modifications			: see version description below\n"
                "\n"
@@ -1777,90 +1797,90 @@ void DBCHandler::generateIIST(QString *const ST,dataContainer *const curMessage)
                "*********************************************************************\n"
                "*)");
     ST->append( "\n_FB_CanRx_Message_Unpack_0(\n"
-                "C_Enable:= C_Init_Can,\n"
-                "Obj_CAN:= Ptr_Obj_Can ,\n"
-                "X_MsgID:= P_ID_Can,\n"
-                "Tm_MsgTmOut:= P_Tm_MsgTmOut,\n"
-                "S_Extended:= P_Msg_Extd,\n"
-                "S_ER_TmOut=> S_Msg_TmOut,\n"
-                "S_Bit_0=>  S_II_BIT_0	 ,\n"
-                "S_Bit_1=>  S_II_BIT_1	 ,\n"
-                "S_Bit_2=>  S_II_BIT_2	 ,\n"
-                "S_Bit_3=>  S_II_BIT_3	 ,\n"
-                "S_Bit_4=>  S_II_BIT_4	 ,\n"
-                "S_Bit_5=>  S_II_BIT_5	 ,\n"
-                "S_Bit_6=>  S_II_BIT_6	 ,\n"
-                "S_Bit_7=>  S_II_BIT_7	 ,\n"
-                "X_Byte_0=> X_II_BYTE_0	 ,\n"
-                "S_Bit_8=>  S_II_BIT_8	 ,\n"
-                "S_Bit_9=>  S_II_BIT_9	 ,\n"
-                "S_Bit_10=> S_II_BIT_10	 ,\n"
-                "S_Bit_11=> S_II_BIT_11	 ,\n"
-                "S_Bit_12=> S_II_BIT_12	 ,\n"
-                "S_Bit_13=> S_II_BIT_13	 ,\n"
-                "S_Bit_14=> S_II_BIT_14	 ,\n"
-                "S_Bit_15=> S_II_BIT_15	 ,\n"
-                "X_Byte_1=> X_II_BYTE_1	 ,\n"
-                "X_Word_0=> X_II_WORD_0	 ,\n"
-                "S_Bit_16=> S_II_BIT_16	 ,\n"
-                "S_Bit_17=> S_II_BIT_17	 ,\n"
-                "S_Bit_18=> S_II_BIT_18	 ,\n"
-                "S_Bit_19=> S_II_BIT_19	 ,\n"
-                "S_Bit_20=> S_II_BIT_20	 ,\n"
-                "S_Bit_21=> S_II_BIT_21	 ,\n"
-                "S_Bit_22=> S_II_BIT_22	 ,\n"
-                "S_Bit_23=> S_II_BIT_23	 ,\n"
-                "X_Byte_2=> X_II_BYTE_2	 ,\n"
-                "S_Bit_24=> S_II_BIT_24	 ,\n"
-                "S_Bit_25=> S_II_BIT_25	 ,\n"
-                "S_Bit_26=> S_II_BIT_26	 ,\n"
-                "S_Bit_27=> S_II_BIT_27	 ,\n"
-                "S_Bit_28=> S_II_BIT_28	 ,\n"
-                "S_Bit_29=> S_II_BIT_29	 ,\n"
-                "S_Bit_30=> S_II_BIT_30	 ,\n"
-                "S_Bit_31=> S_II_BIT_31	 ,\n"
-                "X_Byte_3=> X_II_BYTE_3	 ,\n"
-                "X_Word_1=> X_II_WORD_1	 ,\n"
-                "X_DWord_0=> X_II_DWORD_0 ,\n"
-                "S_Bit_32=> S_II_BIT_32	 ,\n"
-                "S_Bit_33=> S_II_BIT_33	 ,\n"
-                "S_Bit_34=> S_II_BIT_34	 ,\n"
-                "S_Bit_35=> S_II_BIT_35	 ,\n"
-                "S_Bit_36=> S_II_BIT_36	 ,\n"
-                "S_Bit_37=> S_II_BIT_37	 ,\n"
-                "S_Bit_38=> S_II_BIT_38	 ,\n"
-                "S_Bit_39=> S_II_BIT_39	 ,\n"
-                "X_Byte_4=> X_II_BYTE_4	 ,\n"
-                "S_Bit_40=> S_II_BIT_40	 ,\n"
-                "S_Bit_41=> S_II_BIT_41	 ,\n"
-                "S_Bit_42=> S_II_BIT_42	 ,\n"
-                "S_Bit_43=> S_II_BIT_43	 ,\n"
-                "S_Bit_44=> S_II_BIT_44	 ,\n"
-                "S_Bit_45=> S_II_BIT_45	 ,\n"
-                "S_Bit_46=> S_II_BIT_46	 ,\n"
-                "S_Bit_47=> S_II_BIT_47	 ,\n"
-                "X_Byte_5=> X_II_BYTE_5	 ,\n"
-                "X_Word_2=> X_II_WORD_2	 ,\n"
-                "S_Bit_48=> S_II_BIT_48	 ,\n"
-                "S_Bit_49=> S_II_BIT_49	 ,\n"
-                "S_Bit_50=> S_II_BIT_50	 ,\n"
-                "S_Bit_51=> S_II_BIT_51	 ,\n"
-                "S_Bit_52=> S_II_BIT_52	 ,\n"
-                "S_Bit_53=> S_II_BIT_53	 ,\n"
-                "S_Bit_54=> S_II_BIT_54	 ,\n"
-                "S_Bit_55=> S_II_BIT_55	 ,\n"
-                "X_Byte_6=> X_II_BYTE_6	 ,\n"
-                "S_Bit_56=> S_II_BIT_56	 ,\n"
-                "S_Bit_57=> S_II_BIT_57	 ,\n"
-                "S_Bit_58=> S_II_BIT_58	 ,\n"
-                "S_Bit_59=> S_II_BIT_59	 ,\n"
-                "S_Bit_60=> S_II_BIT_60	 ,\n"
-                "S_Bit_61=> S_II_BIT_61	 ,\n"
-                "S_Bit_62=> S_II_BIT_62	 ,\n"
-                "S_Bit_63=> S_II_BIT_63	 ,\n"
-                "X_Byte_7=> X_II_BYTE_7	 ,\n"
-                "X_Word_3=> X_II_WORD_3	 ,\n"
-                "X_DWord_1=>X_II_DWORD_1   );\n");
+                "   C_Enable:= C_Init_Can,\n"
+                "   Obj_CAN:= Ptr_Obj_Can ,\n"
+                "   X_MsgID:= P_ID_Can,\n"
+                "   Tm_MsgTmOut:= P_Tm_MsgTmOut,\n"
+                "   S_Extended:= P_Msg_Extd,\n"
+                "   S_ER_TmOut=> S_Msg_TmOut,\n"
+                "   S_Bit_0     =>  S_II_BIT_0	 ,\n"
+                "   S_Bit_1     =>  S_II_BIT_1	 ,\n"
+                "   S_Bit_2     =>  S_II_BIT_2	 ,\n"
+                "   S_Bit_3     =>  S_II_BIT_3	 ,\n"
+                "   S_Bit_4     =>  S_II_BIT_4	 ,\n"
+                "   S_Bit_5     =>  S_II_BIT_5	 ,\n"
+                "   S_Bit_6     =>  S_II_BIT_6	 ,\n"
+                "   S_Bit_7     =>  S_II_BIT_7	 ,\n"
+                "   X_Byte_0    => X_II_BYTE_0	 ,\n"
+                "   S_Bit_8     =>  S_II_BIT_8	 ,\n"
+                "   S_Bit_9     =>  S_II_BIT_9	 ,\n"
+                "   S_Bit_10    => S_II_BIT_10	 ,\n"
+                "   S_Bit_11    => S_II_BIT_11	 ,\n"
+                "   S_Bit_12    => S_II_BIT_12	 ,\n"
+                "   S_Bit_13    => S_II_BIT_13	 ,\n"
+                "   S_Bit_14    => S_II_BIT_14	 ,\n"
+                "   S_Bit_15    => S_II_BIT_15	 ,\n"
+                "   X_Byte_1    => X_II_BYTE_1	 ,\n"
+                "   X_Word_0    => X_II_WORD_0	 ,\n"
+                "   S_Bit_16    => S_II_BIT_16	 ,\n"
+                "   S_Bit_17    => S_II_BIT_17	 ,\n"
+                "   S_Bit_18    => S_II_BIT_18	 ,\n"
+                "   S_Bit_19    => S_II_BIT_19	 ,\n"
+                "   S_Bit_20    => S_II_BIT_20	 ,\n"
+                "   S_Bit_21    => S_II_BIT_21	 ,\n"
+                "   S_Bit_22    => S_II_BIT_22	 ,\n"
+                "   S_Bit_23    => S_II_BIT_23	 ,\n"
+                "   X_Byte_2    => X_II_BYTE_2	 ,\n"
+                "   S_Bit_24    => S_II_BIT_24	 ,\n"
+                "   S_Bit_25    => S_II_BIT_25	 ,\n"
+                "   S_Bit_26    => S_II_BIT_26	 ,\n"
+                "   S_Bit_27    => S_II_BIT_27	 ,\n"
+                "   S_Bit_28    => S_II_BIT_28	 ,\n"
+                "   S_Bit_29    => S_II_BIT_29	 ,\n"
+                "   S_Bit_30    => S_II_BIT_30	 ,\n"
+                "   S_Bit_31    => S_II_BIT_31	 ,\n"
+                "   X_Byte_3    => X_II_BYTE_3	 ,\n"
+                "   X_Word_1    => X_II_WORD_1	 ,\n"
+                "   X_DWord_0   => X_II_DWORD_0 ,\n"
+                "   S_Bit_32    => S_II_BIT_32	 ,\n"
+                "   S_Bit_33    => S_II_BIT_33	 ,\n"
+                "   S_Bit_34    => S_II_BIT_34	 ,\n"
+                "   S_Bit_35    => S_II_BIT_35	 ,\n"
+                "   S_Bit_36    => S_II_BIT_36	 ,\n"
+                "   S_Bit_37    => S_II_BIT_37	 ,\n"
+                "   S_Bit_38    => S_II_BIT_38	 ,\n"
+                "   S_Bit_39    => S_II_BIT_39	 ,\n"
+                "   X_Byte_4    => X_II_BYTE_4	 ,\n"
+                "   S_Bit_40    => S_II_BIT_40	 ,\n"
+                "   S_Bit_41    => S_II_BIT_41	 ,\n"
+                "   S_Bit_42    => S_II_BIT_42	 ,\n"
+                "   S_Bit_43    => S_II_BIT_43	 ,\n"
+                "   S_Bit_44    => S_II_BIT_44	 ,\n"
+                "   S_Bit_45    => S_II_BIT_45	 ,\n"
+                "   S_Bit_46    => S_II_BIT_46	 ,\n"
+                "   S_Bit_47    => S_II_BIT_47	 ,\n"
+                "   X_Byte_5    => X_II_BYTE_5	 ,\n"
+                "   X_Word_2    => X_II_WORD_2	 ,\n"
+                "   S_Bit_48    => S_II_BIT_48	 ,\n"
+                "   S_Bit_49    => S_II_BIT_49	 ,\n"
+                "   S_Bit_50    => S_II_BIT_50	 ,\n"
+                "   S_Bit_51    => S_II_BIT_51	 ,\n"
+                "   S_Bit_52    => S_II_BIT_52	 ,\n"
+                "   S_Bit_53    => S_II_BIT_53	 ,\n"
+                "   S_Bit_54    => S_II_BIT_54	 ,\n"
+                "   S_Bit_55    => S_II_BIT_55	 ,\n"
+                "   X_Byte_6    => X_II_BYTE_6	 ,\n"
+                "   S_Bit_56    => S_II_BIT_56	 ,\n"
+                "   S_Bit_57    => S_II_BIT_57	 ,\n"
+                "   S_Bit_58    => S_II_BIT_58	 ,\n"
+                "   S_Bit_59    => S_II_BIT_59	 ,\n"
+                "   S_Bit_60    => S_II_BIT_60	 ,\n"
+                "   S_Bit_61    => S_II_BIT_61	 ,\n"
+                "   S_Bit_62    => S_II_BIT_62	 ,\n"
+                "   S_Bit_63    => S_II_BIT_63	 ,\n"
+                "   X_Byte_7    => X_II_BYTE_7	 ,\n"
+                "   X_Word_3    => X_II_WORD_3	 ,\n"
+                "   X_DWord_1   =>X_II_DWORD_1   );\n");
 
     for( const dataContainer::signal * curSignal : *curMessage->getSignalList()){
         ST->append(convTypeComtoApp(curSignal->name,curSignal->startBit,curSignal->length,curSignal->convMethod));
@@ -1886,7 +1906,7 @@ QString DBCHandler::convTypeComtoApp(QString signalName, unsigned short startbit
         ST.append("\n_FB_PACK_BYTE_TO_DWORD_"+QString::number(counterfbBYTETODWORD)+"(X_BYTE_0:= X_II_BYTE_"+QString::number(startbit/8)+", X_BYTE_1:= X_II_BYTE_"+QString::number((startbit/8)+1)+", X_BYTE_2:= X_II_BYTE_"+QString::number((startbit/8)+2)+", X_BYTE_3:= X_II_BYTE_"+QString::number((startbit/8)+3)+" , X_DWORD_0 => Raw_"+signalName+");");
         counterfbBYTETODWORD++;
     }else if((converType=="xtoLWORD")||(converType=="xtoULINT")||(converType=="xtoLREAL") ){
-        ST.append("\n_FB_PACK_BYTE_TO_LWORD_"+QString::number(counterfbBYTETOLWORD)+"(X_BYTE_0:= X_II_BYTE_"+QString::number(startbit/8)+", X_BYTE_1:= X_II_BYTE_"+QString::number((startbit/8)+1)+", X_BYTE_2:=X_II_BYTE_"+QString::number((startbit/8)+2)+" , X_BYTE_3:= X_II_BYTE_"+QString::number((startbit/8)+3)+", X_BYTE_4:= X_II_BYTE_"+QString::number((startbit/8)+4)+", X_BYTE_5:= X_II_BYTE_"+QString::number((startbit/8)+5)+", X_BYTE_6:= X_II_BYTE_"+QString::number((startbit/8)+6)+", X_BYTE_7:= X_II_BYTE_"+QString::number((startbit/8)+7)+" , X_LWORD_0 := Raw_"+signalName+");");
+        ST.append("\n_FB_PACK_BYTE_TO_LWORD_"+QString::number(counterfbBYTETOLWORD)+"(X_BYTE_0:= X_II_BYTE_"+QString::number(startbit/8)+", X_BYTE_1:= X_II_BYTE_"+QString::number((startbit/8)+1)+", X_BYTE_2:=X_II_BYTE_"+QString::number((startbit/8)+2)+" , X_BYTE_3:= X_II_BYTE_"+QString::number((startbit/8)+3)+", X_BYTE_4:= X_II_BYTE_"+QString::number((startbit/8)+4)+", X_BYTE_5:= X_II_BYTE_"+QString::number((startbit/8)+5)+", X_BYTE_6:= X_II_BYTE_"+QString::number((startbit/8)+6)+", X_BYTE_7:= X_II_BYTE_"+QString::number((startbit/8)+7)+" , X_LWORD_0 => Raw_"+signalName+");");
         counterfbBYTETOLWORD++;
     }else{
         bool flagPack = false;
@@ -2108,7 +2128,7 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
                     type.appendChild(pointer);
                     variable.appendChild(type);
                     inputVars.appendChild(variable);
-                    newBlock->inputVars.append({"Ptr_Obj_Can","ADR(DUMMY_ADDRESS)","POINTER to tCan"," "});
+                    newBlock->inputVars.append({"Ptr_Obj_Can","ADR("+canLine+")","POINTER to tCan"," "});
                 }
                 /*Start to generate variables*/
                 for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
@@ -2602,91 +2622,91 @@ void DBCHandler::generateIOST(QString *const ST,dataContainer *const curMessage)
         ST->append(convTypeApptoCom(curSignal->name,curSignal->startBit,curSignal->length,curSignal->convMethod));
     }
     ST->append(    "_FB_CanTx_Message_Unpack_0(\n"
-                   "C_Enable:= C_Init_Can,\n"
-                   "Obj_CAN:= Ptr_Obj_Can,\n"
-                   "X_MsgID:= P_ID_Can,\n"
-                   "Tm_CycleTime:= P_Tm_CycleTime,\n"
-                   "N_Msg_Dlc:=P_Msg_Dlc,\n"
-                   "S_Extended:= P_Msg_Extd,\n"
-                   "S_Bit_0:=	S_IO_BIT_0	,\n"
-                   "S_Bit_1:=	S_IO_BIT_1	,\n"
-                   "S_Bit_2:=	S_IO_BIT_2	,\n"
-                   "S_Bit_3:=	S_IO_BIT_3	,\n"
-                   "S_Bit_4:=	S_IO_BIT_4	,\n"
-                   "S_Bit_5:=	S_IO_BIT_5	,\n"
-                   "S_Bit_6:=	S_IO_BIT_6	,\n"
-                   "S_Bit_7:=	S_IO_BIT_7	,\n"
-                   "X_Byte_0:= 	X_IO_BYTE_0	,\n"
-                   "S_Bit_8:= 	S_IO_BIT_8	,\n"
-                   "S_Bit_9:= 	S_IO_BIT_9	,\n"
-                   "S_Bit_10:= 	S_IO_BIT_10	,\n"
-                   "S_Bit_11:= 	S_IO_BIT_11	,\n"
-                   "S_Bit_12:= 	S_IO_BIT_12	,\n"
-                   "S_Bit_13:= 	S_IO_BIT_13	,\n"
-                   "S_Bit_14:= 	S_IO_BIT_14	,\n"
-                   "S_Bit_15:= 	S_IO_BIT_15	,\n"
-                   "X_Byte_1:= 	X_IO_BYTE_1	,\n"
-                   "X_Word_0:= 	X_IO_WORD_0	,\n"
-                   "S_Bit_16:= 	S_IO_BIT_16	,\n"
-                   "S_Bit_17:= 	S_IO_BIT_17	,\n"
-                   "S_Bit_18:= 	S_IO_BIT_18	,\n"
-                   "S_Bit_19:= 	S_IO_BIT_19	,\n"
-                   "S_Bit_20:= 	S_IO_BIT_20	,\n"
-                   "S_Bit_21:= 	S_IO_BIT_21	,\n"
-                   "S_Bit_22:= 	S_IO_BIT_22	,\n"
-                   "S_Bit_23:= 	S_IO_BIT_23	,\n"
-                   "X_Byte_2:= 	X_IO_BYTE_2	,\n"
-                   "S_Bit_24:= 	S_IO_BIT_24	,\n"
-                   "S_Bit_25:= 	S_IO_BIT_25	,\n"
-                   "S_Bit_26:= 	S_IO_BIT_26	,\n"
-                   "S_Bit_27:= 	S_IO_BIT_27	,\n"
-                   "S_Bit_28:= 	S_IO_BIT_28	,\n"
-                   "S_Bit_29:= 	S_IO_BIT_29	,\n"
-                   "S_Bit_30:= 	S_IO_BIT_30	,\n"
-                   "S_Bit_31:= 	S_IO_BIT_31	,\n"
-                   "X_Byte_3:= 	X_IO_BYTE_3	,\n"
-                   "X_Word_1:= 	X_IO_WORD_1	,\n"
-                   "X_DWord_0:= X_IO_DWORD_0,\n"
-                   "S_Bit_32:= 	S_IO_BIT_32	,\n"
-                   "S_Bit_33:= 	S_IO_BIT_33	,\n"
-                   "S_Bit_34:= 	S_IO_BIT_34	,\n"
-                   "S_Bit_35:= 	S_IO_BIT_35	,\n"
-                   "S_Bit_36:= 	S_IO_BIT_36	,\n"
-                   "S_Bit_37:= 	S_IO_BIT_37	,\n"
-                   "S_Bit_38:= 	S_IO_BIT_38	,\n"
-                   "S_Bit_39:= 	S_IO_BIT_39	,\n"
-                   "X_Byte_4:= 	X_IO_BYTE_4	,\n"
-                   "S_Bit_40:= 	S_IO_BIT_40	,\n"
-                   "S_Bit_41:= 	S_IO_BIT_41	,\n"
-                   "S_Bit_42:= 	S_IO_BIT_42	,\n"
-                   "S_Bit_43:= 	S_IO_BIT_43	,\n"
-                   "S_Bit_44:= 	S_IO_BIT_44	,\n"
-                   "S_Bit_45:= 	S_IO_BIT_45	,\n"
-                   "S_Bit_46:= 	S_IO_BIT_46	,\n"
-                   "S_Bit_47:= 	S_IO_BIT_47	,\n"
-                   "X_Byte_5:= 	X_IO_BYTE_5	,\n"
-                   "X_Word_2:= 	X_IO_WORD_2	,\n"
-                   "S_Bit_48:= 	S_IO_BIT_48	,\n"
-                   "S_Bit_49:= 	S_IO_BIT_49	,\n"
-                   "S_Bit_50:= 	S_IO_BIT_50	,\n"
-                   "S_Bit_51:= 	S_IO_BIT_51	,\n"
-                   "S_Bit_52:= 	S_IO_BIT_52	,\n"
-                   "S_Bit_53:= 	S_IO_BIT_53	,\n"
-                   "S_Bit_54:= 	S_IO_BIT_54	,\n"
-                   "S_Bit_55:= 	S_IO_BIT_55	,\n"
-                   "X_Byte_6:= 	X_IO_BYTE_6	,\n"
-                   "S_Bit_56:= 	S_IO_BIT_56	,\n"
-                   "S_Bit_57:= 	S_IO_BIT_57	,\n"
-                   "S_Bit_58:= 	S_IO_BIT_58	,\n"
-                   "S_Bit_59:= 	S_IO_BIT_59	,\n"
-                   "S_Bit_60:= 	S_IO_BIT_60	,\n"
-                   "S_Bit_61:= 	S_IO_BIT_61	,\n"
-                   "S_Bit_62:= 	S_IO_BIT_62	,\n"
-                   "S_Bit_63:= 	S_IO_BIT_63	,\n"
-                   "X_Byte_7:= 	X_IO_BYTE_7	,\n"
-                   "X_Word_3:= 	X_IO_WORD_3	,\n"
-                   "X_DWord_1:= X_IO_DWORD_1,\n"
-                   "S_Sent_Ok=> S_Msg_Snt_Ok);\n" );
+                   "    C_Enable:= C_Init_Can,\n"
+                   "    Obj_CAN:= Ptr_Obj_Can,\n"
+                   "    X_MsgID:= P_ID_Can,\n"
+                   "    Tm_CycleTime:= P_Tm_CycleTime,\n"
+                   "    N_Msg_Dlc:=P_Msg_Dlc,\n"
+                   "    S_Extended:= P_Msg_Extd,\n"
+                   "    S_Bit_0     :=	S_IO_BIT_0	,\n"
+                   "    S_Bit_1     :=	S_IO_BIT_1	,\n"
+                   "    S_Bit_2     :=	S_IO_BIT_2	,\n"
+                   "    S_Bit_3     :=	S_IO_BIT_3	,\n"
+                   "    S_Bit_4     :=	S_IO_BIT_4	,\n"
+                   "    S_Bit_5     :=	S_IO_BIT_5	,\n"
+                   "    S_Bit_6     :=	S_IO_BIT_6	,\n"
+                   "    S_Bit_7     :=	S_IO_BIT_7	,\n"
+                   "    X_Byte_0    := 	X_IO_BYTE_0	,\n"
+                   "    S_Bit_8     := 	S_IO_BIT_8	,\n"
+                   "    S_Bit_9     := 	S_IO_BIT_9	,\n"
+                   "    S_Bit_10    := 	S_IO_BIT_10	,\n"
+                   "    S_Bit_11    := 	S_IO_BIT_11	,\n"
+                   "    S_Bit_12    := 	S_IO_BIT_12	,\n"
+                   "    S_Bit_13    := 	S_IO_BIT_13	,\n"
+                   "    S_Bit_14    := 	S_IO_BIT_14	,\n"
+                   "    S_Bit_15    := 	S_IO_BIT_15	,\n"
+                   "    X_Byte_1    := 	X_IO_BYTE_1	,\n"
+                   "    X_Word_0    := 	X_IO_WORD_0	,\n"
+                   "    S_Bit_16    := 	S_IO_BIT_16	,\n"
+                   "    S_Bit_17    := 	S_IO_BIT_17	,\n"
+                   "    S_Bit_18    := 	S_IO_BIT_18	,\n"
+                   "    S_Bit_19    := 	S_IO_BIT_19	,\n"
+                   "    S_Bit_20    := 	S_IO_BIT_20	,\n"
+                   "    S_Bit_21    := 	S_IO_BIT_21	,\n"
+                   "    S_Bit_22    := 	S_IO_BIT_22	,\n"
+                   "    S_Bit_23    := 	S_IO_BIT_23	,\n"
+                   "    X_Byte_2    := 	X_IO_BYTE_2	,\n"
+                   "    S_Bit_24    := 	S_IO_BIT_24	,\n"
+                   "    S_Bit_25    := 	S_IO_BIT_25	,\n"
+                   "    S_Bit_26    := 	S_IO_BIT_26	,\n"
+                   "    S_Bit_27    := 	S_IO_BIT_27	,\n"
+                   "    S_Bit_28    := 	S_IO_BIT_28	,\n"
+                   "    S_Bit_29    := 	S_IO_BIT_29	,\n"
+                   "    S_Bit_30    := 	S_IO_BIT_30	,\n"
+                   "    S_Bit_31    := 	S_IO_BIT_31	,\n"
+                   "    X_Byte_3    := 	X_IO_BYTE_3	,\n"
+                   "    X_Word_1    := 	X_IO_WORD_1	,\n"
+                   "    X_DWord_0   := X_IO_DWORD_0,\n"
+                   "    S_Bit_32    := 	S_IO_BIT_32	,\n"
+                   "    S_Bit_33    := 	S_IO_BIT_33	,\n"
+                   "    S_Bit_34    := 	S_IO_BIT_34	,\n"
+                   "    S_Bit_35    := 	S_IO_BIT_35	,\n"
+                   "    S_Bit_36    := 	S_IO_BIT_36	,\n"
+                   "    S_Bit_37    := 	S_IO_BIT_37	,\n"
+                   "    S_Bit_38    := 	S_IO_BIT_38	,\n"
+                   "    S_Bit_39    := 	S_IO_BIT_39	,\n"
+                   "    X_Byte_4    := 	X_IO_BYTE_4	,\n"
+                   "    S_Bit_40    := 	S_IO_BIT_40	,\n"
+                   "    S_Bit_41    := 	S_IO_BIT_41	,\n"
+                   "    S_Bit_42    := 	S_IO_BIT_42	,\n"
+                   "    S_Bit_43    := 	S_IO_BIT_43	,\n"
+                   "    S_Bit_44    := 	S_IO_BIT_44	,\n"
+                   "    S_Bit_45    := 	S_IO_BIT_45	,\n"
+                   "    S_Bit_46    := 	S_IO_BIT_46	,\n"
+                   "    S_Bit_47    := 	S_IO_BIT_47	,\n"
+                   "    X_Byte_5    := 	X_IO_BYTE_5	,\n"
+                   "    X_Word_2    := 	X_IO_WORD_2	,\n"
+                   "    S_Bit_48    := 	S_IO_BIT_48	,\n"
+                   "    S_Bit_49    := 	S_IO_BIT_49	,\n"
+                   "    S_Bit_50    := 	S_IO_BIT_50	,\n"
+                   "    S_Bit_51    := 	S_IO_BIT_51	,\n"
+                   "    S_Bit_52    := 	S_IO_BIT_52	,\n"
+                   "    S_Bit_53    := 	S_IO_BIT_53	,\n"
+                   "    S_Bit_54    := 	S_IO_BIT_54	,\n"
+                   "    S_Bit_55    := 	S_IO_BIT_55	,\n"
+                   "    X_Byte_6    := 	X_IO_BYTE_6	,\n"
+                   "    S_Bit_56    := 	S_IO_BIT_56	,\n"
+                   "    S_Bit_57    := 	S_IO_BIT_57	,\n"
+                   "    S_Bit_58    := 	S_IO_BIT_58	,\n"
+                   "    S_Bit_59    := 	S_IO_BIT_59	,\n"
+                   "    S_Bit_60    := 	S_IO_BIT_60	,\n"
+                   "    S_Bit_61    := 	S_IO_BIT_61	,\n"
+                   "    S_Bit_62    := 	S_IO_BIT_62	,\n"
+                   "    S_Bit_63    := 	S_IO_BIT_63	,\n"
+                   "    X_Byte_7    := 	X_IO_BYTE_7	,\n"
+                   "    X_Word_3    := 	X_IO_WORD_3	,\n"
+                   "    X_DWord_1   := X_IO_DWORD_1,\n"
+                   "    S_Sent_Ok   => S_Msg_Snt_Ok);\n" );
 
 
 
@@ -3192,7 +3212,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"ERR_"+curSignal->name,"CONNECT_ERROR_VARIABLE_HERE","BOOL"," "});
+                        newBlock->inputVars.append({"ERR_"+curSignal->name,this->enableTest?"FrcTest."+curSignal->name+".e":"ASSIGN_ERROR_TRANSMISSION_SIGNAL","BOOL"," "});
                     }
                 }
             }
@@ -3225,6 +3245,28 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
             attr.setValue("http://www.w3.org/1999/xhtml");
             xhtml.setAttributeNode(attr);
             QString handlerText="";
+            handlerText.append("(*\n"
+                               "**********************************************************************\n"
+                               "Bozankaya A.Ş.\n"
+                               "**********************************************************************\n"
+                               "Name					: _FB_"+this->dutHeader+"_ERR_Handler\n"
+                               "POU Type				: FB\n"
+                               "Created by              : COMMUNICATION INTERFACE GENERATOR , BZK.\n"
+                               "Creation Date 			: "+creationDate.toString(Qt::DateFormat::ISODate)+"\n"
+                               "Modifications			: see version description below\n"
+                               "\n"
+                               "\n"
+                               "FB Description:"
+                               "This FB which is created by automatically by communication interface generator \n"
+                               "\n to assign error status of signals to actual signal object. \n"
+                               "*********************************************************************\n"
+                               "\n"
+                               "Version 1	\n"
+                               "*********************************************************************\n"
+                               "Version Description:\n"
+                               "- initial version\n"
+                               "*********************************************************************\n"
+                               "*)");
             /*ST text of Error Handler*/
             foreach (dataContainer * curMessage , comInterface){
                 if(curMessage->getIfSelected())
@@ -3298,7 +3340,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"NA_"+curSignal->name,"CONNECT_NA_VARIABLE_HERE","BOOL"," "});
+                        newBlock->inputVars.append({"NA_"+curSignal->name,this->enableTest?"FrcTest."+curSignal->name+".na":"ASSIGN_NOT_AVAILABLITY_SIGNAL","BOOL"," "});
                     }
                 }
             }
@@ -3331,7 +3373,29 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
             attr.setValue("http://www.w3.org/1999/xhtml");
             xhtml.setAttributeNode(attr);
             QString handlerText="";
-            /*ST text of NA Handler*/
+            /*ST text of Validity Handler*/
+            handlerText.append("(*\n"
+                               "**********************************************************************\n"
+                               "Bozankaya A.Ş.\n"
+                               "**********************************************************************\n"
+                               "Name					: _FB_"+this->dutHeader+"_NA_Handler\n"
+                               "POU Type				: FB\n"
+                               "Created by              : COMMUNICATION INTERFACE GENERATOR , BZK.\n"
+                               "Creation Date 			: "+creationDate.toString(Qt::DateFormat::ISODate)+"\n"
+                               "Modifications			: see version description below\n"
+                               "\n"
+                               "\n"
+                               "FB Description:"
+                               "This FB which is created by automatically by communication interface generator \n"
+                               "\n to assign not available status of signals to actual signal object. \n"
+                               "*********************************************************************\n"
+                               "\n"
+                               "Version 1	\n"
+                               "*********************************************************************\n"
+                               "Version Description:\n"
+                               "- initial version\n"
+                               "*********************************************************************\n"
+                               "*)");
             foreach (dataContainer * curMessage , comInterface){
                 if(curMessage->getIfSelected())
                 for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
@@ -3340,7 +3404,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                     }
                 }
             }
-            /*ST text of Error Handler*/
+            /*ST text of Validty Handler*/
             text=doc.createTextNode(handlerText);
             xhtml.appendChild(text);
             ST.appendChild(xhtml);
@@ -3407,7 +3471,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"VALID_"+curSignal->name,"CONNECT_VALIDITY_VARIABLE_HERE","BOOL"," "});
+                        newBlock->inputVars.append({"VALID_"+curSignal->name,this->enableTest?"FrcTest."+curSignal->name+".v":"ASSIGN_VALIDITY_SIGNAL","BOOL"," "});
 
 
                 }
@@ -3441,7 +3505,29 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
             attr.setValue("http://www.w3.org/1999/xhtml");
             xhtml.setAttributeNode(attr);
             QString handlerText="";
-            /*ST text of NA Handler*/
+            handlerText.append("(*\n"
+                               "**********************************************************************\n"
+                               "Bozankaya A.Ş.\n"
+                               "**********************************************************************\n"
+                               "Name					: _FB_"+this->dutHeader+"_Validity_Handler\n"
+                               "POU Type				: FB\n"
+                               "Created by              : COMMUNICATION INTERFACE GENERATOR , BZK.\n"
+                               "Creation Date 			: "+creationDate.toString(Qt::DateFormat::ISODate)+"\n"
+                               "Modifications			: see version description below\n"
+                               "\n"
+                               "\n"
+                               "FB Description:"
+                               "This FB which is created by automatically by communication interface generator \n"
+                               "\n to assign validity status of signals to actual signal object. \n"
+                               "*********************************************************************\n"
+                               "\n"
+                               "Version 1	\n"
+                               "*********************************************************************\n"
+                               "Version Description:\n"
+                               "- initial version\n"
+                               "*********************************************************************\n"
+                               "*)");
+            /*ST text of validity Handler*/
             foreach (dataContainer * curMessage , comInterface){
                 if(curMessage->getIfSelected())
                 for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
@@ -3513,7 +3599,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                             type.appendChild(BOOL);
                             variable.appendChild(type);
                             inputVars.appendChild(variable);
-                            newBlock->inputVars.append({"VALUE_"+curSignal->name,"CONNECT_VALUE_VARIABLE_HERE",curSignal->appDataType," "});
+                            newBlock->inputVars.append({"VALUE_"+curSignal->name,this->enableTest?"FrcTest."+curSignal->name+".x":"ASSIGN_VARIABLE_OF_SIGNAL",curSignal->appDataType," "});
 
                     }
                 }
@@ -3645,6 +3731,20 @@ void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)
                 QDomElement variable = doc.createElement("variable");
                 attr=doc.createAttribute("name");
                 attr.setValue("FrcLo");
+                variable.setAttributeNode(attr);
+                QDomElement type = doc.createElement("type");
+                QDomElement dataVarType = doc.createElement("derived");
+                attr=doc.createAttribute("name");
+                attr.setValue(dutName);
+                dataVarType.setAttributeNode(attr);
+                type.appendChild(dataVarType);
+                variable.appendChild(type);
+                localVars.appendChild(variable);
+            }
+            if(this->enableTest){
+                QDomElement variable = doc.createElement("variable");
+                attr=doc.createAttribute("name");
+                attr.setValue("FrcTest");
                 variable.setAttributeNode(attr);
                 QDomElement type = doc.createElement("type");
                 QDomElement dataVarType = doc.createElement("derived");

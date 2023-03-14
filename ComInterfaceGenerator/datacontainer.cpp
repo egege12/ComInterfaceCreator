@@ -523,9 +523,10 @@ void dataContainer::signalChecker(signal *signalPtr)
     if(signalPtr->length == 8){
         if(signalPtr ->isJ1939){
             if( signalPtr ->offset != 0 ){
-                    this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 250*ölçek olarak atandı.");
+                if(signalPtr -> minValue < signalPtr ->offset) {
                     signalPtr->minValue =  signalPtr ->offset ;
                     this->setWarning(this->messageID,signalPtr->name+" minimum değerine ofset değeri atandı.");
+                }
             }else{
                 if(signalPtr -> minValue < 0) {
                     signalPtr -> offset = -250* signalPtr ->resolution/2;
@@ -540,10 +541,10 @@ void dataContainer::signalChecker(signal *signalPtr)
 
         }else{
             if( signalPtr ->offset != 0 ){
-
-                    this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 250*ölçek olarak atandı.");
+                if(signalPtr -> minValue < signalPtr ->offset) {
                     signalPtr->minValue =  signalPtr ->offset ;
                     this->setWarning(this->messageID,signalPtr->name+" minimum değerine ofset değeri atandı.");
+                }
             }else{
                 if(signalPtr -> minValue < 0) {
                     signalPtr -> offset = -254* signalPtr ->resolution/2;
@@ -559,10 +560,10 @@ void dataContainer::signalChecker(signal *signalPtr)
     }else if(signalPtr->length == 16){
         if(signalPtr ->isJ1939){
             if( signalPtr ->offset != 0 ){
-
-                    this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 250*ölçek olarak atandı.");
+                if(signalPtr -> minValue < signalPtr ->offset) {
                     signalPtr->minValue =  signalPtr ->offset ;
                     this->setWarning(this->messageID,signalPtr->name+" minimum değerine ofset değeri atandı.");
+                }
             }else{
                 if(signalPtr -> minValue < 0) {
                     signalPtr -> offset = -64255* signalPtr ->resolution/2;
@@ -576,10 +577,10 @@ void dataContainer::signalChecker(signal *signalPtr)
             }
         }else{
             if( signalPtr ->offset != 0 ){
-
-                    this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 250*ölçek olarak atandı.");
+                if(signalPtr -> minValue < signalPtr ->offset) {
                     signalPtr->minValue =  signalPtr ->offset ;
                     this->setWarning(this->messageID,signalPtr->name+" minimum değerine ofset değeri atandı.");
+                }
             }else{
                 if(signalPtr -> minValue < 0) {
                     signalPtr -> offset = -65535* signalPtr ->resolution/2;
@@ -595,10 +596,10 @@ void dataContainer::signalChecker(signal *signalPtr)
     }else if(signalPtr->length == 32){
         if(signalPtr ->isJ1939){
             if( signalPtr ->offset != 0 ){
-
-                    this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 250*ölçek olarak atandı.");
+                if(signalPtr -> minValue < signalPtr ->offset) {
                     signalPtr->minValue =  signalPtr ->offset ;
                     this->setWarning(this->messageID,signalPtr->name+" minimum değerine ofset değeri atandı.");
+                }
             }else{
                 if(signalPtr -> minValue < 0) {
                     signalPtr -> offset = -4211081215* signalPtr ->resolution/2;
@@ -612,10 +613,10 @@ void dataContainer::signalChecker(signal *signalPtr)
             }
         }else{
             if( signalPtr ->offset != 0 ){
-
-                    this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 250*ölçek olarak atandı.");
+                if(signalPtr -> minValue < signalPtr ->offset) {
                     signalPtr->minValue =  signalPtr ->offset ;
                     this->setWarning(this->messageID,signalPtr->name+" minimum değerine ofset değeri atandı.");
+                }
             }else{
                 if(signalPtr -> minValue < 0) {
                     signalPtr -> offset = -4294967294* signalPtr ->resolution/2;
@@ -631,10 +632,10 @@ void dataContainer::signalChecker(signal *signalPtr)
     }else{
         if(signalPtr->isJ1939){
             if( signalPtr ->offset != 0 ){
-
-                    this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 250*ölçek olarak atandı.");
+                if(signalPtr -> minValue < signalPtr ->offset) {
                     signalPtr->minValue =  signalPtr ->offset ;
                     this->setWarning(this->messageID,signalPtr->name+" minimum değerine ofset değeri atandı.");
+                }
             }else{
                 if(signalPtr -> minValue < 0) {
                     signalPtr -> offset = -(((qPow(2,signalPtr->length))-1) * 0.988598)* signalPtr ->resolution/2;
@@ -648,10 +649,10 @@ void dataContainer::signalChecker(signal *signalPtr)
             }
         }else{
             if( signalPtr ->offset != 0 ){
-
-                    this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 250*ölçek olarak atandı.");
+                if(signalPtr -> minValue < signalPtr ->offset) {
                     signalPtr->minValue =  signalPtr ->offset ;
                     this->setWarning(this->messageID,signalPtr->name+" minimum değerine ofset değeri atandı.");
+                }
             }else{
                 if(signalPtr -> minValue < 0) {
                     signalPtr -> offset = -((qPow(2,signalPtr->length))-1)* signalPtr ->resolution/2;

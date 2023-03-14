@@ -82,10 +82,11 @@ struct dataContainer::signal{
     double maxValue;
     double minValue;
     double defValue;
-    QString comment;
+    QString unit;
     QString appDataType;
     QString comDataType;
     QString convMethod;
+    QString comment;
     bool isJ1939;
 
 };
