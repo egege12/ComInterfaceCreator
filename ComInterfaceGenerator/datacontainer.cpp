@@ -638,13 +638,13 @@ void dataContainer::signalChecker(signal *signalPtr)
                 }
             }else{
                 if(signalPtr -> minValue < 0) {
-                    signalPtr -> offset = -(((qPow(2,signalPtr->length))-1) * 0.988598)* signalPtr ->resolution/2;
-                    signalPtr -> minValue = -(((qPow(2,signalPtr->length))-1) * 0.988598)* signalPtr ->resolution/2;
+                    signalPtr -> offset = -(((qPow(2,signalPtr->length))-1) * 0.9804)* signalPtr ->resolution/2;
+                    signalPtr -> minValue = -(((qPow(2,signalPtr->length))-1) * 0.9804)* signalPtr ->resolution/2;
                     this->setWarning(this->messageID,signalPtr->name+" minimum değer ve ofset değeri atandı.");
                 }
             }
-            if(signalPtr->maxValue > (((qPow(2,signalPtr->length))-1) * 0.988598)* signalPtr ->resolution + signalPtr ->offset){
-                signalPtr->maxValue = (((qPow(2,signalPtr->length))-1) * 0.988598)* signalPtr ->resolution + signalPtr ->offset;
+            if(signalPtr->maxValue > (((qPow(2,signalPtr->length))-1) * 0.9804)* signalPtr ->resolution + signalPtr ->offset){
+                signalPtr->maxValue = (((qPow(2,signalPtr->length))-1) * 0.9804)* signalPtr ->resolution + signalPtr ->offset;
                 this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri olabilecek değerden büyük olduğu için mümkün maksimum değer atandı.");
             }
         }else{

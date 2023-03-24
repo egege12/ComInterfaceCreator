@@ -152,7 +152,7 @@ void DBCHandler::readFile(QString fileLocation)
 {
     dbcPath = fileLocation;
     if(this->isAllInserted){
-        this->setErrCode("DBC is already inserted");
+        this->setErrCode("DBC zaten içeri aktarılmış, programı yeniden başlatın");
         qInfo()<<"alreadyinserted";
     }else{
         openFile();
@@ -378,6 +378,43 @@ bool DBCHandler::parseMessages(QFile *ascFile)
                         curSignal->isJ1939 = commentContainer.contains(QString("j1939"),Qt::CaseInsensitive) ;
                         curSignal->defValue= defValue;
                     }
+                }
+            }
+
+        }else if((curLine.contains("BA_")) && curLine.contains("SG_")){   //Catch BA_ SA_  signal parameters
+
+            QStringList containerLine = curLine.remove(";").split(" ");
+            if(containerLine.at(1).contains(QString("GenSigStartValue"),Qt::CaseInsensitive)){
+                QString targetID;
+                if(containerLine.at(3).toUInt()>2047){
+                    targetID = QString::number((containerLine.at(3).toUInt())-2147483648,16).toUpper();
+                }else{
+                    targetID = QString::number(containerLine.at(3).toUInt(),16).toUpper();
+                }
+                double defValue=containerLine.at(5).toDouble();
+
+                if(comInterface.contains(targetID)){
+                    for( dataContainer::signal * curSignal : *comInterface.value(targetID)->getSignalList()){
+                        if( curSignal->name.contains(containerLine.at(4))){
+                            curSignal->defValue= defValue;
+                        }
+                    }
+                }
+            }
+
+        }else if((curLine.contains("BA_")) && curLine.contains("BO_")){   //Catch BA_ BO_  signal parameters
+
+            QStringList containerLine = curLine.remove(";").split(" ");
+            if(containerLine.at(1).contains(QString("GenMsgCycleTime"),Qt::CaseInsensitive)){
+                QString targetID;
+                if(containerLine.at(3).toUInt()>2047){
+                    targetID = QString::number((containerLine.at(3).toUInt())-2147483648,16).toUpper();
+                }else{
+                    targetID = QString::number(containerLine.at(3).toUInt(),16).toUpper();
+                }
+
+                if(comInterface.contains(targetID)){
+                    comInterface.value(targetID)->setMsCycleTime(containerLine.at(4));
                 }
             }
 
