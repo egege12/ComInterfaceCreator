@@ -4,7 +4,7 @@ import QtQuick.Controls 2.0
 
 Window {
     id: root
-    width: 1080
+    width: 1200
     height: 615
     visible: true
     property bool fullscreen
@@ -65,7 +65,7 @@ Window {
             }
             Text{
                 id : textVersion
-                text: qsTr("v1.0.0029")
+                text: qsTr("v1.0.0030")
                 width :80
                 height:20
                 anchors.bottom: parent.bottom
