@@ -334,23 +334,29 @@ bool DBCHandler::parseMessages(QFile *ascFile)
         }else if((curLine.contains("CM_"))&& curLine.contains("BO_")){
 
             QStringList messageList = curLine.split(" ");
-            QString commentContainer =  curLine.mid(curLine.indexOf(messageList.at(2)),curLine.length());
-            QString ID = QString::number(messageList.at(2).toUInt(),16).toUpper();
+            QString commentContainer =  getBetween("\"","\";",curLine);
+            QString configComment = getBetween("[*","*]",curLine);
+            QString ID ="";
+            if(messageList.at(2).toUInt()>2047){
+                ID = QString::number((messageList.at(2).toUInt())-2147483648,16).toUpper();
+            }else{
+                ID = QString::number(messageList.at(2).toUInt(),16).toUpper();
+            }
             QString msTimeout="";
             QString msCycleTime="";
-            if(commentContainer.contains("timeout",Qt::CaseInsensitive)){
-                msTimeout = this->getBetween("timeout","ms",commentContainer);
+            if(configComment.contains("timeout",Qt::CaseInsensitive)){
+                msTimeout = this->getBetween("timeout","ms",configComment);
             }else{
                 dataContainer::setWarning(ID,"Mesaj için timeout hatalı yazılmış, <timeout : XXXX ms> etiketiyle yoruma ekleyin.");
             }
-            if(commentContainer.contains("cycletime",Qt::CaseInsensitive)){
-                msCycleTime = this->getBetween("cycletime","ms",commentContainer);
+            if(configComment.contains("cycletime",Qt::CaseInsensitive)){
+                msCycleTime = this->getBetween("cycletime","ms",configComment);
             }else{
                 dataContainer::setWarning(ID,"Mesaj için cycletime hatalı yazılmış, <cycletime : XXXX ms> etiketiyle yoruma ekleyin.");
             }
-
+            qInfo()<<configComment;
             msgCommentList.append({ID,msTimeout,msCycleTime,commentContainer});
-            if (commentContainer.contains(QString("j1939"),Qt::CaseInsensitive)){
+            if (configComment.contains("j1939",Qt::CaseInsensitive)){
                       for( dataContainer::signal * curSignal : *comInterface.value(ID)->getSignalList()){
                         curSignal->isJ1939 = true;
                       }
@@ -358,6 +364,7 @@ bool DBCHandler::parseMessages(QFile *ascFile)
         }else if((curLine.contains("CM_"))&& curLine.contains("SG_")){
 
             QString commentContainer = getBetween("\"","\";",curLine);
+            QString configComment = getBetween("[*","*]",curLine);
             QStringList commentLine = curLine.split(" ");
             QString targetID;
             if(commentLine.at(2).toUInt()>2047){
@@ -366,16 +373,16 @@ bool DBCHandler::parseMessages(QFile *ascFile)
                 targetID = QString::number(commentLine.at(2).toUInt(),16).toUpper();
             }
             double defValue;
-            if(commentContainer.contains(QString("defValue"),Qt::CaseInsensitive)){
-                defValue=this->getBetween("defValue","**",commentContainer.remove("=").remove(":")).toDouble();
+            if(configComment.contains(QString("defValue"),Qt::CaseInsensitive)){
+                defValue=this->getBetween("sDefValue","eDefValue",configComment.remove("=").remove(":")).toDouble();
             }else{
                 defValue=0.0;
             }
             if(comInterface.contains(targetID)){
                 for( dataContainer::signal * curSignal : *comInterface.value(targetID)->getSignalList()){
                     if( curSignal->name.contains(commentLine.at(3))){
-                        curSignal->comment=commentContainer;
-                        curSignal->isJ1939 = commentContainer.contains(QString("j1939"),Qt::CaseInsensitive) ;
+                        curSignal->comment=commentContainer.remove(configComment);
+                        curSignal->isJ1939 = (configComment.contains(QString("j1939"),Qt::CaseInsensitive))? true: curSignal->isJ1939 ;
                         curSignal->defValue= defValue;
                     }
                 }
