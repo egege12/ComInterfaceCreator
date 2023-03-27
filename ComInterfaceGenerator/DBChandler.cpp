@@ -290,6 +290,9 @@ bool DBCHandler::parseMessages(QFile *ascFile)
     QList<QList<QString>> msgCommentList;
     unsigned long debugcounter=0;
     bool isExtended = 0;
+    bool secLineFlagCmMes = false;
+    bool secLineFlagCmSig = false;
+    QString secLineContainer = "";
     while (!lines->atEnd()) {
         QString curLine = lines->readLine();
 
@@ -331,61 +334,101 @@ bool DBCHandler::parseMessages(QFile *ascFile)
             addSignalToMessage (messageID,curSignal);
  /*Append and manupulate message comments*/
 /************************************************/
-        }else if((curLine.contains("CM_"))&& curLine.contains("BO_")){
+        }else if(((curLine.contains("CM_"))&& curLine.contains("BO_")) || secLineFlagCmMes ){
+            unsigned i;
+            if(!secLineFlagCmMes && curLine.contains("\";")){
+                secLineContainer = curLine;
+                i=10;
+            }else if (secLineFlagCmMes && curLine.contains("\";")){
+                secLineFlagCmMes = false;
+                secLineContainer.append(curLine);
+                i=20;
+            }else if (secLineFlagCmMes && !curLine.contains("\";")){
+                secLineContainer.append(curLine);
+                i=30;
+            }else{
+                i=40;
+                secLineContainer = curLine;
+                secLineFlagCmMes = true;
+            }
 
-            QStringList messageList = curLine.split(" ");
-            QString commentContainer =  getBetween("\"","\";",curLine);
-            QString configComment = getBetween("[*","*]",curLine);
-            QString ID ="";
-            if(messageList.at(2).toUInt()>2047){
-                ID = QString::number((messageList.at(2).toUInt())-2147483648,16).toUpper();
-            }else{
-                ID = QString::number(messageList.at(2).toUInt(),16).toUpper();
-            }
-            QString msTimeout="";
-            QString msCycleTime="";
-            if(configComment.contains("timeout",Qt::CaseInsensitive)){
-                msTimeout = this->getBetween("timeout","ms",configComment);
-            }else{
-                dataContainer::setWarning(ID,"Mesaj için timeout hatalı yazılmış, <timeout : XXXX ms> etiketiyle yoruma ekleyin.");
-            }
-            if(configComment.contains("cycletime",Qt::CaseInsensitive)){
-                msCycleTime = this->getBetween("cycletime","ms",configComment);
-            }else{
-                dataContainer::setWarning(ID,"Mesaj için cycletime hatalı yazılmış, <cycletime : XXXX ms> etiketiyle yoruma ekleyin.");
-            }
-            qInfo()<<configComment;
-            msgCommentList.append({ID,msTimeout,msCycleTime,commentContainer});
-            if (configComment.contains("j1939",Qt::CaseInsensitive)){
-                      for( dataContainer::signal * curSignal : *comInterface.value(ID)->getSignalList()){
+            if((i == 10) || (i ==20)){
+                QStringList commentLine = secLineContainer.split(" ");
+                QString commentContainer =  secLineContainer.contains("\"") && secLineContainer.contains("\";")? getBetween("\"","\";",secLineContainer):"";
+                QString configComment = secLineContainer.contains("[*") && secLineContainer.contains("*]")? getBetween("[*","*]",secLineContainer) : "";
+                QString ID ="";
+                if(commentLine.at(2).toUInt()>2047){
+                    ID = QString::number((commentLine.at(2).toUInt())-2147483648,16).toUpper();
+                }else{
+                    ID = QString::number(commentLine.at(2).toUInt(),16).toUpper();
+                }
+                QString msTimeout="";
+                QString msCycleTime="";
+                if(configComment.contains("timeout",Qt::CaseInsensitive)){
+                    msTimeout = this->getBetween("timeout","ms",configComment);
+                }else{
+                    dataContainer::setWarning(ID,"Mesaj için timeout hatalı yazılmış, <timeout : XXXX ms> etiketiyle yoruma ekleyin.");
+                }
+                if(configComment.contains("cycletime",Qt::CaseInsensitive)){
+                    msCycleTime = this->getBetween("cycletime","ms",configComment);
+                }else{
+                    dataContainer::setWarning(ID,"Mesaj için cycletime hatalı yazılmış, <cycletime : XXXX ms> etiketiyle yoruma ekleyin.");
+                }
+                qInfo()<<configComment;
+                msgCommentList.append({ID,msTimeout,msCycleTime,commentContainer.remove(configComment)});
+                if (configComment.contains("j1939",Qt::CaseInsensitive)){
+                    for( dataContainer::signal * curSignal : *comInterface.value(ID)->getSignalList()){
                         curSignal->isJ1939 = true;
-                      }
-            }
-        }else if((curLine.contains("CM_"))&& curLine.contains("SG_")){
-
-            QString commentContainer = getBetween("\"","\";",curLine);
-            QString configComment = getBetween("[*","*]",curLine);
-            QStringList commentLine = curLine.split(" ");
-            QString targetID;
-            if(commentLine.at(2).toUInt()>2047){
-                targetID = QString::number((commentLine.at(2).toUInt())-2147483648,16).toUpper();
-            }else{
-                targetID = QString::number(commentLine.at(2).toUInt(),16).toUpper();
-            }
-            double defValue;
-            if(configComment.contains(QString("defValue"),Qt::CaseInsensitive)){
-                defValue=this->getBetween("sDefValue","eDefValue",configComment.remove("=").remove(":")).toDouble();
-            }else{
-                defValue=0.0;
-            }
-            if(comInterface.contains(targetID)){
-                for( dataContainer::signal * curSignal : *comInterface.value(targetID)->getSignalList()){
-                    if( curSignal->name.contains(commentLine.at(3))){
-                        curSignal->comment=commentContainer.remove(configComment);
-                        curSignal->isJ1939 = (configComment.contains(QString("j1939"),Qt::CaseInsensitive))? true: curSignal->isJ1939 ;
-                        curSignal->defValue= defValue;
                     }
                 }
+                secLineContainer="";
+                i=0;
+            }
+
+        }else if(((curLine.contains("CM_"))&& curLine.contains("SG_")) || secLineFlagCmSig ){
+
+            unsigned i;
+            if(!secLineFlagCmSig && curLine.contains("\";")){
+                secLineContainer = curLine;
+                i=10;
+            }else if (secLineFlagCmSig && curLine.contains("\";")){
+                secLineFlagCmSig = false;
+                secLineContainer.append(curLine);
+                i=20;
+            }else if (secLineFlagCmSig && !curLine.contains("\";")){
+                secLineContainer.append(curLine);
+                i=30;
+            }else{
+                i=30;
+                secLineContainer = curLine;
+                secLineFlagCmSig = true;
+            }
+            if((i == 10) || (i ==20)){
+                QStringList commentLine = secLineContainer.split(" ");
+                QString commentContainer =  secLineContainer.contains("\"") && secLineContainer.contains("\";")? getBetween("\"","\";",secLineContainer):"";
+                QString configComment = secLineContainer.contains("[*") && secLineContainer.contains("*]")? getBetween("[*","*]",secLineContainer) : "";
+                QString targetID;
+                if(commentLine.at(2).toUInt()>2047){
+                    targetID = QString::number((commentLine.at(2).toUInt())-2147483648,16).toUpper();
+                }else{
+                    targetID = QString::number(commentLine.at(2).toUInt(),16).toUpper();
+                }
+                double defValue;
+                if(configComment.contains(QString("defValue"),Qt::CaseInsensitive)){
+                    defValue=this->getBetween("sDefValue","eDefValue",configComment.remove("=").remove(":")).toDouble();
+                }else{
+                    defValue=0.0;
+                }
+                if(comInterface.contains(targetID)){
+                    for( dataContainer::signal * curSignal : *comInterface.value(targetID)->getSignalList()){
+                        if( curSignal->name.contains(commentLine.at(3))){
+                            curSignal->comment=commentContainer.remove(configComment);
+                            curSignal->isJ1939 = (configComment.contains(QString("j1939"),Qt::CaseInsensitive))? true: curSignal->isJ1939 ;
+                            curSignal->defValue= defValue;
+                        }
+                    }
+                }
+                secLineFlagCmSig=false;
             }
 
         }else if((curLine.contains("BA_")) && curLine.contains("SG_")){   //Catch BA_ SA_  signal parameters
