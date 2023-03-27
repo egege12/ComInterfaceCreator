@@ -707,6 +707,7 @@ Rectangle {
                             anchors.left:parent.left
                             anchors.right:parent.right
                             anchors.top:headerInfoList.bottom
+                            width : parent.width
                             clip:true
                             ListView{
                                 id: listViewInfos
@@ -715,7 +716,7 @@ Rectangle {
                                 model: ListModelInfos {
                                     id: listModelInfos
                                 }
-                                contentWidth:700
+                                contentWidth:1000
                                 property bool enableVScrollbar: true
                                 ScrollBar.vertical: ScrollBar{
                                     policy: ((listViewInfos.height - listViewInfos.contentHeight) < -3) ?
@@ -737,7 +738,7 @@ Rectangle {
                                 delegate:Rectangle{
                                     id:delegateRectangleInfo
                                     implicitHeight: textInfos.implicitHeight+2
-                                    implicitWidth: impwidth*(textInfos.font.pointSize*0.6) +5
+                                    implicitWidth: impwidth*textInfos.font.pointSize*0.6 +5
                                     color:"transparent"
                                     Component.onCompleted: {
                                         if(listViewInfos.contentWidth < (delegateRectangleInfo.implicitWidth)){
@@ -750,13 +751,11 @@ Rectangle {
                                         width:parent.width
                                         text: listdata
                                         font.pointSize: 10
-                                        elide: Text.ElideRight
                                         font.preferShaping: false
                                         color:generationinfo? "#000000":"#838383"
                                     }
                                     MouseArea {
                                         anchors.fill: parent
-
                                         hoverEnabled: true;
                                         onEntered: {delegateRectangleInfo.color= "#decc73"; textInfos.color = "#000000";
                                                     if (listViewInfos.width < (impwidth*(textInfos.font.pointSize*0.6) +5)){ToolTip.show(listdata)}}
