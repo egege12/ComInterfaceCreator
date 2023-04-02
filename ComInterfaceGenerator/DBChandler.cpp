@@ -331,6 +331,7 @@ bool DBCHandler::parseMessages(QFile *ascFile)
             curSignal.unit = commentContainer.toUtf8();
             curSignal.isJ1939 = false; // get default , it set on comment
             curSignal.defValue=0.0; // get default , it set on comment
+            curSignal.isMotorola=curLine.contains("@0+");//Signal motorola or intel
             addSignalToMessage (messageID,curSignal);
  /*Append and manupulate message comments*/
 /************************************************/
@@ -1305,7 +1306,6 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
 ///******************************************************************************
 /// RECEIVE MESSAGES FUNCTION BLOCK ST GENERATOR
 ///******************************************************************************
-
 void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
 {
     QDomAttr attr;
@@ -2154,11 +2154,9 @@ QString DBCHandler::convTypeComtoApp(QString signalName, unsigned short startbit
     ST.append("\n\n\n{endregion}\n\n\n");
     return ST;
 }
-
 ///******************************************************************************
 /// TRANSMIT MESSAGES FUNCTION BLOCK ST GENERATOR
 ///******************************************************************************
-
 void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
 {
     QDomAttr attr;
@@ -3249,8 +3247,9 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
     return ST;
 
 }
-
-
+///******************************************************************************
+/// PLACE HANDLERS
+///******************************************************************************
 void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
 {
     QDomAttr attr;
@@ -3759,7 +3758,9 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
 
             }
 }
-
+///******************************************************************************
+/// Generate POUS
+///******************************************************************************
 void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)
 {
     QDomAttr attr;
