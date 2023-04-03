@@ -367,13 +367,13 @@ bool DBCHandler::parseMessages(QFile *ascFile)
                 QString msCycleTime="";
                 if(configComment.contains("timeout",Qt::CaseInsensitive)){
                     msTimeout = this->getBetween("timeout","ms",configComment);
-                }else{
-                    dataContainer::setWarning(ID,"Mesaj için timeout hatalı yazılmış, <timeout : XXXX ms> etiketiyle yoruma ekleyin.");
+                    if(comInterface.contains(ID))
+                    comInterface.value(ID)->isTmOutSet = true;
                 }
                 if(configComment.contains("cycletime",Qt::CaseInsensitive)){
                     msCycleTime = this->getBetween("cycletime","ms",configComment);
-                }else{
-                    dataContainer::setWarning(ID,"Mesaj için cycletime hatalı yazılmış, <cycletime : XXXX ms> etiketiyle yoruma ekleyin.");
+                    if(comInterface.contains(ID))
+                    comInterface.value(ID)->isCycleTmSet = true;
                 }
                 qInfo()<<configComment;
                 msgCommentList.append({ID,msTimeout,msCycleTime,commentContainer.remove(configComment)});
@@ -466,6 +466,7 @@ bool DBCHandler::parseMessages(QFile *ascFile)
 
                 if(comInterface.contains(targetID)){
                     comInterface.value(targetID)->setMsCycleTime(containerLine.at(4));
+                    comInterface.value(targetID)->isCycleTmSet = true;
                 }
             }
 
