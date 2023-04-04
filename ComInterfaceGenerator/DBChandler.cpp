@@ -3320,9 +3320,12 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                 }
             }
             interface.appendChild(inputVars);
-
+            /*
+             * This part is deleted after v1.000.037
+             * reason : To reduce memory alocation GVL variables will be used
+             */
             /*Generate Output Input Variables - inoutVars*/
-            QDomElement inoutVars = doc.createElement("inOutVars");
+            /*QDomElement inoutVars = doc.createElement("inOutVars");
             {
                 QDomElement variable = doc.createElement("variable");
                 attr=doc.createAttribute("name");
@@ -3338,7 +3341,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                 inoutVars.appendChild(variable);
             };
             interface.appendChild(inoutVars);
-
+            */
             pou.appendChild(interface);
 
             QDomElement body = doc.createElement("body");
@@ -3448,9 +3451,12 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                 }
             }
             interface.appendChild(inputVars);
-
+            /*
+             * This part is deleted after v1.000.037
+             * reason : To reduce memory alocation GVL variables will be used
+             */
             /*Generate Output Input Variables - inoutVars*/
-            QDomElement inoutVars = doc.createElement("inOutVars");
+            /*QDomElement inoutVars = doc.createElement("inOutVars");
             {
                 QDomElement variable = doc.createElement("variable");
                 attr=doc.createAttribute("name");
@@ -3466,7 +3472,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                 inoutVars.appendChild(variable);
             };
             interface.appendChild(inoutVars);
-
+            */
             pou.appendChild(interface);
 
             QDomElement body = doc.createElement("body");
@@ -3503,7 +3509,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                 if(curMessage->getIfSelected())
                 for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
                     if(curSignal->isJ1939){
-                        handlerText.append("\n"+this->dutHeader+ "."+curSignal->name+ ".na 					:=	NA_"+curSignal->name+ ";");
+                        handlerText.append("\nGVL."+this->dutHeader+ "."+curSignal->name+ ".na 					:=	NA_"+curSignal->name+ ";");
                     }
                 }
             }
@@ -3580,8 +3586,13 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                 }
             }
             interface.appendChild(inputVars);
+            /*
+             * This part is deleted after v1.000.037
+             * reason : To reduce memory alocation GVL variables will be used
+             */
 
             /*Generate Output Input Variables - inoutVars*/
+            /*
             QDomElement inoutVars = doc.createElement("inOutVars");
             {
                 QDomElement variable = doc.createElement("variable");
@@ -3598,7 +3609,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                 inoutVars.appendChild(variable);
             };
             interface.appendChild(inoutVars);
-
+            */
             pou.appendChild(interface);
 
             QDomElement body = doc.createElement("body");
@@ -3634,7 +3645,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
             foreach (dataContainer * curMessage , comInterface){
                 if(curMessage->getIfSelected())
                 for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
-                        handlerText.append("\n"+this->dutHeader+ "."+curSignal->name+ ".v					:=	VALID_"+curSignal->name+ ";");
+                        handlerText.append("\nGVL."+this->dutHeader+ "."+curSignal->name+ ".v					:=	VALID_"+curSignal->name+ ";");
                 }
             }
             /*ST text of Error Handler*/
@@ -3707,8 +3718,12 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                     }
                 }
                 interface.appendChild(inputVars);
-
+                /*
+                 * This part is deleted after v1.000.037
+                 * reason : To reduce memory alocation GVL variables will be used
+                 */
                 /*Generate Output Input Variables - inoutVars*/
+                /*
                 QDomElement inoutVars = doc.createElement("inOutVars");
                 {
                     QDomElement variable = doc.createElement("variable");
@@ -3725,7 +3740,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                     inoutVars.appendChild(variable);
                 };
                 interface.appendChild(inoutVars);
-
+                */
                 pou.appendChild(interface);
 
                 QDomElement body = doc.createElement("body");
@@ -3739,7 +3754,7 @@ void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
                 foreach (dataContainer * curMessage , comInterface){
                     if(curMessage->getIfSelected())
                     for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
-                            handlerText.append("\n"+this->dutHeader+ "."+curSignal->name+ ".x					:=	VALUE_"+curSignal->name+ ";");
+                            handlerText.append("\nGVL."+this->dutHeader+ "."+curSignal->name+ ".x					:=	VALUE_"+curSignal->name+ ";");
                     }
                 }
                 /*ST text of Error Handler*/
@@ -4061,13 +4076,14 @@ void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)
                                 localxId++;
                             }
                             block.appendChild(inputVariables);
+
+
+                        QDomElement inoutVariables = doc.createElement("inOutVariables");
                         /*
                          * This part is deleted after v1.000.037
                          * reason : To reduce memory alocation GVL variables will be used
                          */
                         /*
-                        QDomElement inoutVariables = doc.createElement("inOutVariables");
-
                         if(curStruct->name != "AND" && curStruct->name != "OR"){
                             QDomElement variable = doc.createElement("variable");
                             attr=doc.createAttribute("formalParameter");
@@ -4083,8 +4099,9 @@ void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)
                             inoutVariables.appendChild(variable);
 
                             }
-                        block.appendChild(inoutVariables);
+
                         */
+                        block.appendChild(inoutVariables);
                         QDomElement outputVariables = doc.createElement("outputVariables");
                             foreach(QList<QString> curVar , curStruct->outputVars){
 
