@@ -1025,6 +1025,10 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
                 {//initialValue
                     QDomElement initialValue = doc.createElement("initialValue");
                     QDomElement structValue = doc.createElement("structValue");
+                    /*
+                     * This part deleted after v1.000.037
+                     *
+                     */
                     //if((curSignal->appDataType)!="BOOL"){
                     //    QDomElement value = doc.createElement("value");
                     //    attr = doc.createAttribute("member");
@@ -1389,7 +1393,7 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"FrcEn_"+curSignal->name,"FrcHi."+curSignal->name+".v","BOOL"," "});
+                        newBlock->inputVars.append({"FrcEn_"+curSignal->name,"FrcVar."+curSignal->name+".v","BOOL"," "});
                         /*Create FrcVal */
                         variable = doc.createElement("variable");
                         attr=doc.createAttribute("name");
@@ -1400,7 +1404,7 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                         type.appendChild(signalDataType);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"FrcVal_"+curSignal->name,"FrcHi."+curSignal->name+".x",curSignal->comDataType," "});
+                        newBlock->inputVars.append({"FrcVal_"+curSignal->name,"FrcVar."+curSignal->name+".x",curSignal->comDataType," "});
                     }
                     else {
                         /*Create FrcHi */
@@ -1413,7 +1417,7 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"FrcHi_"+curSignal->name,"FrcHi."+curSignal->name+".x","BOOL"," "});
+                        newBlock->inputVars.append({"FrcHi_"+curSignal->name,"FrcVar."+curSignal->name+".v","BOOL"," "});
                         /*Create FrcLo */
                         variable = doc.createElement("variable");
                         attr=doc.createAttribute("name");
@@ -1424,7 +1428,7 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"FrcLo_"+curSignal->name,"FrcLo."+curSignal->name+".x","BOOL"," "});
+                        newBlock->inputVars.append({"FrcLo_"+curSignal->name,"FrcVar."+curSignal->name+".x","BOOL"," "});
                     }
 
                 }
@@ -1447,8 +1451,12 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                 }
                 interface.appendChild(outputVars);
             }
+            /*
+             * This part deleted after v.1.0.037
+             * reason : to reduce memory allocation GVL variables directly will be used
+             */
             /*Generate Output Input Variables - inoutVars*/
-            {
+            /*{
                 QDomElement inoutVars = doc.createElement("inOutVars");
                 {
                     QDomElement variable = doc.createElement("variable");
@@ -1465,7 +1473,7 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                     inoutVars.appendChild(variable);
                 }
                 interface.appendChild(inoutVars);
-            }
+            }*/
             /*Generate Local Variables - inoutVars*/
             QString STcode;
             this->generateIIST(&STcode,curMessage);
@@ -1984,11 +1992,11 @@ QString DBCHandler::convTypeComtoApp(QString signalName, unsigned short startbit
 {
     QString ST="\n\n\n{region \""+signalName+"\"}\n\n\n";
     if(converType=="BOOL:BOOL"){
-        ST.append("\n"+this->dutHeader+"."+signalName+".v               := NOT S_Msg_TmOut OR FrcHi_"+signalName+" OR FrcLo_"+signalName+" ;"
-                  "\n"+this->dutHeader+"."+signalName+".x                := "+this->dutHeader+"."+signalName+".v AND (S_II_BIT_"+QString::number(startbit)+" OR FrcHi_"+signalName+") AND NOT FrcLo_"+signalName+" ;");
+        ST.append("\nGVL."+this->dutHeader+"."+signalName+".v               := NOT S_Msg_TmOut OR FrcHi_"+signalName+" OR FrcLo_"+signalName+" ;"
+                  "\nGVL."+this->dutHeader+"."+signalName+".x                := GVL."+this->dutHeader+"."+signalName+".v AND (S_II_BIT_"+QString::number(startbit)+" OR FrcHi_"+signalName+") AND NOT FrcLo_"+signalName+" ;");
     }else if(converType=="2BOOL:BOOL"){
-        ST.append("\n"+this->dutHeader+"."+signalName+".v               := ((NOT S_Msg_TmOut AND NOT S_II_BIT_"+QString::number(startbit+1)+") OR FrcHi_"+signalName+" OR FrcLo_"+signalName+") ;"
-                   "\n"+this->dutHeader+"."+signalName+".x               := "+this->dutHeader+"."+signalName+".v AND (S_II_BIT_"+QString::number(startbit+1)+" OR FrcHi_"+signalName+") AND NOT FrcLo_"+signalName+";");
+        ST.append("\nGVL."+this->dutHeader+"."+signalName+".v               := ((NOT S_Msg_TmOut AND NOT S_II_BIT_"+QString::number(startbit+1)+") OR FrcHi_"+signalName+" OR FrcLo_"+signalName+") ;"
+                   "\nGVL."+this->dutHeader+"."+signalName+".x               := GVL."+this->dutHeader+"."+signalName+".v AND (S_II_BIT_"+QString::number(startbit+1)+" OR FrcHi_"+signalName+") AND NOT FrcLo_"+signalName+";");
     }else if((converType=="xtoBYTE")||(converType=="xtoUSINT")||((converType=="xtoREAL") && (length==8))){
         ST.append("\nRaw_"+signalName+"             := X_II_BYTE_"+QString::number(startbit/8)+";");
     }else if((converType=="xtoWORD")||(converType=="xtoUINT")||((converType=="xtoREAL") && (length==16))){
@@ -2081,13 +2089,13 @@ QString DBCHandler::convTypeComtoApp(QString signalName, unsigned short startbit
     }
     // TYPE CONVERTION AND E  NA CONTROL STARTS
     if(length==1){
-        ST.append("\n"+this->dutHeader+"."+signalName+".e				:= FALSE;");
-        ST.append("\n"+this->dutHeader+"."+signalName+".na				:= FALSE;");
+        ST.append("\nGVL."+this->dutHeader+"."+signalName+".e				:= FALSE;");
+        ST.append("\nGVL."+this->dutHeader+"."+signalName+".na				:= FALSE;");
     }
     else if((length==2) && (converType != "toBYTE")){
 
-        ST.append("\n"+this->dutHeader+"."+signalName+".e				:= S_II_BIT_"+QString::number(startbit+1)+" AND NOT S_II_BIT_"+QString::number(startbit)+" ;");
-        ST.append("\n"+this->dutHeader+"."+signalName+".na				:= S_II_BIT_"+QString::number(startbit+1)+" AND S_II_BIT_"+QString::number(startbit)+" ;");
+        ST.append("\nGVL."+this->dutHeader+"."+signalName+".e				:= S_II_BIT_"+QString::number(startbit+1)+" AND NOT S_II_BIT_"+QString::number(startbit)+" ;");
+        ST.append("\nGVL."+this->dutHeader+"."+signalName+".na				:= S_II_BIT_"+QString::number(startbit+1)+" AND S_II_BIT_"+QString::number(startbit)+" ;");
 
     }
     else if((length<9)){
@@ -2100,8 +2108,8 @@ QString DBCHandler::convTypeComtoApp(QString signalName, unsigned short startbit
         else if ((converType == "toREAL")|| (converType == "xtoREAL")){
             ST.append("\nCont_"+signalName+"				:= USINT_TO_REAL(BYTE_TO_USINT(Raw_"+signalName+"))*"+QString::number(resolution,'g',(length>32)? 20:15)+QString::number(offset,'g',(length>32)? 20:15))+";";
         }
-        ST.append( "\n"+this->dutHeader+"."+signalName+".e              := (Raw_"+signalName+" > 16#FD);");
-        ST.append("\n"+this->dutHeader+"."+signalName+".na              := (Raw_"+signalName+" = 16#FF) ;");
+        ST.append( "\nGVL."+this->dutHeader+"."+signalName+".e              := (Raw_"+signalName+" > 16#FD);");
+        ST.append("\nGVL."+this->dutHeader+"."+signalName+".na              := (Raw_"+signalName+" = 16#FF) ;");
 
     }else if((length<17)){
         if((converType == "toWORD")|| (converType == "xtoWORD")){
@@ -2113,8 +2121,8 @@ QString DBCHandler::convTypeComtoApp(QString signalName, unsigned short startbit
         else if ((converType == "toREAL")|| (converType == "xtoREAL")){
             ST.append("\n Cont_"+signalName+"				:= UINT_TO_REAL(WORD_TO_UINT(Raw_"+signalName+"))*"+QString::number(resolution,'g',(length>32)? 20:15)+QString::number(offset,'g',(length>32)? 20:15))+";";
         }
-        ST.append("\n"+this->dutHeader+"."+signalName+".e              := (Raw_"+signalName+" > 16#FDFF) AND (Raw_"+signalName+" < 16#FF00) ;");
-        ST.append("\n"+this->dutHeader+"."+signalName+".na              := (Raw_"+signalName+" > 16#FEFF) ;");
+        ST.append("\nGVL."+this->dutHeader+"."+signalName+".e              := (Raw_"+signalName+" > 16#FDFF) AND (Raw_"+signalName+" < 16#FF00) ;");
+        ST.append("\nGVL."+this->dutHeader+"."+signalName+".na              := (Raw_"+signalName+" > 16#FEFF) ;");
 
     }else if((length<33)){
         if((converType == "toDWORD")|| (converType == "xtoDWORD")){
@@ -2126,8 +2134,8 @@ QString DBCHandler::convTypeComtoApp(QString signalName, unsigned short startbit
         else if ((converType == "toREAL")|| (converType == "xtoREAL")){
             ST.append("\nCont_"+signalName+"				:= UDINT_TO_REAL(DWORD_TO_UDINT(Raw_"+signalName+"))*"+QString::number(resolution,'g',(length>32)? 20:15)+QString::number(offset,'g',(length>32)? 20:15))+";";
         }
-        ST.append("\n"+this->dutHeader+"."+signalName+".e              := (Raw_"+signalName+" > 16#FDFFFFFF) AND (Raw_"+signalName+" < 16#FF000000) ;");
-        ST.append("\n"+this->dutHeader+"."+signalName+".na              := (Raw_"+signalName+" > 16#FEFFFFFF) ;");
+        ST.append("\nGVL."+this->dutHeader+"."+signalName+".e              := (Raw_"+signalName+" > 16#FDFFFFFF) AND (Raw_"+signalName+" < 16#FF000000) ;");
+        ST.append("\nGVL."+this->dutHeader+"."+signalName+".na              := (Raw_"+signalName+" > 16#FEFFFFFF) ;");
 
     }else if((length<65)){
         if((converType == "toLWORD")|| (converType == "xtoLWORD")){
@@ -2139,21 +2147,21 @@ QString DBCHandler::convTypeComtoApp(QString signalName, unsigned short startbit
         else if ((converType == "toLREAL")|| (converType == "xtoLREAL")){
             ST.append("\nCont_"+signalName+"				:= ULINT_TO_LREAL(LWORD_TO_ULINT(Raw_"+signalName+"))*"+QString::number(resolution,'g',(length>32)? 20:15)+QString::number(offset,'g',(length>32)? 20:15))+";";
         }
-        ST.append("\n"+this->dutHeader+"."+signalName+".e              := (Raw_"+signalName+" > 16#FDFFFFFFFFFFFFFF) AND (Raw_"+signalName+" < 16#FF00000000000000) ;");
-        ST.append("\n"+this->dutHeader+"."+signalName+".na              := (Raw_"+signalName+" > 16#FEFFFFFFFFFFFFFF) ;");
+        ST.append("\nGVL."+this->dutHeader+"."+signalName+".e              := (Raw_"+signalName+" > 16#FDFFFFFFFFFFFFFF) AND (Raw_"+signalName+" < 16#FF00000000000000) ;");
+        ST.append("\nGVL."+this->dutHeader+"."+signalName+".na              := (Raw_"+signalName+" > 16#FEFFFFFFFFFFFFFF) ;");
 
     }// TYPE CONVERTION AND E  NA CONTROL ENDS
 // ADD COMMON PART EXCEPT BOOL AND 2XBOOLS
     if((length!= 1) && (!(length==2 && (converType !="toByte")))){
-        ST.append("\n"+this->dutHeader+"."+signalName+".RangeExcd 		:= NOT ((Cont_"+signalName+" >= "+QString::number(minValue,'g',(length>32)? 20:15)+") AND ("+QString::number(minValue,'g',(length>32)? 20:15)+" <= "+QString::number(maxValue,'g',(length>32)? 20:15)+"));"
-        "\n"+this->dutHeader+"."+signalName+".v				:= NOT( S_Msg_TmOut OR "+this->dutHeader+"."+signalName+".RangeExcd OR (( "+this->dutHeader+"."+signalName+".e OR "+this->dutHeader+"."+signalName+".na) AND "+this->dutHeader+"."+signalName+".J1939)) OR FrcEn_"+signalName+";"
+        ST.append("\nGVL."+this->dutHeader+"."+signalName+".RangeExcd 		:= NOT ((Cont_"+signalName+" >= "+QString::number(minValue,'g',(length>32)? 20:15)+") AND ("+QString::number(minValue,'g',(length>32)? 20:15)+" <= "+QString::number(maxValue,'g',(length>32)? 20:15)+"));"
+        "\nGVL."+this->dutHeader+"."+signalName+".v				:= NOT( S_Msg_TmOut OR GVL."+this->dutHeader+"."+signalName+".RangeExcd OR (( GVL."+this->dutHeader+"."+signalName+".e OR GVL."+this->dutHeader+"."+signalName+".na) AND GVL."+this->dutHeader+"."+signalName+".J1939)) OR FrcEn_"+signalName+";"
         "\n"
         "\nIF FrcEn_"+signalName+" THEN"
-        "\n	"+this->dutHeader+"."+signalName+".x 		   	:= FrcVal_"+signalName+";"
-        "\nELSIF "+this->dutHeader+"."+signalName+".v THEN"
-        "\n	"+this->dutHeader+"."+signalName+".x 		   	:= Cont_"+signalName+";"
+        "\n	GVL."+this->dutHeader+"."+signalName+".x 		   	:= FrcVal_"+signalName+";"
+        "\nELSIF GVL."+this->dutHeader+"."+signalName+".v THEN"
+        "\n	GVL."+this->dutHeader+"."+signalName+".x 		   	:= Cont_"+signalName+";"
         "\nELSE"
-        "\n	"+this->dutHeader+"."+signalName+".x 		   	:= "+QString::number(defValue,'g',(length>32)? 20:15)+";"
+        "\n	GVL."+this->dutHeader+"."+signalName+".x 		   	:= "+QString::number(defValue,'g',(length>32)? 20:15)+";"
         "\nEND_IF;\n");
     }
     ST.append("\n\n\n{endregion}\n\n\n");
@@ -2233,7 +2241,7 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"FrcEn_"+curSignal->name,"FrcHi."+curSignal->name+".v","BOOL"," "});
+                        newBlock->inputVars.append({"FrcEn_"+curSignal->name,"FrcVar."+curSignal->name+".v","BOOL"," "});
                         /*Create FrcVal */
                         variable = doc.createElement("variable");
                         attr=doc.createAttribute("name");
@@ -2244,7 +2252,7 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
                         type.appendChild(signalDataType);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"FrcVal_"+curSignal->name,"FrcHi."+curSignal->name+".x",curSignal->comDataType," "});
+                        newBlock->inputVars.append({"FrcVal_"+curSignal->name,"FrcVar."+curSignal->name+".x",curSignal->comDataType," "});
                     }
                     else {
                         /*Create FrcHi */
@@ -2257,7 +2265,7 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"FrcHi_"+curSignal->name,"FrcHi."+curSignal->name+".x","BOOL"," "});
+                        newBlock->inputVars.append({"FrcHi_"+curSignal->name,"FrcVar."+curSignal->name+".x","BOOL"," "});
                         /*Create FrcLo */
                         variable = doc.createElement("variable");
                         attr=doc.createAttribute("name");
@@ -2268,7 +2276,7 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
                         type.appendChild(BOOL);
                         variable.appendChild(type);
                         inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"FrcLo_"+curSignal->name,"FrcLo."+curSignal->name+".x","BOOL"," "});
+                        newBlock->inputVars.append({"FrcLo_"+curSignal->name,"FrcVar."+curSignal->name+".x","BOOL"," "});
                     }
 
                 }
@@ -2291,8 +2299,12 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
                 }
                 interface.appendChild(outputVars);
             }
+            /*
+             * This part deleted after v.1.0.037
+             * reason : to reduce memory allocation GVL variables directly will be used
+             */
             /*Generate Output Input Variables - inoutVars*/
-            {
+             /*{
                 QDomElement inoutVars = doc.createElement("inOutVars");
                 {
                     QDomElement variable = doc.createElement("variable");
@@ -2309,7 +2321,7 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
                     inoutVars.appendChild(variable);
                 }
                 interface.appendChild(inoutVars);
-            }
+            }*/
             QString STcode;
             this->generateIOST(&STcode,curMessage);
             /*Generate Local Variables - localVars*/
@@ -2807,22 +2819,22 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
     // TYPE CONVERTION AND E  NA CONTROL STARTS
     if((length<9)){
         if((converType == "toBYTE")|| (converType == "xtoBYTE")){
-            ST.append(""+this->dutHeader+"."+signalName+".RangeExcd :=  "+QString::number(maxValue,'g',(length>32)? 20:15)+" < "+this->dutHeader+"."+signalName+".x OR "+QString::number(minValue,'g',(length>32)? 20:15)+" > "+this->dutHeader+"."+signalName+".x;"
+            ST.append("GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  ("+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x) OR ("+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x);"
             "\n //Transmit Data : Range Control End"
             "\n IF FrcEn_"+signalName+" THEN"
             "\n 	//Transmit Data : Force variable Start"
             "\n 	Cont_"+signalName+"	:= FrcVal_"+signalName+";"
             "\n 	//Transmit Data : Force variable Start"
-            "\n ELSIF ("+this->dutHeader+"."+signalName+".v AND NOT "+this->dutHeader+"."+signalName+".RangeExcd) THEN"
+            "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
             "\n 	//Transmit Data : Normal Start"
-            "\n 	Cont_"+signalName+"	:= "+this->dutHeader+"."+signalName+".x ;"
+            "\n 	Cont_"+signalName+"	:= GVL."+this->dutHeader+"."+signalName+".x ;"
             "\n 	 //Transmit Data : Normal End"
             "\n ELSE"
-            "\n 	IF "+this->dutHeader+"."+signalName+".J1939 THEN"
+            "\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN"
             "\n 	//Transmit Data : Data not valid J1939 error transmission Start"
-            "\n 	IF "+this->dutHeader+"."+signalName+".na THEN"
+            "\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN"
             "\n 		Cont_"+signalName+":= 16#FF;"
-            "\n 	ELSIF "+this->dutHeader+"."+signalName+".e THEN"
+            "\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN"
             "\n 		Cont_"+signalName+":= 16#FE;"
             "\n 	ELSE"
             "\n 		Cont_"+signalName+":= 16#FE;"
@@ -2837,22 +2849,22 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
         }
         else if ((converType == "toUSINT")|| (converType == "xtoUSINT")){
 
-            ST.append("<"+this->dutHeader+"."+signalName+".RangeExcd :=  "+QString::number(maxValue,'g',(length>32)? 20:15)+" < "+this->dutHeader+"."+signalName+".x OR "+QString::number(minValue,'g',(length>32)? 20:15)+" > "+this->dutHeader+"."+signalName+".x;"
+            ST.append("<GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  ("+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x )OR ("+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x);"
             "\n //Transmit Data : Range Control End"
             "\n IF FrcEn_"+signalName+" THEN"
             "\n 	//Transmit Data : Force variable Start"
             "\n 	Cont_"+signalName+"	:= USINT_TO_BYTE(FrcVal_"+signalName+");"
             "\n 	//Transmit Data : Force variable Start"
-            "\n ELSIF ("+this->dutHeader+"."+signalName+".v AND NOT "+this->dutHeader+"."+signalName+".RangeExcd) THEN"
+            "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
             "\n 	//Transmit Data : Normal Start"
-            "\n 	Cont_"+signalName+"	:= USINT_TO_BYTE("+this->dutHeader+"."+signalName+".x );"
+            "\n 	Cont_"+signalName+"	:= USINT_TO_BYTE(GVL."+this->dutHeader+"."+signalName+".x );"
             "\n 	 //Transmit Data : Normal End"
             "\n ELSE"
-            "\n 	IF "+this->dutHeader+"."+signalName+".J1939 THEN"
+            "\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN"
             "\n 	//Transmit Data : Data not valid J1939 error transmission Start"
-            "\n 	IF "+this->dutHeader+"."+signalName+".na THEN"
+            "\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN"
             "\n 		Cont_"+signalName+":= 16#FF;"
-            "\n 	ELSIF "+this->dutHeader+"."+signalName+".e THEN"
+            "\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN"
             "\n 		Cont_"+signalName+":= 16#FE;"
             "\n 	ELSE"
             "\n 		Cont_"+signalName+":= 16#FE;"
@@ -2860,7 +2872,7 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
             "\n 	//Transmit Data : Data not valid J1939 error transmission End"
             "\n 	ELSE"
             "\n 	//Transmit Data : Data not valid  Start"
-            "\n 		Cont_"+signalName+":= USINT_TO_BYTE("+QString::number(defValue,'g',(length>32)? 20:15)+" );"
+            "\n 		Cont_"+signalName+":= "+QString::number(defValue,'g',(length>32)? 20:15)+";"
             "\n 	//Transmit Data : Data not valid  End"
             "\n 	END_IF;"
             "\n END_IF;");
@@ -2869,22 +2881,22 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
         else if ((converType == "toREAL")|| (converType == "xtoREAL")){
 
 
-            ST.append(""+this->dutHeader+"."+signalName+".RangeExcd :=  "+QString::number(maxValue,'g',(length>32)? 20:15)+" < "+this->dutHeader+"."+signalName+".x OR "+QString::number(minValue,'g',(length>32)? 20:15)+" > "+this->dutHeader+"."+signalName+".x;"
+            ST.append("GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  ("+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x )OR ("+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x);"
             "\n //Transmit Data : Range Control End"
             "\n IF FrcEn_"+signalName+" THEN"
             "\n 	//Transmit Data : Force variable Start"
-            "\n 	Cont_"+signalName+"	:= USINT_TO_BYTE(REAL_TO_USINT(( FrcVal_"+signalName+" + "+QString::number(offset,'g',(length>32)? 20:15)+")/ "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
+            "\n 	Cont_"+signalName+"	:= USINT_TO_BYTE(REAL_TO_USINT(( FrcVal_"+signalName+" - "+QString::number(offset,'g',(length>32)? 20:15)+")/ "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
             "\n 	//Transmit Data : Force variable Start"
-            "\n ELSIF ("+this->dutHeader+"."+signalName+".v AND NOT "+this->dutHeader+"."+signalName+".RangeExcd) THEN"
+            "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
             "\n 	//Transmit Data : Normal Start"
-            "\n 	Cont_"+signalName+"	:= USINT_TO_BYTE(REAL_TO_USINT(("+this->dutHeader+"."+signalName+".x + "+QString::number(offset,'g',(length>32)? 20:15)+")/ "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
+            "\n 	Cont_"+signalName+"	:= USINT_TO_BYTE(REAL_TO_USINT((GVL."+this->dutHeader+"."+signalName+".x - "+QString::number(offset,'g',(length>32)? 20:15)+")/ "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
             "\n 	 //Transmit Data : Normal End"
             "\n ELSE"
-            "\n 	IF "+this->dutHeader+"."+signalName+".J1939 THEN"
+            "\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN"
             "\n 	//Transmit Data : Data not valid J1939 error transmission Start"
-            "\n 	IF "+this->dutHeader+"."+signalName+".na THEN"
+            "\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN"
             "\n 		Cont_"+signalName+":= 16#FF;"
-            "\n 	ELSIF "+this->dutHeader+"."+signalName+".e THEN"
+            "\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN"
             "\n 		Cont_"+signalName+":= 16#FE;"
             "\n 	ELSE"
             "\n 		Cont_"+signalName+":= 16#FE;"
@@ -2892,7 +2904,7 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
             "\n 	//Transmit Data : Data not valid J1939 error transmission End"
             "\n 	ELSE"
             "\n 	//Transmit Data : Data not valid  Start"
-            "\n 		Cont_"+signalName+":= USINT_TO_BYTE(REAL_TO_USINT(("+QString::number(defValue,'g',(length>32)? 20:15)+" + "+QString::number(offset,'g',(length>32)? 20:15)+")/"+QString::number(resolution,'g',(length>32)? 20:15)+"));"
+            "\n 		Cont_"+signalName+":= USINT_TO_BYTE(REAL_TO_USINT(("+ ((defValue==0)? "" : (QString::number(defValue,'g',(length>32)? 20:15)+" - ")+QString::number(offset,'g',(length>32)? 20:15))+")/"+QString::number(resolution,'g',(length>32)? 20:15)+"));"
             "\n 	//Transmit Data : Data not valid  End"
             "\n 	END_IF;"
             "\n END_IF;");
@@ -2901,22 +2913,22 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
 
     }else if((length<17)){
         if((converType == "toWORD")|| (converType == "xtoWORD")){
-            ST.append(""+this->dutHeader+"."+signalName+".RangeExcd :=  "+QString::number(maxValue,'g',(length>32)? 20:15)+" < "+this->dutHeader+"."+signalName+".x OR "+QString::number(minValue,'g',(length>32)? 20:15)+" > "+this->dutHeader+"."+signalName+".x;"
+            ST.append("GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  ("+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x )OR ("+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x);"
            "\n //Transmit Data : Range Control End"
            "\n IF FrcEn_"+signalName+" THEN"
            "\n 	//Transmit Data : Force variable Start"
            "\n 	Cont_"+signalName+"	:= FrcVal_"+signalName+";"
            "\n 	//Transmit Data : Force variable Start"
-           "\n ELSIF ("+this->dutHeader+"."+signalName+".v AND NOT "+this->dutHeader+"."+signalName+".RangeExcd) THEN"
+           "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
            "\n 	//Transmit Data : Normal Start"
-           "\n 	Cont_"+signalName+"	:= "+this->dutHeader+"."+signalName+".x ;"
+           "\n 	Cont_"+signalName+"	:= GVL."+this->dutHeader+"."+signalName+".x ;"
            "\n 	 //Transmit Data : Normal End"
            "\n ELSE"
-           "\n 	IF "+this->dutHeader+"."+signalName+".J1939 THEN"
+           "\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN"
            "\n 	//Transmit Data : Data not valid J1939 error transmission Start"
-           "\n 	IF "+this->dutHeader+"."+signalName+".na THEN"
+           "\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN"
            "\n 		Cont_"+signalName+":= 16#FF01;"
-           "\n 	ELSIF "+this->dutHeader+"."+signalName+".e THEN"
+           "\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN"
            "\n 		Cont_"+signalName+":= 16#FE01;"
            "\n 	ELSE"
            "\n 		Cont_"+signalName+":= 16#FE01;"
@@ -2931,22 +2943,22 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
         }
         else if ((converType == "toUINT")|| (converType == "xtoUINT")){
 
-            ST.append("<"+this->dutHeader+"."+signalName+".RangeExcd :=  "+QString::number(maxValue,'g',(length>32)? 20:15)+" < "+this->dutHeader+"."+signalName+".x OR "+QString::number(minValue,'g',(length>32)? 20:15)+" > "+this->dutHeader+"."+signalName+".x;"
+            ST.append("<GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  ("+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x )OR ("+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x);"
             "\n //Transmit Data : Range Control End"
             "\n IF FrcEn_"+signalName+" THEN"
             "\n 	//Transmit Data : Force variable Start"
             "\n 	Cont_"+signalName+"	:= UINT_TO_WORD(FrcVal_"+signalName+");"
             "\n 	//Transmit Data : Force variable Start"
-            "\n ELSIF ("+this->dutHeader+"."+signalName+".v AND NOT "+this->dutHeader+"."+signalName+".RangeExcd) THEN"
+            "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
             "\n 	//Transmit Data : Normal Start"
-            "\n 	Cont_"+signalName+"	:= UINT_TO_WORD("+this->dutHeader+"."+signalName+".x );"
+            "\n 	Cont_"+signalName+"	:= UINT_TO_WORD(GVL."+this->dutHeader+"."+signalName+".x );"
             "\n 	 //Transmit Data : Normal End"
             "\n ELSE"
-            "\n 	IF "+this->dutHeader+"."+signalName+".J1939 THEN"
+            "\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN"
             "\n 	//Transmit Data : Data not valid J1939 error transmission Start"
-            "\n 	IF "+this->dutHeader+"."+signalName+".na THEN"
+            "\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN"
             "\n 		Cont_"+signalName+":= 16#FF01;"
-            "\n 	ELSIF "+this->dutHeader+"."+signalName+".e THEN"
+            "\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN"
             "\n 		Cont_"+signalName+":= 16#FE01;"
             "\n 	ELSE"
             "\n 		Cont_"+signalName+":= 16#FE01;"
@@ -2954,29 +2966,29 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
             "\n 	//Transmit Data : Data not valid J1939 error transmission End"
             "\n 	ELSE"
             "\n 	//Transmit Data : Data not valid  Start"
-            "\n 		Cont_"+signalName+":= UINT_TO_WORD("+QString::number(defValue,'g',(length>32)? 20:15)+" );"
+            "\n 		Cont_"+signalName+":= "+QString::number(defValue,'g',(length>32)? 20:15)+";"
             "\n 	//Transmit Data : Data not valid  End"
             "\n 	END_IF;"
             "\n END_IF;");
 
         }
         else if ((converType == "toREAL")|| (converType == "xtoREAL")){
-            ST.append(""+this->dutHeader+"."+signalName+".RangeExcd :=  "+QString::number(maxValue,'g',(length>32)? 20:15)+" < "+this->dutHeader+"."+signalName+".x OR "+QString::number(minValue,'g',(length>32)? 20:15)+" > "+this->dutHeader+"."+signalName+".x;"
+            ST.append("GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  ("+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x )OR ("+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x);"
             "\n //Transmit Data : Range Control End"
             "\n IF FrcEn_"+signalName+" THEN"
             "\n 	//Transmit Data : Force variable Start"
-            "\n 	Cont_"+signalName+"	:= UINT_TO_WORD(REAL_TO_UINT(( FrcVal_"+signalName+" + "+QString::number(minValue,'g',(length>32)? 20:15)+")/ "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
+            "\n 	Cont_"+signalName+"	:= UINT_TO_WORD(REAL_TO_UINT(( FrcVal_"+signalName+" - "+QString::number(minValue,'g',(length>32)? 20:15)+")/ "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
             "\n 	//Transmit Data : Force variable Start"
-            "\n ELSIF ("+this->dutHeader+"."+signalName+".v AND NOT "+this->dutHeader+"."+signalName+".RangeExcd) THEN"
+            "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
             "\n 	//Transmit Data : Normal Start"
-            "\n 	Cont_"+signalName+"	:= UINT_TO_WORD(REAL_TO_UINT(("+this->dutHeader+"."+signalName+".x + "+QString::number(minValue,'g',(length>32)? 20:15)+")/ "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
+            "\n 	Cont_"+signalName+"	:= UINT_TO_WORD(REAL_TO_UINT((GVL."+this->dutHeader+"."+signalName+".x - "+QString::number(minValue,'g',(length>32)? 20:15)+")/ "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
             "\n 	 //Transmit Data : Normal End"
             "\n ELSE"
-            "\n 	IF "+this->dutHeader+"."+signalName+".J1939 THEN"
+            "\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN"
             "\n 	//Transmit Data : Data not valid J1939 error transmission Start"
-            "\n 	IF "+this->dutHeader+"."+signalName+".na THEN"
+            "\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN"
             "\n 		Cont_"+signalName+":= 16#FF01;"
-            "\n 	ELSIF "+this->dutHeader+"."+signalName+".e THEN"
+            "\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN"
             "\n 		Cont_"+signalName+":= 16#FE01;"
             "\n 	ELSE"
             "\n 		Cont_"+signalName+":= 16#FE01;"
@@ -2984,7 +2996,7 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
             "\n 	//Transmit Data : Data not valid J1939 error transmission End"
             "\n 	ELSE"
             "\n 	//Transmit Data : Data not valid  Start"
-            "\n 		Cont_"+signalName+":= UINT_TO_WORD(REAL_TO_UINT(("+QString::number(defValue,'g',(length>32)? 20:15)+" + "+QString::number(offset,'g',(length>32)? 20:15)+")/"+QString::number(resolution,'g',(length>32)? 20:15)+"));"
+            "\n 		Cont_"+signalName+":= UINT_TO_WORD(REAL_TO_UINT(("+((defValue==0) ? "" : (QString::number(defValue,'g',(length>32)? 20:15)+" - ")+QString::number(offset,'g',(length>32)? 20:15))+")/"+QString::number(resolution,'g',(length>32)? 20:15)+"));"
             "\n 	//Transmit Data : Data not valid  End"
             "\n 	END_IF;"
             "\n END_IF;");
@@ -2992,22 +3004,22 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
 
     }else if((length<33)){
         if((converType == "toDWORD")|| (converType == "xtoDWORD")){
-            ST.append(""+this->dutHeader+"."+signalName+".RangeExcd :=  "+QString::number(maxValue,'g',(length>32)? 20:15)+" < "+this->dutHeader+"."+signalName+".x OR "+QString::number(minValue,'g',(length>32)? 20:15)+" > "+this->dutHeader+"."+signalName+".x;"
+            ST.append("GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  "+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x OR "+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x;"
            "\n //Transmit Data : Range Control End"
            "\n IF FrcEn_"+signalName+" THEN"
            "\n 	//Transmit Data : Force variable Start"
            "\n 	Cont_"+signalName+"	:= FrcVal_"+signalName+";"
            "\n 	//Transmit Data : Force variable Start"
-           "\n ELSIF ("+this->dutHeader+"."+signalName+".v AND NOT "+this->dutHeader+"."+signalName+".RangeExcd) THEN"
+           "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
            "\n 	//Transmit Data : Normal Start"
-           "\n 	Cont_"+signalName+"	:= "+this->dutHeader+"."+signalName+".x ;"
+           "\n 	Cont_"+signalName+"	:= GVL."+this->dutHeader+"."+signalName+".x ;"
            "\n 	 //Transmit Data : Normal End"
            "\n ELSE"
-           "\n 	IF "+this->dutHeader+"."+signalName+".J1939 THEN"
+           "\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN"
            "\n 	//Transmit Data : Data not valid J1939 error transmission Start"
-           "\n 	IF "+this->dutHeader+"."+signalName+".na THEN	"
+           "\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN	"
            "\n 	Cont_"+signalName+":= 16#FF000001;"
-           "\n 	ELSIF "+this->dutHeader+"."+signalName+".e THEN"
+           "\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN"
            "\n 	Cont_"+signalName+":= 16#FE000001;"
            "\n 	ELSE"
            "\n 	Cont_"+signalName+":= 16#FE000001;"
@@ -3022,22 +3034,22 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
         }
         else if ((converType == "toUDINT")|| (converType == "xtoUDINT")){
 
-            ST.append("<"+this->dutHeader+"."+signalName+".RangeExcd :=  "+QString::number(maxValue,'g',(length>32)? 20:15)+" < "+this->dutHeader+"."+signalName+".x OR "+QString::number(minValue,'g',(length>32)? 20:15)+" > "+this->dutHeader+"."+signalName+".x;"
+            ST.append("<GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  ("+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x )OR ("+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x);"
            "\n //Transmit Data : Range Control End"
            "\n IF FrcEn_"+signalName+" THEN"
            "\n 	//Transmit Data : Force variable Start"
            "\n 	Cont_"+signalName+"	:= UDINT_TO_DWORD(FrcVal_"+signalName+");"
            "\n 	//Transmit Data : Force variable Start"
-           "\n ELSIF ("+this->dutHeader+"."+signalName+".v AND NOT "+this->dutHeader+"."+signalName+".RangeExcd) THEN"
+           "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
            "\n 	//Transmit Data : Normal Start"
-           "\n 	Cont_"+signalName+"	:= UDINT_TO_DWORD("+this->dutHeader+"."+signalName+".x );"
+           "\n 	Cont_"+signalName+"	:= UDINT_TO_DWORD(GVL."+this->dutHeader+"."+signalName+".x );"
            "\n 	 //Transmit Data : Normal End"
            "\n ELSE"
-           "\n 	IF "+this->dutHeader+"."+signalName+".J1939 THEN"
+           "\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN"
            "\n 	//Transmit Data : Data not valid J1939 error transmission Start"
-           "\n 	IF "+this->dutHeader+"."+signalName+".na THEN	"
+           "\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN	"
            "\n 	Cont_"+signalName+":= 16#FF000001;"
-           "\n 	ELSIF "+this->dutHeader+"."+signalName+".e THEN"
+           "\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN"
            "\n 	Cont_"+signalName+":= 16#FE000001;"
            "\n 	ELSE"
            "\n 	Cont_"+signalName+":= 16#FE000001;"
@@ -3045,29 +3057,29 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
            "\n 	//Transmit Data : Data not valid J1939 error transmission End"
            "\n 	ELSE"
            "\n 	//Transmit Data : Data not valid  Start"
-           "\n 		Cont_"+signalName+":= UDINT_TO_DWORD("+QString::number(defValue,'g',(length>32)? 20:15)+" );"
+           "\n 		Cont_"+signalName+":= "+QString::number(defValue,'g',(length>32)? 20:15)+";"
            "\n 	//Transmit Data : Data not valid  End"
            "\n 	END_IF;"
            "\n END_IF;");
 
         }
         else if ((converType == "toREAL")|| (converType == "xtoREAL")){
-            ST.append(""+this->dutHeader+"."+signalName+".RangeExcd :=  "+QString::number(maxValue,'g',(length>32)? 20:15)+" < "+this->dutHeader+"."+signalName+".x OR "+QString::number(minValue,'g',(length>32)? 20:15)+" > "+this->dutHeader+"."+signalName+".x;"
+            ST.append("GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  ("+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x )OR ("+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x);"
             "\n //Transmit Data : Range Control End"
             "\n IF FrcEn_"+signalName+" THEN"
             "\n 	//Transmit Data : Force variable Start"
-            "\n 	Cont_"+signalName+"	:= UDINT_TO_DWORD(REAL_TO_UDINT(( FrcVal_"+signalName+" + "+QString::number(offset,'g',(length>32)? 20:15)+")/ "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
+            "\n 	Cont_"+signalName+"	:= UDINT_TO_DWORD(REAL_TO_UDINT(( FrcVal_"+signalName+" - "+QString::number(offset,'g',(length>32)? 20:15)+")/ "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
             "\n 	//Transmit Data : Force variable Start"
-            "\n ELSIF ("+this->dutHeader+"."+signalName+".v AND NOT "+this->dutHeader+"."+signalName+".RangeExcd) THEN"
+            "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
             "\n 	//Transmit Data : Normal Start"
-            "\n 	Cont_"+signalName+"	:= UDINT_TO_DWORD(REAL_TO_UDINT(("+this->dutHeader+"."+signalName+".x + "+QString::number(offset,'g',(length>32)? 20:15)+")/ "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
+            "\n 	Cont_"+signalName+"	:= UDINT_TO_DWORD(REAL_TO_UDINT((GVL."+this->dutHeader+"."+signalName+".x - "+QString::number(offset,'g',(length>32)? 20:15)+")/ "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
             "\n 	 //Transmit Data : Normal End"
             "\n ELSE"
-            "\n 	IF "+this->dutHeader+"."+signalName+".J1939 THEN"
+            "\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN"
             "\n 	//Transmit Data : Data not valid J1939 error transmission Start"
-            "\n 	IF "+this->dutHeader+"."+signalName+".na THEN	"
+            "\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN	"
             "\n 	Cont_"+signalName+":= 16#FF000001;"
-            "\n 	ELSIF "+this->dutHeader+"."+signalName+".e THEN"
+            "\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN"
             "\n 	Cont_"+signalName+":= 16#FE000001;"
             "\n 	ELSE"
             "\n 	Cont_"+signalName+":= 16#FE000001;"
@@ -3075,29 +3087,29 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
             "\n 	//Transmit Data : Data not valid J1939 error transmission End"
             "\n 	ELSE"
             "\n 	//Transmit Data : Data not valid  Start"
-            "\n 		Cont_"+signalName+":= UDINT_TO_DWORD(REAL_TO_UDINT(("+QString::number(defValue,'g',(length>32)? 20:15)+" + "+QString::number(offset,'g',(length>32)? 20:15)+")/"+QString::number(resolution,'g',(length>32)? 20:15)+"));"
+            "\n 		Cont_"+signalName+":= UDINT_TO_DWORD(REAL_TO_UDINT(("+((defValue==0) ? "" : (QString::number(defValue,'g',(length>32)? 20:15)+" - ")+QString::number(offset,'g',(length>32)? 20:15))+")/"+QString::number(resolution,'g',(length>32)? 20:15)+"));"
             "\n 	//Transmit Data : Data not valid  End"
             "\n 	END_IF;"
             "\n END_IF;");
         }
     }else if((length<65)){
         if((converType == "toLWORD")|| (converType == "xtoLWORD")){
-            ST.append(""+this->dutHeader+"."+signalName+".RangeExcd :=  "+QString::number(maxValue,'g',(length>32)? 20:15)+" < "+this->dutHeader+"."+signalName+".x OR "+QString::number(minValue,'g',(length>32)? 20:15)+" > "+this->dutHeader+"."+signalName+".x;"
+            ST.append("GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  ("+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x )OR ("+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x);"
             "\n //Transmit Data : Range Control End"
             "\n IF FrcEn_"+signalName+" THEN"
             "\n 	//Transmit Data : Force variable Start"
             "\n 	Cont_"+signalName+"	:= FrcVal_"+signalName+";"
             "\n 	//Transmit Data : Force variable Start"
-            "\n ELSIF ("+this->dutHeader+"."+signalName+".v AND NOT "+this->dutHeader+"."+signalName+".RangeExcd) THEN"
+            "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
             "\n 	//Transmit Data : Normal Start"
-            "\n 	Cont_"+signalName+"	:= "+this->dutHeader+"."+signalName+".x ;"
+            "\n 	Cont_"+signalName+"	:= GVL."+this->dutHeader+"."+signalName+".x ;"
             "\n 	 //Transmit Data : Normal End"
             "\n ELSE"
-            "\n 	IF "+this->dutHeader+"."+signalName+".J1939 THEN"
+            "\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN"
             "\n 	//Transmit Data : Data not valid J1939 error transmission Start"
-            "\n 	IF "+this->dutHeader+"."+signalName+".na THEN	"
+            "\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN	"
             "\n 	Cont_"+signalName+":= 16#FF00000000000001;"
-            "\n 	ELSIF "+this->dutHeader+"."+signalName+".e THEN"
+            "\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN"
             "\n 	Cont_"+signalName+":= 16#FE00000000000001;"
             "\n 	ELSE"
             "\n 	Cont_"+signalName+":= 16#FE00000000000001;"
@@ -3111,22 +3123,22 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
             "\n END_IF;");
         }
         else if ((converType == "toULINT")|| (converType == "xtoULINT")){
-            ST.append("<"+this->dutHeader+"."+signalName+".RangeExcd :=  "+QString::number(maxValue,'g',(length>32)? 20:15)+" < "+this->dutHeader+"."+signalName+".x OR "+QString::number(minValue,'g',(length>32)? 20:15)+" > "+this->dutHeader+"."+signalName+".x;"
+            ST.append("<GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  ("+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x )OR ("+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x);"
             "\n //Transmit Data : Range Control End"
             "\n IF FrcEn_"+signalName+" THEN"
             "\n 	//Transmit Data : Force variable Start"
             "\n 	Cont_"+signalName+"	:= ULINT_TO_LWORD(FrcVal_"+signalName+");"
             "\n 	//Transmit Data : Force variable Start"
-            "\n ELSIF ("+this->dutHeader+"."+signalName+".v AND NOT "+this->dutHeader+"."+signalName+".RangeExcd) THEN"
+            "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
             "\n 	//Transmit Data : Normal Start"
-            "\n 	Cont_"+signalName+"	:= ULINT_TO_LWORD("+this->dutHeader+"."+signalName+".x );"
+            "\n 	Cont_"+signalName+"	:= ULINT_TO_LWORD(GVL."+this->dutHeader+"."+signalName+".x );"
             "\n 	 //Transmit Data : Normal End"
             "\n ELSE"
-            "\n 	IF "+this->dutHeader+"."+signalName+".J1939 THEN"
+            "\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN"
             "\n 	//Transmit Data : Data not valid J1939 error transmission Start"
-            "\n 	IF "+this->dutHeader+"."+signalName+".na THEN	"
+            "\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN	"
             "\n 	Cont_"+signalName+":= 16#FF00000000000001;"
-            "\n 	ELSIF "+this->dutHeader+"."+signalName+".e THEN"
+            "\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN"
             "\n 	Cont_"+signalName+":= 16#FE00000000000001;"
             "\n 	ELSE"
             "\n 	Cont_"+signalName+":= 16#FE00000000000001;"
@@ -3134,28 +3146,28 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
             "\n 	//Transmit Data : Data not valid J1939 error transmission End"
             "\n 	ELSE"
             "\n 	//Transmit Data : Data not valid  Start"
-            "\n 		Cont_"+signalName+":= ULINT_TO_LWORD("+QString::number(defValue,'g',(length>32)? 20:15)+" );"
+            "\n 		Cont_"+signalName+":= "+QString::number(defValue,'g',(length>32)? 20:15)+";"
             "\n 	//Transmit Data : Data not valid  End"
             "\n 	END_IF;"
             "\n END_IF;");
         }
         else if ((converType == "toLREAL")|| (converType == "xtoLREAL")){
-            ST.append(""+this->dutHeader+"."+signalName+".RangeExcd :=  "+QString::number(maxValue,'g',(length>32)? 20:15)+" < "+this->dutHeader+"."+signalName+".x OR "+QString::number(minValue,'g',(length>32)? 20:15)+" > "+this->dutHeader+"."+signalName+".x;"
+            ST.append("GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  ("+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x )OR ("+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x);"
             "\n //Transmit Data : Range Control End"
             "\n IF FrcEn_"+signalName+" THEN"
             "\n 	//Transmit Data : Force variable Start"
-            "\n 	Cont_"+signalName+"	:= ULINT_TO_LWORD(LREAL_TO_ULINT(( FrcVal_"+signalName+" + "+QString::number(offset,'g',(length>32)? 20:15)+") / "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
+            "\n 	Cont_"+signalName+"	:= ULINT_TO_LWORD(LREAL_TO_ULINT(( FrcVal_"+signalName+" - "+QString::number(offset,'g',(length>32)? 20:15)+") / "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
             "\n 	//Transmit Data : Force variable Start"
-            "\n ELSIF ("+this->dutHeader+"."+signalName+".v AND NOT "+this->dutHeader+"."+signalName+".RangeExcd) THEN"
+            "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
             "\n 	//Transmit Data : Normal Start"
-            "\n 	Cont_"+signalName+"	:= ULINT_TO_LWORD(LREAL_TO_ULINT(("+this->dutHeader+"."+signalName+".x + "+QString::number(offset,'g',(length>32)? 20:15)+") / "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
+            "\n 	Cont_"+signalName+"	:= ULINT_TO_LWORD(LREAL_TO_ULINT((GVL."+this->dutHeader+"."+signalName+".x - "+QString::number(offset,'g',(length>32)? 20:15)+") / "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
             "\n 	 //Transmit Data : Normal End"
             "\n ELSE"
-            "\n 	IF "+this->dutHeader+"."+signalName+".J1939 THEN"
+            "\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN"
             "\n 	//Transmit Data : Data not valid J1939 error transmission Start"
-            "\n 	IF "+this->dutHeader+"."+signalName+".na THEN	"
+            "\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN	"
             "\n 	Cont_"+signalName+":= 16#FF00000000000001;"
-            "\n 	ELSIF "+this->dutHeader+"."+signalName+".e THEN"
+            "\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN"
             "\n 	Cont_"+signalName+":= 16#FE00000000000001;"
             "\n 	ELSE"
             "\n 	Cont_"+signalName+":= 16#FE00000000000001;"
@@ -3163,7 +3175,7 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
             "\n 	//Transmit Data : Data not valid J1939 error transmission End"
             "\n 	ELSE"
             "\n 	//Transmit Data : Data not valid  Start"
-            "\n 		Cont_"+signalName+":= ULINT_TO_LWORD(LREAL_TO_ULINT(("+QString::number(defValue,'g',(length>32)? 20:15)+" + "+QString::number(offset,'g',(length>32)? 20:15)+")/"+QString::number(resolution,'g',(length>32)? 20:15)+"));"
+            "\n 		Cont_"+signalName+":= ULINT_TO_LWORD(REAL_TO_ULINT(("+((defValue==0) ? "" : (QString::number(defValue,'g',(length>32)? 20:15)+" - ")+QString::number(offset,'g',(length>32)? 20:15))+")/"+QString::number(resolution,'g',(length>32)? 20:15)+"));"
             "\n 	//Transmit Data : Data not valid  End"
             "\n 	END_IF;"
             "\n END_IF;");
@@ -3172,10 +3184,10 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
 
 
     if(converType=="BOOL:BOOL"){
-        ST.append("\nS_IO_Bit_"+QString::number(startbit)+"               :=	("+this->dutHeader+"."+signalName+".x OR FrcHi_"+signalName+") AND NOT FrcLo_"+signalName+" AND "+this->dutHeader+"."+signalName+".v ;");
+        ST.append("\nS_IO_Bit_"+QString::number(startbit)+"               :=	(GVL."+this->dutHeader+"."+signalName+".x OR FrcHi_"+signalName+") AND NOT FrcLo_"+signalName+" AND GVL."+this->dutHeader+"."+signalName+".v ;");
     }else if(converType=="2BOOL:BOOL"){
-        ST.append("\nS_IO_Bit_"+QString::number(startbit)+"               :=	("+this->dutHeader+"."+signalName+".x OR FrcHi_"+signalName+") AND NOT FrcLo_"+signalName+";"
-                  "\nS_IO_Bit_"+QString::number(startbit+1)+"             :=	(NOT "+this->dutHeader+"."+signalName+".v ) AND NOT (FrcHi_"+signalName+" OR FrcLo_"+signalName+"); ");
+        ST.append("\nS_IO_Bit_"+QString::number(startbit)+"               :=	(GVL."+this->dutHeader+"."+signalName+".x OR FrcHi_"+signalName+") AND NOT FrcLo_"+signalName+";"
+                  "\nS_IO_Bit_"+QString::number(startbit+1)+"             :=	(NOT GVL."+this->dutHeader+"."+signalName+".v ) AND NOT (FrcHi_"+signalName+" OR FrcLo_"+signalName+"); ");
     }else if((converType=="xtoBYTE")||(converType=="xtoUSINT")||((converType=="xtoREAL") && (length==8))){
         ST.append("\nX_IO_BYTE_"+QString::number(startbit/8)+"            :=Cont_"+signalName+";");
     }else if((converType=="xtoWORD")||(converType=="xtoUINT")||((converType=="xtoREAL") && (length==16))){
@@ -3251,6 +3263,7 @@ QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbi
     return ST;
 
 }
+
 ///******************************************************************************
 /// PLACE HANDLERS
 ///******************************************************************************
@@ -3808,21 +3821,7 @@ void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)
             {
                 QDomElement variable = doc.createElement("variable");
                 attr=doc.createAttribute("name");
-                attr.setValue("FrcHi");
-                variable.setAttributeNode(attr);
-                QDomElement type = doc.createElement("type");
-                QDomElement dataVarType = doc.createElement("derived");
-                attr=doc.createAttribute("name");
-                attr.setValue(dutName);
-                dataVarType.setAttributeNode(attr);
-                type.appendChild(dataVarType);
-                variable.appendChild(type);
-                localVars.appendChild(variable);
-            }
-            {
-                QDomElement variable = doc.createElement("variable");
-                attr=doc.createAttribute("name");
-                attr.setValue("FrcLo");
+                attr.setValue("FrcVar");
                 variable.setAttributeNode(attr);
                 QDomElement type = doc.createElement("type");
                 QDomElement dataVarType = doc.createElement("derived");
@@ -3987,8 +3986,11 @@ void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)
                         FBD.appendChild(inVariable);
                         countLocalID++;
                     }
-
-                    if(curStruct->name != "AND" && curStruct->name != "OR")
+                    /*
+                     * This part is deleted after v1.000.037
+                     * reason : To reduce memory alocation GVL variables will be used
+                     */
+                    /*if(curStruct->name != "AND" && curStruct->name != "OR")
                     {
                         QDomElement inVariable = doc.createElement("inVariable");
                         QDomElement position = doc.createElement("position");
@@ -4011,7 +4013,7 @@ void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)
                         inVariable.setAttributeNode(attr);
                         FBD.appendChild(inVariable);
                         countLocalID++;
-                    }
+                    }*/
                     {
                         QDomElement block = doc.createElement("block");
                         attr=doc.createAttribute("localId");
@@ -4059,7 +4061,11 @@ void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)
                                 localxId++;
                             }
                             block.appendChild(inputVariables);
-
+                        /*
+                         * This part is deleted after v1.000.037
+                         * reason : To reduce memory alocation GVL variables will be used
+                         */
+                        /*
                         QDomElement inoutVariables = doc.createElement("inOutVariables");
 
                         if(curStruct->name != "AND" && curStruct->name != "OR"){
@@ -4078,6 +4084,7 @@ void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)
 
                             }
                         block.appendChild(inoutVariables);
+                        */
                         QDomElement outputVariables = doc.createElement("outputVariables");
                             foreach(QList<QString> curVar , curStruct->outputVars){
 
