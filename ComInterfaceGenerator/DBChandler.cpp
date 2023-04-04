@@ -2106,7 +2106,7 @@ QString DBCHandler::convTypeComtoApp(QString signalName, unsigned short startbit
             ST.append("\nCont_"+signalName+"				:= BYTE_TO_USINT(Raw_"+signalName+") ;");
         }
         else if ((converType == "toREAL")|| (converType == "xtoREAL")){
-            ST.append("\nCont_"+signalName+"				:= USINT_TO_REAL(BYTE_TO_USINT(Raw_"+signalName+"))*"+QString::number(resolution,'g',(length>32)? 20:15)+" + "+QString::number(offset,'g',(length>32)? 20:15))+";";
+            ST.append("\nCont_"+signalName+"				:= USINT_TO_REAL(BYTE_TO_USINT(Raw_"+signalName+"))*"+QString::number(resolution,'g',(length>32)? 20:15)+" + "+QString::number(offset,'g',(length>32)? 20:15)+";");
         }
         ST.append( "\nGVL."+this->dutHeader+"."+signalName+".e              := (Raw_"+signalName+" > 16#FD);");
         ST.append("\nGVL."+this->dutHeader+"."+signalName+".na              := (Raw_"+signalName+" = 16#FF) ;");
@@ -2119,7 +2119,7 @@ QString DBCHandler::convTypeComtoApp(QString signalName, unsigned short startbit
             ST.append("\nCont_"+signalName+"				:= WORD_TO_UINT(Raw_"+signalName+") ;");
         }
         else if ((converType == "toREAL")|| (converType == "xtoREAL")){
-            ST.append("\n Cont_"+signalName+"				:= UINT_TO_REAL(WORD_TO_UINT(Raw_"+signalName+"))*"+QString::number(resolution,'g',(length>32)? 20:15)+" + "+QString::number(offset,'g',(length>32)? 20:15))+";";
+            ST.append("\n Cont_"+signalName+"				:= UINT_TO_REAL(WORD_TO_UINT(Raw_"+signalName+"))*"+QString::number(resolution,'g',(length>32)? 20:15)+" + "+QString::number(offset,'g',(length>32)? 20:15)+";");
         }
         ST.append("\nGVL."+this->dutHeader+"."+signalName+".e              := (Raw_"+signalName+" > 16#FDFF) AND (Raw_"+signalName+" < 16#FF00) ;");
         ST.append("\nGVL."+this->dutHeader+"."+signalName+".na              := (Raw_"+signalName+" > 16#FEFF) ;");
@@ -2132,7 +2132,7 @@ QString DBCHandler::convTypeComtoApp(QString signalName, unsigned short startbit
             ST.append("\nCont_"+signalName+"				:= DWORD_TO_UDINT(Raw_"+signalName+") ;");
         }
         else if ((converType == "toREAL")|| (converType == "xtoREAL")){
-            ST.append("\nCont_"+signalName+"				:= UDINT_TO_REAL(DWORD_TO_UDINT(Raw_"+signalName+"))*"+QString::number(resolution,'g',(length>32)? 20:15)+" + "+QString::number(offset,'g',(length>32)? 20:15))+";";
+            ST.append("\nCont_"+signalName+"				:= UDINT_TO_REAL(DWORD_TO_UDINT(Raw_"+signalName+"))*"+QString::number(resolution,'g',(length>32)? 20:15)+" + "+QString::number(offset,'g',(length>32)? 20:15)+";");
         }
         ST.append("\nGVL."+this->dutHeader+"."+signalName+".e              := (Raw_"+signalName+" > 16#FDFFFFFF) AND (Raw_"+signalName+" < 16#FF000000) ;");
         ST.append("\nGVL."+this->dutHeader+"."+signalName+".na              := (Raw_"+signalName+" > 16#FEFFFFFF) ;");
@@ -2145,7 +2145,7 @@ QString DBCHandler::convTypeComtoApp(QString signalName, unsigned short startbit
             ST.append("\nCont_"+signalName+"				:= LWORD_TO_ULINT(Raw_"+signalName+") ;");
         }
         else if ((converType == "toLREAL")|| (converType == "xtoLREAL")){
-            ST.append("\nCont_"+signalName+"				:= ULINT_TO_LREAL(LWORD_TO_ULINT(Raw_"+signalName+"))*"+QString::number(resolution,'g',(length>32)? 20:15)+" + "+QString::number(offset,'g',(length>32)? 20:15))+";";
+            ST.append("\nCont_"+signalName+"				:= ULINT_TO_LREAL(LWORD_TO_ULINT(Raw_"+signalName+"))*"+QString::number(resolution,'g',(length>32)? 20:15)+" + "+QString::number(offset,'g',(length>32)? 20:15)+";");
         }
         ST.append("\nGVL."+this->dutHeader+"."+signalName+".e              := (Raw_"+signalName+" > 16#FDFFFFFFFFFFFFFF) AND (Raw_"+signalName+" < 16#FF00000000000000) ;");
         ST.append("\nGVL."+this->dutHeader+"."+signalName+".na              := (Raw_"+signalName+" > 16#FEFFFFFFFFFFFFFF) ;");
