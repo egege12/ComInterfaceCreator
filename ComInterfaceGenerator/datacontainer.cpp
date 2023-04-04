@@ -690,4 +690,10 @@ void dataContainer::signalChecker(signal *signalPtr)
         this->setWarning(this->messageID,signalPtr->name+" sinyali minimum değeri maksimum değerden büyük.Mesaj OpenXML formatı dönüştürülemez. ");
         setNotSelectable();
     }
+    for(signal *signal : this->signalList){
+        if(signal->name == signalPtr->name){
+            this->setWarning(this->messageID,signalPtr->name+" aynı isimde birden fazla sinyal var. Sinyal isimleri eşsiz olmalıdır.");
+            setNotSelectable();
+        }
+    }
 }
