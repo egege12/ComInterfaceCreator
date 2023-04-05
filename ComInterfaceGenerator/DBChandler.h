@@ -162,8 +162,8 @@ private:
     //Conversion Methods
     void generateIIST(QString *const ST, dataContainer * const curMessage);
     void generateIOST(QString *const ST,dataContainer *const curMessage);
-    QString convTypeComtoApp(QString signalName, unsigned short startbit, unsigned short length, QString converType,double resolution, double offset, double maxValue, double minValue, double defValue);
-    QString convTypeApptoCom(QString signalName, unsigned short startbit, unsigned short length, QString converType,double resolution, double offset, double maxValue, double minValue, double defValue);
+    QString convTypeComtoApp(QString signalName, unsigned short startbit, unsigned short length, QString converType,double resolution, double offset, double maxValue, double minValue, double defValue,bool j1939);
+    QString convTypeApptoCom(QString signalName, unsigned short startbit, unsigned short length, QString converType,double resolution, double offset, double maxValue, double minValue, double defValue,bool j1939);
 
 
 };

@@ -32,6 +32,7 @@ public:
     QString getComment();
     bool getIfSelected();
     bool getIfExtended();
+    bool getIfBitOperation();
     bool getIfNotSelectable();
     unsigned short getDLC();
     static const QList<QString> getWarningList();
@@ -48,6 +49,7 @@ public:
     void setMsCycleTime(QString msCycleTime);
     void setComment(QString comment);
     void setExtended(bool isExtended);
+    void setBitOperation(bool isBitOperation);
     static void setWarning(QString ID,QString const& warningCode);
 
     bool isTmOutSet;
@@ -67,6 +69,7 @@ private:
     bool isNotSelectable;
     QList<signal*> signalList;
     void signalChecker(signal *signalPtr);
+    bool isBitOperation;
 
 signals:
 

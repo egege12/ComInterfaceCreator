@@ -73,6 +73,11 @@ bool dataContainer::getIfExtended()
     return this->isExtended;
 }
 
+bool dataContainer::getIfBitOperation()
+{
+    return this->isBitOperation;
+}
+
 bool dataContainer::getIfNotSelectable()
 {
     return this->isNotSelectable;
@@ -156,6 +161,11 @@ void dataContainer::setExtended(bool isExtended)
     this->isExtended=isExtended;
 }
 
+void dataContainer::setBitOperation(bool isBitOperation)
+{
+    this->isBitOperation = isBitOperation;
+}
+
 void dataContainer::setWarning(QString ID,const QString &warningCode)
 {
     if(ID == ("INFO") || (ID == ("info") )){
@@ -177,6 +187,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
         signalPtr->appDataType = "BOOL";
         signalPtr->comDataType = "BOOL";
         signalPtr->convMethod="BOOL:BOOL";
+        this->setBitOperation(true);
     }else if (signalPtr->length == 2){ 
         if((signalPtr->isJ1939) || signalPtr->name.contains("C_") || signalPtr->name.contains("S_")){
             signalPtr->appDataType = "BOOL";
@@ -192,6 +203,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             signalPtr->comDataType = "BYTE";
             this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde C_ S_ Z_ işareti bulunmuyor");
         }
+        this->setBitOperation(true);
     }else if (signalPtr->length < 8){
         signalPtr->comDataType = "BYTE";
         if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
@@ -212,7 +224,8 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             signalPtr->convMethod="toBYTE";
             this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
         }
-    this->setWarning(this->messageID,signalPtr->name+" sinyali veri boyutu 8 ve katları değil,standart olmayan veri transferi");
+        this->setBitOperation(true);
+        this->setWarning(this->messageID,signalPtr->name+" sinyali veri boyutu 8 ve katları değil,standart olmayan veri transferi");
     }else if (signalPtr->length == 8){
         if((signalPtr->startBit == 0 )||(signalPtr->startBit == 8 )||(signalPtr->startBit == 16 )||(signalPtr->startBit == 24 )||(signalPtr->startBit == 32 )||(signalPtr->startBit == 40 )||(signalPtr->startBit == 48 )||(signalPtr->startBit == 56 )){
             signalPtr->comDataType = "BYTE";
@@ -305,6 +318,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             this->setWarning(this->messageID,signalPtr->name+" sinyali veri boyutu 8 ve katları değil,standart olmayan veri transferi");
             this->setWarning(this->messageID,signalPtr->name+" sinyali başlangıç biti 8 ve katları değil,düşük perfomans");
         }
+        this->setBitOperation(true);
     }else if (signalPtr->length == 16){
         if((signalPtr->startBit == 0 )||(signalPtr->startBit == 8 )||(signalPtr->startBit == 16 )||(signalPtr->startBit == 24 )||(signalPtr->startBit == 32 )||(signalPtr->startBit == 40 )||(signalPtr->startBit == 48 )){
             signalPtr->comDataType = "WORD";
@@ -395,7 +409,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             this->setWarning(this->messageID,signalPtr->name+" sinyali veri boyutu 8 ve katları değil,standart olmayan veri transferi");
             this->setWarning(this->messageID,signalPtr->name+" sinyali başlangıç biti 8 ve katları değil,düşük perfomans");
         }
-
+        this->setBitOperation(true);
     }else if (signalPtr->length == 32){
         if((signalPtr->startBit == 0 )||(signalPtr->startBit == 8 )||(signalPtr->startBit == 16 )||(signalPtr->startBit == 24 )||(signalPtr->startBit == 32 )){
             signalPtr->comDataType = "DWORD";
@@ -485,6 +499,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             this->setWarning(this->messageID,signalPtr->name+" sinyali veri boyutu 8 ve katları değil,standart olmayan veri transferi");
             this->setWarning(this->messageID,signalPtr->name+" sinyali başlangıç biti 8 ve katları değil,düşük perfomans");
         }
+        this->setBitOperation(true);
     }else if (signalPtr->length == 64){
         signalPtr->comDataType = "LWORD";
         if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")){
