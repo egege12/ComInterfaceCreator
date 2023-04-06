@@ -7,15 +7,15 @@
 #include <QHostInfo>
 
 unsigned long long DBCHandler::selectedMessageCounter = 0;
-unsigned DBCHandler::counterfbBYTETOWORD = 0;
-unsigned DBCHandler::counterfbBYTETODWORD = 0;
-unsigned DBCHandler::counterfbBYTETOLWORD = 0;
-unsigned DBCHandler::counterfb8BITTOBYTE = 0;
-unsigned DBCHandler::counterfbDWORDTOLWORD = 0;
-unsigned DBCHandler::counterfbLWORDTOBYTE = 0;
-unsigned DBCHandler::counterfbDWORDTOBYTE = 0;
-unsigned DBCHandler::counterfbWORDTOBYTE = 0;
-unsigned DBCHandler::counterfbBYTETO8BIT = 0;
+unsigned int DBCHandler::counterfbBYTETOWORD = 0;
+unsigned int DBCHandler::counterfbBYTETODWORD = 0;
+unsigned int DBCHandler::counterfbBYTETOLWORD = 0;
+unsigned int DBCHandler::counterfb8BITTOBYTE = 0;
+unsigned int DBCHandler::counterfbDWORDTOLWORD = 0;
+unsigned int DBCHandler::counterfbLWORDTOBYTE = 0;
+unsigned int DBCHandler::counterfbDWORDTOBYTE = 0;
+unsigned int DBCHandler::counterfbWORDTOBYTE = 0;
+unsigned int DBCHandler::counterfbBYTETO8BIT = 0;
 bool DBCHandler::allSelected=false;
 
 
@@ -515,25 +515,6 @@ bool DBCHandler::generateNewMessage(QString messageID, QString messageName , uns
 
 bool DBCHandler::createObjIds()
 {
-    QString name,id;
-
-    foreach(dataContainer *const curValue , comInterface){
-        if(curValue->getIfSelected()){
-            name = "_FB_"+this->dutHeader+"_"+curValue->getName()+"_0X"+curValue->getID();
-            id = getRandomID();
-            this->fbNameandObjId.append({name,id});
-        }
-    }
-    if(this->IOType == "IO"){
-        name = "_FB_"+this->dutHeader+"_NA_Handler";
-        this->fbNameandObjId.append({name,getRandomID()});
-        name = "_FB_"+this->dutHeader+"_ERR_Handler";
-        this->fbNameandObjId.append({name,getRandomID()});
-        name = "_FB_"+this->dutHeader+"_Validity_Handler";
-        this->fbNameandObjId.append({name,getRandomID()});
-        name = "_FB_"+this->dutHeader+"_Output_Handler";
-        this->fbNameandObjId.append({name,getRandomID()});
-    }
     this->dutObjID = this->getRandomID();
     this->pouObjID = this->getRandomID();
 
@@ -900,18 +881,14 @@ bool DBCHandler::createXml_STG1(QFile *xmlFile)
         types.appendChild(dataTypes);
         setProgress(30);
         if((this->IOType == "II")){
-            this->generateIIPous(&pous,doc);
             setProgress(40);
-            this->generatePouFpd(&pous,doc);
-            setProgress(60);
+            this->generateIIPous(&pous,doc);
+            setProgress(50);
         }
         else{
-            this->generateHandlers(&pous,doc);
             setProgress(40);
             this->generateIOPous(&pous,doc);
             setProgress(50);
-            this->generatePouFpd(&pous,doc);
-            setProgress(60);
         }
         types.appendChild(pous);
         elemProject.appendChild(types);
@@ -942,26 +919,9 @@ bool DBCHandler::createXml_STG1(QFile *xmlFile)
         //fbs
         QDomElement ProjectStructure = doc.createElement("ProjectStructure");
         data.appendChild(ProjectStructure);
-        QDomElement folder1 = doc.createElement("Folder");
-        attr= doc.createAttribute("Name");
-        attr.setValue("FD_Library_Application"); // Folder name for Function blocks
-        folder1.setAttributeNode(attr);
-        QDomElement folder2 = doc.createElement("Folder");
-        attr= doc.createAttribute("Name");
-        attr.setValue("_FB_"+this->dutHeader+"_MessageBlocks"); // Folder name for Function blocks
-        folder2.setAttributeNode(attr);
-        folder1.appendChild(folder2);
+        QDomElement folder1;
+        QDomElement folder2;
 
-        for(QList<QString> const &data : fbNameandObjId ){
-            QDomElement object = doc.createElement("Object");
-            attr=doc.createAttribute("Name");
-            attr.setValue(data.at(0));
-            object.setAttributeNode(attr);
-            attr=doc.createAttribute("ObjectId");
-            attr.setValue(data.at(1));
-            object.setAttributeNode(attr);
-            folder2.appendChild(object);
-        }
         setProgress(70);
         //DUTs
         ProjectStructure.appendChild(folder1);
@@ -1315,15 +1275,9 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
 {
     QDomAttr attr;
     QDomText text;
-     //For AND and OR gate to manipulate timeout and disturbance flags
-    structFbdBlock* gateAND = new structFbdBlock;
-    structFbdBlock* gateOR = new structFbdBlock;
-    unsigned short counterInANDOR = 1;
-    gateAND->name="AND";
-    gateOR->name="OR";
 
-    foreach (dataContainer * curMessage , comInterface){
-        if(curMessage->getIfSelected()){
+    QString namePou = "P_"+this->dutHeader;
+     //For AND and OR gate to manipulate timeout and disturbance flags
 
             /*generate block struct type new block*/
 
@@ -1331,349 +1285,80 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
             QDomElement pou = doc.createElement("pou");
             /*set pou name*/
             attr=doc.createAttribute("name");
-            attr.setValue("_FB_"+this->dutHeader+"_"+curMessage->getName()+"_0X"+curMessage->getID());
-            newBlock->name="_FB_"+this->dutHeader+"_"+curMessage->getName()+"_0X"+curMessage->getID();
+            attr.setValue(namePou);
             pou.setAttributeNode(attr);
             /*set pouType*/
             attr=doc.createAttribute("pouType");
-            attr.setValue("functionBlock");
+            attr.setValue("program");
             pou.setAttributeNode(attr);
 
             /*Interface*/
             QDomElement interface = doc.createElement("interface");
-            {
-                QDomElement inputVars = doc.createElement("inputVars");
 
-                /*Generate Input Variables - inputVars*/
-                /*C_Init_Can*/
-                {
-                    QDomElement variable = doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("C_Init_Can");
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement BOOL = doc.createElement("BOOL");
-                    type.appendChild(BOOL);
-                    variable.appendChild(type);
-                    inputVars.appendChild(variable);
-                    newBlock->inputVars.append({"C_Init_Can","GVL."+dutHeader+".S_CAN_Init","BOOL"," "});
-                }
-                /*Ptr_Obj_Can*/
-                {
-                    QDomElement variable = doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("Ptr_Obj_Can");
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement pointer = doc.createElement("pointer");
-                    QDomElement baseType = doc.createElement("baseType");
-                    QDomElement derived =doc.createElement("derived");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("tCan");
-                    derived.setAttributeNode(attr);
-                    baseType.appendChild(derived);
-                    pointer.appendChild(baseType);
-                    type.appendChild(pointer);
-                    variable.appendChild(type);
-                    inputVars.appendChild(variable);
-                    newBlock->inputVars.append({"Ptr_Obj_Can","ADR("+canLine+")","POINTER TO tCan"," "});
-
-                }
-                /*Start to generate variables*/
-                for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
-                    /*Bool signals has FrcHi and FrcLo, others FrcEn FrcVal*/
-                    if(curSignal->appDataType != "BOOL"){
-                        /*Create FrcEn */
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("FrcEn_"+curSignal->name);
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BOOL = doc.createElement("BOOL");
-                        type.appendChild(BOOL);
-                        variable.appendChild(type);
-                        inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"FrcEn_"+curSignal->name,"FrcVar."+curSignal->name+".v","BOOL"," "});
-                        /*Create FrcVal */
-                        variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("FrcVal_"+curSignal->name);
-                        variable.setAttributeNode(attr);
-                        type = doc.createElement("type");
-                        QDomElement signalDataType = doc.createElement(curSignal->appDataType);
-                        type.appendChild(signalDataType);
-                        variable.appendChild(type);
-                        inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"FrcVal_"+curSignal->name,"FrcVar."+curSignal->name+".x",curSignal->comDataType," "});
-                    }
-                    else {
-                        /*Create FrcHi */
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("FrcHi_"+curSignal->name);
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BOOL = doc.createElement("BOOL");
-                        type.appendChild(BOOL);
-                        variable.appendChild(type);
-                        inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"FrcHi_"+curSignal->name,"FrcVar."+curSignal->name+".v","BOOL"," "});
-                        /*Create FrcLo */
-                        variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("FrcLo_"+curSignal->name);
-                        variable.setAttributeNode(attr);
-                        type = doc.createElement("type");
-                        BOOL = doc.createElement("BOOL");
-                        type.appendChild(BOOL);
-                        variable.appendChild(type);
-                        inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"FrcLo_"+curSignal->name,"FrcVar."+curSignal->name+".x","BOOL"," "});
-                    }
-
-                }
-                interface.appendChild(inputVars);
-            }
-            /*Generate Output Variables - outputVars*/
-            {
-                QDomElement outputVars = doc.createElement("outputVars");;
-                {
-                    QDomElement variable = doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("S_Msg_TmOut");
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement BOOL = doc.createElement("BOOL");
-                    type.appendChild(BOOL);
-                    variable.appendChild(type);
-                    outputVars.appendChild(variable);
-                    newBlock->outputVars.append({"S_Msg_TmOut","GVL."+dutHeader+".S_TmOut_"+curMessage->getName()+"_0X"+curMessage->getID(),"BOOL"," "});
-                }
-                interface.appendChild(outputVars);
-            }
-            /*
-             * This part deleted after v.1.0.037
-             * reason : to reduce memory allocation GVL variables directly will be used
-             */
-            /*Generate Output Input Variables - inoutVars*/
-            /*{
-                QDomElement inoutVars = doc.createElement("inOutVars");
-                {
-                    QDomElement variable = doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue(dutHeader);
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement dataVarType = doc.createElement("derived");
-                    attr=doc.createAttribute("name");
-                    attr.setValue(dutName);
-                    dataVarType.setAttributeNode(attr);
-                    type.appendChild(dataVarType);
-                    variable.appendChild(type);
-                    inoutVars.appendChild(variable);
-                }
-                interface.appendChild(inoutVars);
-            }*/
-            /*Generate Local Variables - inoutVars*/
+            /*Generate Local Variables - localVars*/
             QString STcode;
-            this->generateIIST(&STcode,curMessage);
+            this->generateIIST(&STcode);
+//Generate local vars
             {
                 QDomElement localVars= doc.createElement("localVars");
                 /*Function block declaration*/
+                foreach (dataContainer * curMessage , comInterface){
+                    if(curMessage->getIfSelected()){
+                        QDomElement variable=doc.createElement("variable");
+                        attr=doc.createAttribute("name");
+                        attr.setValue(curMessage->getIfBitOperation()?("_FB_CanRx_Message_Unpack_"+curMessage->getID()):("_FB_CanRx_Message_"+curMessage->getID()));
+                        variable.setAttributeNode(attr);
+                        QDomElement type = doc.createElement("type");
+                        QDomElement derived = doc.createElement("derived");
+                        attr=doc.createAttribute("name");
+                        attr.setValue(curMessage->getIfBitOperation()?("_FB_CanRx_Message_Unpack"):("_FB_CanRx_Message"));
+                        derived.setAttributeNode(attr);
+                        type.appendChild(derived);
+                        variable.appendChild(type);
+                        localVars.appendChild(variable);
+                    }
+                }
+
+                foreach (dataContainer * curMessage , comInterface){
+                    if(curMessage->getIfSelected()){
+                        for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
+                            QDomElement variable=doc.createElement("variable");
+                            attr=doc.createAttribute("name");
+                            attr.setValue("Raw_"+curSignal->name);
+                            variable.setAttributeNode(attr);
+                            QDomElement type = doc.createElement("type");
+                            QDomElement dataType = doc.createElement(curSignal->comDataType);
+                            type.appendChild(dataType);
+                            variable.appendChild(type);
+                            localVars.appendChild(variable);
+                            variable=doc.createElement("variable");
+                            attr=doc.createAttribute("name");
+                            attr.setValue("Cont_"+curSignal->name);
+                            variable.setAttributeNode(attr);
+                            type = doc.createElement("type");
+                            dataType = doc.createElement(curSignal->appDataType);
+                            type.appendChild(dataType);
+                            variable.appendChild(type);
+                            localVars.appendChild(variable);
+                        }
+                    }
+                }
+
                 {
                     QDomElement variable=doc.createElement("variable");
                     attr=doc.createAttribute("name");
-                    attr.setValue(curMessage->getIfBitOperation()?("_FB_CanRx_Message_Unpack_0"):("_FB_CanRx_Message_0"));
+                    attr.setValue("FrcVar");
                     variable.setAttributeNode(attr);
                     QDomElement type = doc.createElement("type");
                     QDomElement derived = doc.createElement("derived");
                     attr=doc.createAttribute("name");
-                    attr.setValue(curMessage->getIfBitOperation()?("_FB_CanRx_Message_Unpack"):("_FB_CanRx_Message"));
+                    attr.setValue(this->dutName);
                     derived.setAttributeNode(attr);
                     type.appendChild(derived);
                     variable.appendChild(type);
                     localVars.appendChild(variable);
                 }
-                /*P_ID_Can*/
-                {
-                    QDomElement variable=doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("P_ID_Can");
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement dataVarType = doc.createElement("UDINT");
-                    type.appendChild(dataVarType);
-                    QDomElement initialValue = doc.createElement("initialValue");
-                    QDomElement simpleValue = doc.createElement("simpleValue");
-                    attr=doc.createAttribute("value");
-                    attr.setValue("16#"+curMessage->getID());
-                    simpleValue.setAttributeNode(attr);
-                    initialValue.appendChild(simpleValue);
-                    variable.appendChild(type);
-                    variable.appendChild(initialValue);
-                    localVars.appendChild(variable);
-                }
-                /*P_Tm_MsgTmOut*/
-                {
-                    QDomElement variable=doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("P_Tm_MsgTmOut");
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement dataVarType = doc.createElement("TIME");
-                    type.appendChild(dataVarType);
-                    QDomElement initialValue = doc.createElement("initialValue");
-                    QDomElement simpleValue = doc.createElement("simpleValue");
-                    attr=doc.createAttribute("value");
-                    attr.setValue("TIME#"+curMessage->getMsTimeOut()+"ms");
-                    simpleValue.setAttributeNode(attr);
-                    initialValue.appendChild(simpleValue);
-                    variable.appendChild(type);
-                    variable.appendChild(initialValue);
-                    localVars.appendChild(variable);
-                }
-                /*P_Msg_Extd*/
-                {
-                    QDomElement variable=doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("P_Msg_Extd");
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement dataVarType = doc.createElement("BOOL");
-                    type.appendChild(dataVarType);
-                    QDomElement initialValue = doc.createElement("initialValue");
-                    QDomElement simpleValue = doc.createElement("simpleValue");
-                    attr=doc.createAttribute("value");
-                    attr.setValue(QString::number(curMessage->getIfExtended()).toUpper());
-                    simpleValue.setAttributeNode(attr);
-                    initialValue.appendChild(simpleValue);
-                    variable.appendChild(type);
-                    variable.appendChild(initialValue);
-                    localVars.appendChild(variable);
-                }
 
-                for(unsigned i=0; i<64;i++){
-                    if(i==9){
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("X_II_BYTE_0");
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BYTE = doc.createElement("BYTE");
-                        type.appendChild(BYTE);
-                        variable.appendChild(type);
-                        localVars.appendChild(variable);
-                    }else if(i==17){
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("X_II_BYTE_1");
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BYTE = doc.createElement("BYTE");
-                        type.appendChild(BYTE);
-                        variable.appendChild(type);
-                        localVars.appendChild(variable);
-                    }
-                    else if(i==25){
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("X_II_BYTE_2");
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BYTE = doc.createElement("BYTE");
-                        type.appendChild(BYTE);
-                        variable.appendChild(type);
-                        localVars.appendChild(variable);
-                    }
-                    else if(i==33){
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("X_II_BYTE_3");
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BYTE = doc.createElement("BYTE");
-                        type.appendChild(BYTE);
-                        variable.appendChild(type);
-                        localVars.appendChild(variable);
-                    }
-                    else if(i==41){
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("X_II_BYTE_4");
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BYTE = doc.createElement("BYTE");
-                        type.appendChild(BYTE);
-                        variable.appendChild(type);
-                        localVars.appendChild(variable);
-                    }
-                    else if(i==49){
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("X_II_BYTE_5");
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BYTE = doc.createElement("BYTE");
-                        type.appendChild(BYTE);
-                        variable.appendChild(type);
-                        localVars.appendChild(variable);
-                    }
-                    else if(i==57){
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("X_II_BYTE_6");
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BYTE = doc.createElement("BYTE");
-                        type.appendChild(BYTE);
-                        variable.appendChild(type);
-                        localVars.appendChild(variable);
-                    }
-
-                    {
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("S_II_BIT_"+QString::number(i));
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BOOL = doc.createElement("BOOL");
-                        type.appendChild(BOOL);
-                        variable.appendChild(type);
-                        localVars.appendChild(variable);
-                    }
-
-                    if(i==63){
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("X_II_BYTE_7");
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BYTE = doc.createElement("BYTE");
-                        type.appendChild(BYTE);
-                        variable.appendChild(type);
-                        localVars.appendChild(variable);
-                    }
-                }
-                for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
-                    QDomElement variable=doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("Raw_"+curSignal->name);
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement dataType = doc.createElement(curSignal->comDataType);
-                    type.appendChild(dataType);
-                    variable.appendChild(type);
-                    localVars.appendChild(variable);
-                    variable=doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("Cont_"+curSignal->name);
-                    variable.setAttributeNode(attr);
-                    type = doc.createElement("type");
-                    dataType = doc.createElement(curSignal->appDataType);
-                    type.appendChild(dataType);
-                    variable.appendChild(type);
-                    localVars.appendChild(variable);
-                }
                 for (unsigned i =0; i<counterfbBYTETOWORD; i++){
                     QDomElement variable=doc.createElement("variable");
                     attr=doc.createAttribute("name");
@@ -1765,7 +1450,6 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
             attr=doc.createAttribute("xmlns");
             attr.setValue("http://www.w3.org/1999/xhtml");
             xhtml.setAttributeNode(attr);
-
             text=doc.createTextNode(STcode);
             xhtml.appendChild(text);
             ST.appendChild(xhtml);
@@ -1782,11 +1466,7 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
             attr.setValue("discard");
             data.setAttributeNode(attr);
             QDomElement ObjectId = doc.createElement("ObjectId");
-            foreach(QList<QString> curVal , this->fbNameandObjId){
-                if(curVal.at(0)== ("_FB_"+this->dutHeader+"_"+curMessage->getName()+"_0X"+curMessage->getID())){
-                    text=doc.createTextNode(curVal.at(1));
-                }
-            }
+            text=doc.createTextNode(this->pouObjID);
             ObjectId.appendChild(text);
             data.appendChild(ObjectId);
             addData.appendChild(data);
@@ -1796,44 +1476,24 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
 
            fbdBlocks.append(newBlock);
            // append input variables to AND gate to check disturbance -> EXP format : GVL.IIXC.S_TmOut_Motor_Messages_3_0X512
-           gateAND->inputVars.append({"In"+QString::number(counterInANDOR),"GVL."+dutHeader+".S_TmOut_"+curMessage->getName()+"_0X"+curMessage->getID(),"BOOL"," "});
-           // append input variables to OR gate to check disturbance -> EXP format : GVL.IIXC.S_TmOut_Motor_Messages_3_0X512
-           gateOR->inputVars.append({"In"+QString::number(counterInANDOR),"GVL."+dutHeader+".S_TmOut_"+curMessage->getName()+"_0X"+curMessage->getID(),"BOOL"," "});
-           counterInANDOR++;
-        }
-
-    }
-    // append end of input variables FALSE
-    gateAND->inputVars.append({"In"+QString::number(counterInANDOR),"FALSE","BOOL"," "});
-    // append end of input variables FALSE
-    gateOR->inputVars.append({"In"+QString::number(counterInANDOR),"FALSE","BOOL"," "});
- // It only has one output so It is outside of loop
-  // append input variables to AND gate to check disturbance -> EXP format : GVL.IIXC.S_Com_Distrb_IIXC
-    gateAND->outputVars.append({"Out1","GVL."+dutHeader+".S_Com_Distrb","BOOL"," "});
-  // append input variables to OR gate to check disturbance -> EXP format : GVL.IIXC.S_Com_Flt_IIXC
-    gateOR->outputVars.append({"Out1","GVL."+dutHeader+".S_Com_Flt","BOOL"," "});
-
-    fbdBlocks.append(gateAND);
-    fbdBlocks.append(gateOR);
-
 
 
 }
-void DBCHandler::generateIIST(QString *const ST,dataContainer *const curMessage)
+void DBCHandler::generateIIST(QString *const ST)
 {
     ST->append("(*\n"
                "**********************************************************************\n"
                "Bozankaya A.Ş.\n"
                "**********************************************************************\n"
-               "Name					: _FB_"+dutHeader+"_"+curMessage->getName()+"_"+curMessage->getID()+"\n"
-               "POU Type				: FB\n"
+               "Name					: P_"+dutName+"\n"
+               "POU Type				: Program\n"
                "Created by              : COMMUNICATION INTERFACE GENERATOR("+QHostInfo::localHostName()+") , BZK.\n"
                "Creation Date 			: "+creationDate.toString(Qt::DateFormat::ISODate)+"\n"
                "Modifications			: see version description below\n"
                "\n"
                "\n"
-               "FB Description:"
-               "This FB which is created by automatically by communication interface generator \n handles the RX (INPUT) can messages according to CAN_500_LIB\n"
+               "Program Description:"
+               "This program which is created by automatically by communication interface generator \n handles the RX (INPUT) can messages according to CAN_500_LIB\n"
                "*********************************************************************\n"
                "\n"
                "Version 1	\n"
@@ -1842,135 +1502,60 @@ void DBCHandler::generateIIST(QString *const ST,dataContainer *const curMessage)
                "- initial version\n"
                "*********************************************************************\n"
                "*)");
-    ST->append((curMessage->getIfBitOperation())?
-               ("\n_FB_CanRx_Message_Unpack_0(\n"
-                "   C_Enable:= C_Init_Can,\n"
-                "   Obj_CAN:= Ptr_Obj_Can ,\n"
-                "   X_MsgID:= P_ID_Can,\n"
-                "   Tm_MsgTmOut:= P_Tm_MsgTmOut,\n"
-                "   S_Extended:= P_Msg_Extd,\n"
-                "   S_ER_TmOut=> S_Msg_TmOut,\n"
-                "   S_Bit_0     =>  S_II_BIT_0	 ,\n"
-                "   S_Bit_1     =>  S_II_BIT_1	 ,\n"
-                "   S_Bit_2     =>  S_II_BIT_2	 ,\n"
-                "   S_Bit_3     =>  S_II_BIT_3	 ,\n"
-                "   S_Bit_4     =>  S_II_BIT_4	 ,\n"
-                "   S_Bit_5     =>  S_II_BIT_5	 ,\n"
-                "   S_Bit_6     =>  S_II_BIT_6	 ,\n"
-                "   S_Bit_7     =>  S_II_BIT_7	 ,\n"
-                "   X_Byte_0    => X_II_BYTE_0	 ,\n"
-                "   S_Bit_8     =>  S_II_BIT_8	 ,\n"
-                "   S_Bit_9     =>  S_II_BIT_9	 ,\n"
-                "   S_Bit_10    => S_II_BIT_10	 ,\n"
-                "   S_Bit_11    => S_II_BIT_11	 ,\n"
-                "   S_Bit_12    => S_II_BIT_12	 ,\n"
-                "   S_Bit_13    => S_II_BIT_13	 ,\n"
-                "   S_Bit_14    => S_II_BIT_14	 ,\n"
-                "   S_Bit_15    => S_II_BIT_15	 ,\n"
-                "   X_Byte_1    => X_II_BYTE_1	 ,\n"
-                "   S_Bit_16    => S_II_BIT_16	 ,\n"
-                "   S_Bit_17    => S_II_BIT_17	 ,\n"
-                "   S_Bit_18    => S_II_BIT_18	 ,\n"
-                "   S_Bit_19    => S_II_BIT_19	 ,\n"
-                "   S_Bit_20    => S_II_BIT_20	 ,\n"
-                "   S_Bit_21    => S_II_BIT_21	 ,\n"
-                "   S_Bit_22    => S_II_BIT_22	 ,\n"
-                "   S_Bit_23    => S_II_BIT_23	 ,\n"
-                "   X_Byte_2    => X_II_BYTE_2	 ,\n"
-                "   S_Bit_24    => S_II_BIT_24	 ,\n"
-                "   S_Bit_25    => S_II_BIT_25	 ,\n"
-                "   S_Bit_26    => S_II_BIT_26	 ,\n"
-                "   S_Bit_27    => S_II_BIT_27	 ,\n"
-                "   S_Bit_28    => S_II_BIT_28	 ,\n"
-                "   S_Bit_29    => S_II_BIT_29	 ,\n"
-                "   S_Bit_30    => S_II_BIT_30	 ,\n"
-                "   S_Bit_31    => S_II_BIT_31	 ,\n"
-                "   X_Byte_3    => X_II_BYTE_3	 ,\n"
-                "   S_Bit_32    => S_II_BIT_32	 ,\n"
-                "   S_Bit_33    => S_II_BIT_33	 ,\n"
-                "   S_Bit_34    => S_II_BIT_34	 ,\n"
-                "   S_Bit_35    => S_II_BIT_35	 ,\n"
-                "   S_Bit_36    => S_II_BIT_36	 ,\n"
-                "   S_Bit_37    => S_II_BIT_37	 ,\n"
-                "   S_Bit_38    => S_II_BIT_38	 ,\n"
-                "   S_Bit_39    => S_II_BIT_39	 ,\n"
-                "   X_Byte_4    => X_II_BYTE_4	 ,\n"
-                "   S_Bit_40    => S_II_BIT_40	 ,\n"
-                "   S_Bit_41    => S_II_BIT_41	 ,\n"
-                "   S_Bit_42    => S_II_BIT_42	 ,\n"
-                "   S_Bit_43    => S_II_BIT_43	 ,\n"
-                "   S_Bit_44    => S_II_BIT_44	 ,\n"
-                "   S_Bit_45    => S_II_BIT_45	 ,\n"
-                "   S_Bit_46    => S_II_BIT_46	 ,\n"
-                "   S_Bit_47    => S_II_BIT_47	 ,\n"
-                "   X_Byte_5    => X_II_BYTE_5	 ,\n"
-                "   S_Bit_48    => S_II_BIT_48	 ,\n"
-                "   S_Bit_49    => S_II_BIT_49	 ,\n"
-                "   S_Bit_50    => S_II_BIT_50	 ,\n"
-                "   S_Bit_51    => S_II_BIT_51	 ,\n"
-                "   S_Bit_52    => S_II_BIT_52	 ,\n"
-                "   S_Bit_53    => S_II_BIT_53	 ,\n"
-                "   S_Bit_54    => S_II_BIT_54	 ,\n"
-                "   S_Bit_55    => S_II_BIT_55	 ,\n"
-                "   X_Byte_6    => X_II_BYTE_6	 ,\n"
-                "   S_Bit_56    => S_II_BIT_56	 ,\n"
-                "   S_Bit_57    => S_II_BIT_57	 ,\n"
-                "   S_Bit_58    => S_II_BIT_58	 ,\n"
-                "   S_Bit_59    => S_II_BIT_59	 ,\n"
-                "   S_Bit_60    => S_II_BIT_60	 ,\n"
-                "   S_Bit_61    => S_II_BIT_61	 ,\n"
-                "   S_Bit_62    => S_II_BIT_62	 ,\n"
-                "   S_Bit_63    => S_II_BIT_63	 ,\n"
-                "   X_Byte_7    => X_II_BYTE_7	  );\n"):
-               ("\n_FB_CanRx_Message_0("
-                "\n	C_Enable:= C_Init_Can, "
-                "\n	Obj_CAN:= Ptr_Obj_Can, "
-                "\n	X_MsgID:= P_ID_Can, "
-                "\n	Tm_MsgTmOut:= P_Tm_MsgTmOut, "
-                "\n	S_Extended:= P_Msg_Extd, "
-                "\n	S_ER_TmOut=> S_Msg_TmOut, "
-                "\n	X_Byte_0=> X_II_BYTE_0, "
-                "\n	X_Byte_1=> X_II_BYTE_1, "
-                "\n	X_Byte_2=> X_II_BYTE_2, "
-                "\n	X_Byte_3=> X_II_BYTE_3, "
-                "\n	X_Byte_4=> X_II_BYTE_4, "
-                "\n	X_Byte_5=> X_II_BYTE_5, "
-                "\n	X_Byte_6=> X_II_BYTE_6, "
-                "\n	X_Byte_7=> X_II_BYTE_7); "));
+    foreach (dataContainer * curMessage , comInterface){
+        if(curMessage->getIfSelected()){
+            ST->append("\n{region \""+curMessage->getName()+"- ID:"+curMessage->getID()+"\"}\n");
+            QString nameFb = (curMessage->getIfBitOperation())? ("_FB_CanRx_Message_Unpack_"+curMessage->getID()) : ("_FB_CanRx_Message_"+curMessage->getID());
+            ST->append( "\n"+nameFb+"(\n"
+                        "   C_Enable:= GVL."+dutHeader+".S_CAN_Init,\n"
+                        "   Obj_CAN:= ADR("+this->canLine+"),\n"
+                        "   X_MsgID:= 16#"+curMessage->getID()+",\n"
+                        "   Tm_MsgTmOut:= TIME#"+curMessage->getMsTimeOut()+"ms,\n"
+                        "   S_Extended:= "+QString::number(curMessage->getIfExtended()).toUpper()+",\n"
+                        "   S_ER_TmOut=> GVL."+dutHeader+".S_TmOut_"+curMessage->getName()+"_0X"+curMessage->getID()+");\n");
 
-    for( const dataContainer::signal * curSignal : *curMessage->getSignalList()){
-        ST->append(convTypeComtoApp(curSignal->name,curSignal->startBit,curSignal->length,curSignal->convMethod,curSignal->resolution,curSignal->offset, curSignal->maxValue, curSignal->minValue, curSignal->defValue,curSignal->isJ1939));
+            for( const dataContainer::signal * curSignal : *curMessage->getSignalList()){
+                ST->append(convTypeComtoApp(curSignal,curMessage->getID(),curMessage->getName(),nameFb));
+            }
+            ST->append("\n{endregion}");
+        }
     }
-
-
 }
-QString DBCHandler::convTypeComtoApp(QString signalName, unsigned short startbit, unsigned short length, QString converType,double resolution, double offset, double maxValue, double minValue, double defValue, bool j1939)
+QString DBCHandler::convTypeComtoApp(const dataContainer::signal * curSignal, QString idMessage, QString nameMessage, QString nameFb)
 {
-    QString ST="\n\n\n{region \""+signalName+"\"}\n\n\n";
-    if(converType=="BOOL:BOOL"){
-        ST.append("\nGVL."+this->dutHeader+"."+signalName+".v               := NOT S_Msg_TmOut OR FrcHi_"+signalName+" OR FrcLo_"+signalName+" ;"
-                  "\nGVL."+this->dutHeader+"."+signalName+".x                := GVL."+this->dutHeader+"."+signalName+".v AND (S_II_BIT_"+QString::number(startbit)+" OR FrcHi_"+signalName+") AND NOT FrcLo_"+signalName+" ;");
-    }else if(converType=="2BOOL:BOOL"){
-        ST.append("\nGVL."+this->dutHeader+"."+signalName+".v               := ((NOT S_Msg_TmOut AND NOT S_II_BIT_"+QString::number(startbit+1)+") OR FrcHi_"+signalName+" OR FrcLo_"+signalName+") ;"
-                   "\nGVL."+this->dutHeader+"."+signalName+".x               := GVL."+this->dutHeader+"."+signalName+".v AND (S_II_BIT_"+QString::number(startbit+1)+" OR FrcHi_"+signalName+") AND NOT FrcLo_"+signalName+";");
-    }else if((converType=="xtoBYTE")||(converType=="xtoUSINT")||((converType=="xtoREAL") && (length==8))){
-        ST.append("\nRaw_"+signalName+"             := X_II_BYTE_"+QString::number(startbit/8)+";");
-    }else if((converType=="xtoWORD")||(converType=="xtoUINT")||((converType=="xtoREAL") && (length==16))){
-        ST.append("\n_FB_PACK_BYTE_TO_WORD_"+QString::number(counterfbBYTETOWORD)+"(X_BYTE_0:= X_II_BYTE_"+QString::number(startbit/8)+", X_BYTE_1:=  X_II_BYTE_"+QString::number((startbit/8)+1)+", X_WORD_0 => Raw_"+signalName+");");
+    QString ST="\n{region \""+curSignal->name+"\"}";
+    if(curSignal->convMethod=="BOOL:BOOL"){
+        ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".v               := NOT GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" OR FrcVar."+curSignal->name+".v ;"
+                  "\nIF NOT FrcVar."+curSignal->name+".v THEN;"
+                  "\nGVL."+this->dutHeader+"."+curSignal->name+".x               := GVL."+this->dutHeader+"."+curSignal->name+".v AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+";"
+                  "\nELSE "
+                  "\nGVL."+this->dutHeader+"."+curSignal->name+".x               := FrcVar."+curSignal->name+".x ;"
+                  "\nEND_IF;");
+    }else if(curSignal->convMethod=="2BOOL:BOOL"){
+        ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".v               := ((NOT GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" AND NOT "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+") OR FrcVar."+curSignal->name+".v) ;"
+                   "\nIF NOT FrcVar."+curSignal->name+".v THEN;"
+                   "\nGVL."+this->dutHeader+"."+curSignal->name+".x              := GVL."+this->dutHeader+"."+curSignal->name+".v AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+";"
+                   "\nELSE "
+                   "\nGVL."+this->dutHeader+"."+curSignal->name+".x              := FrcVar."+curSignal->name+".x ;"
+                   "\nEND_IF;");
+    }else if((curSignal->convMethod=="xtoBYTE")||(curSignal->convMethod=="xtoUSINT")||((curSignal->convMethod=="xtoREAL") && (curSignal->length==8))){
+        ST.append("\nRaw_"+curSignal->name+"             := "+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+";");
+    }else if((curSignal->convMethod=="xtoWORD")||(curSignal->convMethod=="xtoUINT")||((curSignal->convMethod=="xtoREAL") && (curSignal->length==16))){
+        ST.append("\n_FB_PACK_BYTE_TO_WORD_"+QString::number(counterfbBYTETOWORD)+"(X_BYTE_0:= "+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+", X_BYTE_1:=  "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+1)+", X_WORD_0 => Raw_"+curSignal->name+");");
         counterfbBYTETOWORD++;
-    }else if((converType=="xtoDWORD")||(converType=="xtoUDINT")||((converType=="xtoREAL") && (length==32))){
-        ST.append("\n_FB_PACK_BYTE_TO_DWORD_"+QString::number(counterfbBYTETODWORD)+"(X_BYTE_0:= X_II_BYTE_"+QString::number(startbit/8)+", X_BYTE_1:= X_II_BYTE_"+QString::number((startbit/8)+1)+", X_BYTE_2:= X_II_BYTE_"+QString::number((startbit/8)+2)+", X_BYTE_3:= X_II_BYTE_"+QString::number((startbit/8)+3)+" , X_DWORD_0 => Raw_"+signalName+");");
+    }else if((curSignal->convMethod=="xtoDWORD")||(curSignal->convMethod=="xtoUDINT")||((curSignal->convMethod=="xtoREAL") && (curSignal->length==32))){
+        ST.append("\n_FB_PACK_BYTE_TO_DWORD_"+QString::number(counterfbBYTETODWORD)+"(X_BYTE_0:= "+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+", X_BYTE_1:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+1)+", X_BYTE_2:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+2)+", X_BYTE_3:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+3)+" , X_DWORD_0 => Raw_"+curSignal->name+");");
         counterfbBYTETODWORD++;
-    }else if((converType=="xtoLWORD")||(converType=="xtoULINT")||(converType=="xtoLREAL") ){
-        ST.append("\n_FB_PACK_BYTE_TO_LWORD_"+QString::number(counterfbBYTETOLWORD)+"(X_BYTE_0:= X_II_BYTE_"+QString::number(startbit/8)+", X_BYTE_1:= X_II_BYTE_"+QString::number((startbit/8)+1)+", X_BYTE_2:=X_II_BYTE_"+QString::number((startbit/8)+2)+" , X_BYTE_3:= X_II_BYTE_"+QString::number((startbit/8)+3)+", X_BYTE_4:= X_II_BYTE_"+QString::number((startbit/8)+4)+", X_BYTE_5:= X_II_BYTE_"+QString::number((startbit/8)+5)+", X_BYTE_6:= X_II_BYTE_"+QString::number((startbit/8)+6)+", X_BYTE_7:= X_II_BYTE_"+QString::number((startbit/8)+7)+" , X_LWORD_0 => Raw_"+signalName+");");
+    }else if((curSignal->convMethod=="xtoLWORD")||(curSignal->convMethod=="xtoULINT")||(curSignal->convMethod=="xtoLREAL") ){
+        ST.append("\n_FB_PACK_BYTE_TO_LWORD_"+QString::number(counterfbBYTETOLWORD)+"(X_BYTE_0:= "+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+", X_BYTE_1:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+1)+", X_BYTE_2:="+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+2)+" , X_BYTE_3:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+3)+", X_BYTE_4:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+4)+", X_BYTE_5:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+5)+", X_BYTE_6:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+6)+", X_BYTE_7:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+7)+" , X_LWORD_0 => Raw_"+curSignal->name+");");
         counterfbBYTETOLWORD++;
     }else{
         bool flagPack = false;
-        if((length>8)){
-            if(length<17){
+        if((curSignal->length>8)){
+            if(curSignal->length<17){
                 ST.append("\n_FB_PACK_BYTE_TO_WORD_"+QString::number(counterfbBYTETOWORD)+"();");
 
-            }else if(length <33){
+            }else if(curSignal->length <33){
                 ST.append("\n_FB_PACK_BYTE_TO_DWORD_"+QString::number(counterfbBYTETODWORD)+"();");
 
             }else {
@@ -1984,13 +1569,13 @@ QString DBCHandler::convTypeComtoApp(QString signalName, unsigned short startbit
         unsigned counterBITBYTE=0;
         unsigned counterBYTEWORD=0;
         unsigned counterBYTEDWORD=0;
-        for(unsigned i =0; i<length;i++){
+        for(unsigned i =0; i<curSignal->length;i++){
 
-            if((i%32 == 0) && (i>0) && length>16){
+            if((i%32 == 0) && (i>0) && curSignal->length>16){
                 packID++;
                 packByteID=0;
             }
-            if((i%16 == 0) && (i>0) && length<=16){
+            if((i%16 == 0) && (i>0) && curSignal->length<=16){
                 packID++;
                 packByteID=0;
             }
@@ -2001,18 +1586,18 @@ QString DBCHandler::convTypeComtoApp(QString signalName, unsigned short startbit
                 flagPack=true;
             }
             if(flagPack){
-                    ST.append("S_BIT_"+QString::number(i%8)+":= S_II_BIT_"+QString::number(startbit+i)+"");
-                    if(((i%8 != 7) &&(i%(length-1) != 0)) || (i==0)) {
+                    ST.append("S_BIT_"+QString::number(i%8)+":= "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+i)+"");
+                    if(((i%8 != 7) &&(i%(curSignal->length-1) != 0)) || (i==0)) {
                         ST.append(",");
                     }
             }
             if(flagPack){
-                if(((i%8 == 7)||(i%(length-1) == 0) )&& (i>0)){
+                if(((i%8 == 7)||(i%(curSignal->length-1) == 0) )&& (i>0)){
                     ST.append(" ,X_BYTE_0=>");
-                    if(length<9){
-                    ST.append("Raw_"+signalName);
+                    if(curSignal->length<9){
+                    ST.append("Raw_"+curSignal->name);
                     ST.append(");");
-                    }else if (length <17){
+                    }else if (curSignal->length <17){
                     ST.append("_FB_PACK_BYTE_TO_WORD_"+QString::number(counterfbBYTETOWORD+packID));
                     ST.append(".X_BYTE_"+QString::number(packByteID)+");");
                     }else{
@@ -2027,15 +1612,15 @@ QString DBCHandler::convTypeComtoApp(QString signalName, unsigned short startbit
 
         }
 
-        if((length>8)){
-            if(length<17){
-                ST.append("\nRaw_"+signalName+"            :=_FB_PACK_BYTE_TO_WORD_"+QString::number(counterfbBYTETOWORD)+".X_WORD_0;");
+        if((curSignal->length>8)){
+            if(curSignal->length<17){
+                ST.append("\nRaw_"+curSignal->name+"            :=_FB_PACK_BYTE_TO_WORD_"+QString::number(counterfbBYTETOWORD)+".X_WORD_0;");
                 counterfbBYTETOWORD++;
-            }else if(length <33){
-                ST.append("\nRaw_"+signalName+"            :=_FB_PACK_BYTE_TO_DWORD_"+QString::number(counterfbBYTETODWORD)+".X_DWORD_0;");
+            }else if(curSignal->length <33){
+                ST.append("\nRaw_"+curSignal->name+"            :=_FB_PACK_BYTE_TO_DWORD_"+QString::number(counterfbBYTETODWORD)+".X_DWORD_0;");
                 counterfbBYTETODWORD++;
             }else {
-                ST.append("\n_FB_PACK_DWORD_TO_LWORD_"+QString::number(counterfbDWORDTOLWORD)+"(X_DWORD_0:=_FB_PACK_BYTE_TO_DWORD_"+QString::number(counterfbBYTETODWORD)+".X_DWORD_0,X_DWORD_1:=_FB_PACK_BYTE_TO_DWORD_"+QString::number(counterfbBYTETODWORD+1)+".X_DWORD_0,X_LWORD_0=> Raw_"+signalName+");");
+                ST.append("\n_FB_PACK_DWORD_TO_LWORD_"+QString::number(counterfbDWORDTOLWORD)+"(X_DWORD_0:=_FB_PACK_BYTE_TO_DWORD_"+QString::number(counterfbBYTETODWORD)+".X_DWORD_0,X_DWORD_1:=_FB_PACK_BYTE_TO_DWORD_"+QString::number(counterfbBYTETODWORD+1)+".X_DWORD_0,X_LWORD_0=> Raw_"+curSignal->name+");");
             counterfbDWORDTOLWORD++;
             counterfbBYTETODWORD++;
             counterfbBYTETODWORD++;
@@ -2044,84 +1629,87 @@ QString DBCHandler::convTypeComtoApp(QString signalName, unsigned short startbit
         counterfb8BITTOBYTE = counterfb8BITTOBYTE+ counterBITBYTE;
     }
     // TYPE CONVERTION AND E  NA CONTROL STARTS
-    if(length==1){
-        ST.append("\nGVL."+this->dutHeader+"."+signalName+".e				:= FALSE;");
-        ST.append("\nGVL."+this->dutHeader+"."+signalName+".na				:= FALSE;");
+    if(curSignal->length==1){
+        ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".e				:= FALSE;");
+        ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".na				:= FALSE;");
     }
-    else if((length==2) && (converType != "toBYTE")){
+    else if((curSignal->length==2) && (curSignal->convMethod != "toBYTE")){
 
-        ST.append((j1939==true)? ("\nGVL."+this->dutHeader+"."+signalName+".e				:= S_II_BIT_"+QString::number(startbit+1)+" AND NOT S_II_BIT_"+QString::number(startbit)+" ;") : ("\nGVL."+this->dutHeader+"."+signalName+".e				:= FALSE;"));
-        ST.append((j1939==true)? ("\nGVL."+this->dutHeader+"."+signalName+".na				:= S_II_BIT_"+QString::number(startbit+1)+" AND S_II_BIT_"+QString::number(startbit)+" ;") : ("\nGVL."+this->dutHeader+"."+signalName+".na				:= FALSE;"));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e				    := "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+" AND NOT "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+" ;") : ("\nGVL."+this->dutHeader+"."+curSignal->name+".e				:= FALSE;"));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na				:= "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+" AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+" ;") : ("\nGVL."+this->dutHeader+"."+curSignal->name+".na				:= FALSE;"));
 
     }
-    else if((length<9)){
-        if((converType == "toBYTE")|| (converType == "xtoBYTE")){
-            ST.append("\nCont_"+signalName+"				:= Raw_"+signalName+" ;");
+    else if((curSignal->length<9)){
+        if((curSignal->convMethod == "toBYTE")|| (curSignal->convMethod == "xtoBYTE")){
+            ST.append("\nCont_"+curSignal->name+"				:= Raw_"+curSignal->name+" ;");
         }
-        else if ((converType == "toUSINT")|| (converType == "xtoUSINT")){
-            ST.append("\nCont_"+signalName+"				:= BYTE_TO_USINT(Raw_"+signalName+") ;");
+        else if ((curSignal->convMethod == "toUSINT")|| (curSignal->convMethod == "xtoUSINT")){
+            ST.append("\nCont_"+curSignal->name+"				:= BYTE_TO_USINT(Raw_"+curSignal->name+") ;");
         }
-        else if ((converType == "toREAL")|| (converType == "xtoREAL")){
-            ST.append("\nCont_"+signalName+"				:= USINT_TO_REAL(BYTE_TO_USINT(Raw_"+signalName+"))*"+QString::number(resolution,'g',(length>32)? 20:15)+" + "+QString::number(offset,'g',(length>32)? 20:15)+";");
+        else if ((curSignal->convMethod == "toREAL")|| (curSignal->convMethod == "xtoREAL")){
+            ST.append("\nCont_"+curSignal->name+"				:= USINT_TO_REAL(BYTE_TO_USINT(Raw_"+curSignal->name+"))"+((curSignal->resolution == 1)? (""):("*"+QString::number(curSignal->resolution,'g',15)))+((curSignal->offset == 0)? (""):("+"+QString::number(curSignal->offset,'g',15)))+";");
         }
-        ST.append((j1939==true)? ("\nGVL."+this->dutHeader+"."+signalName+".e              := (Raw_"+signalName+" > 16#FD);") : ("\nGVL."+this->dutHeader+"."+signalName+".e				:= FALSE;"));
-        ST.append((j1939==true)? ("\nGVL."+this->dutHeader+"."+signalName+".na             := (Raw_"+signalName+" = 16#FF);") : ("\nGVL."+this->dutHeader+"."+signalName+".na				:= FALSE;"));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e              := (Raw_"+curSignal->name+" > 16#FD);") : ("\nGVL."+this->dutHeader+"."+curSignal->name+".e				:= FALSE;"));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na             := (Raw_"+curSignal->name+" = 16#FF);") : ("\nGVL."+this->dutHeader+"."+curSignal->name+".na				:= FALSE;"));
 
-    }else if((length<17)){
-        if((converType == "toWORD")|| (converType == "xtoWORD")){
-            ST.append("\nCont_"+signalName+"				:= Raw_"+signalName+" ;");
+    }else if((curSignal->length<17)){
+        if((curSignal->convMethod == "toWORD")|| (curSignal->convMethod == "xtoWORD")){
+            ST.append("\nCont_"+curSignal->name+"				:= Raw_"+curSignal->name+" ;");
         }
-        else if ((converType == "toUINT")|| (converType == "xtoUINT")){
-            ST.append("\nCont_"+signalName+"				:= WORD_TO_UINT(Raw_"+signalName+") ;");
+        else if ((curSignal->convMethod == "toUINT")|| (curSignal->convMethod == "xtoUINT")){
+            ST.append("\nCont_"+curSignal->name+"				:= WORD_TO_UINT(Raw_"+curSignal->name+") ;");
         }
-        else if ((converType == "toREAL")|| (converType == "xtoREAL")){
-            ST.append("\n Cont_"+signalName+"				:= UINT_TO_REAL(WORD_TO_UINT(Raw_"+signalName+"))*"+QString::number(resolution,'g',(length>32)? 20:15)+" + "+QString::number(offset,'g',(length>32)? 20:15)+";");
+        else if ((curSignal->convMethod == "toREAL")|| (curSignal->convMethod == "xtoREAL")){
+            ST.append("\n Cont_"+curSignal->name+"				:= UINT_TO_REAL(WORD_TO_UINT(Raw_"+curSignal->name+"))"+((curSignal->resolution == 1)? (""):("*"+QString::number(curSignal->resolution,'g',15)))+((curSignal->offset == 0)? (""):("+"+QString::number(curSignal->offset,'g',15)))+";");
         }
-        ST.append((j1939==true)? ("\nGVL."+this->dutHeader+"."+signalName+".e              := (Raw_"+signalName+" > 16#FDFF;") : ("\nGVL."+this->dutHeader+"."+signalName+".e				:= FALSE;"));
-        ST.append((j1939==true)? ("\nGVL."+this->dutHeader+"."+signalName+".na             := (Raw_"+signalName+" > 16#FEFF;") : ("\nGVL."+this->dutHeader+"."+signalName+".na				:= FALSE;"));
-    }else if((length<33)){
-        if((converType == "toDWORD")|| (converType == "xtoDWORD")){
-            ST.append("\nCont_"+signalName+"               := Raw_"+signalName+" ;");
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e              := (Raw_"+curSignal->name+" > 16#FDFF;") : ("\nGVL."+this->dutHeader+"."+curSignal->name+".e				:= FALSE;"));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na             := (Raw_"+curSignal->name+" > 16#FEFF;") : ("\nGVL."+this->dutHeader+"."+curSignal->name+".na				:= FALSE;"));
+    }else if((curSignal->length<33)){
+        if((curSignal->convMethod == "toDWORD")|| (curSignal->convMethod == "xtoDWORD")){
+            ST.append("\nCont_"+curSignal->name+"               := Raw_"+curSignal->name+" ;");
         }
-        else if ((converType == "toUDINT")|| (converType == "xtoUDINT")){
-            ST.append("\nCont_"+signalName+"				:= DWORD_TO_UDINT(Raw_"+signalName+") ;");
+        else if ((curSignal->convMethod == "toUDINT")|| (curSignal->convMethod == "xtoUDINT")){
+            ST.append("\nCont_"+curSignal->name+"				:= DWORD_TO_UDINT(Raw_"+curSignal->name+") ;");
         }
-        else if ((converType == "toREAL")|| (converType == "xtoREAL")){
-            ST.append("\nCont_"+signalName+"				:= UDINT_TO_REAL(DWORD_TO_UDINT(Raw_"+signalName+"))*"+QString::number(resolution,'g',(length>32)? 20:15)+" + "+QString::number(offset,'g',(length>32)? 20:15)+";");
+        else if ((curSignal->convMethod == "toREAL")|| (curSignal->convMethod == "xtoREAL")){
+            ST.append("\nCont_"+curSignal->name+"				:= UDINT_TO_REAL(DWORD_TO_UDINT(Raw_"+curSignal->name+"))"+((curSignal->resolution == 1)? (""):("*"+QString::number(curSignal->resolution,'g',15)))+((curSignal->offset == 0)? (""):("+"+QString::number(curSignal->offset,'g',15)))+";");
         }
-        ST.append((j1939==true)? ("\nGVL."+this->dutHeader+"."+signalName+".e              := (Raw_"+signalName+" > 16#FDFFFFFF;") : ("\nGVL."+this->dutHeader+"."+signalName+".e				:= FALSE;"));
-        ST.append((j1939==true)? ("\nGVL."+this->dutHeader+"."+signalName+".na             := (Raw_"+signalName+" > 16#FEFFFFFF;") : ("\nGVL."+this->dutHeader+"."+signalName+".na				:= FALSE;"));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e              := (Raw_"+curSignal->name+" > 16#FDFFFFFF;") : ("\nGVL."+this->dutHeader+"."+curSignal->name+".e				:= FALSE;"));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na             := (Raw_"+curSignal->name+" > 16#FEFFFFFF;") : ("\nGVL."+this->dutHeader+"."+curSignal->name+".na				:= FALSE;"));
 
-    }else if((length<65)){
-        if((converType == "toLWORD")|| (converType == "xtoLWORD")){
-            ST.append("\nCont_"+signalName+"               := Raw_"+signalName+" ;");
+    }else if((curSignal->length<65)){
+        if((curSignal->convMethod == "toLWORD")|| (curSignal->convMethod == "xtoLWORD")){
+            ST.append("\nCont_"+curSignal->name+"               := Raw_"+curSignal->name+" ;");
         }
-        else if ((converType == "toULINT")|| (converType == "xtoULINT")){
-            ST.append("\nCont_"+signalName+"				:= LWORD_TO_ULINT(Raw_"+signalName+") ;");
+        else if ((curSignal->convMethod == "toULINT")|| (curSignal->convMethod == "xtoULINT")){
+            ST.append("\nCont_"+curSignal->name+"				:= LWORD_TO_ULINT(Raw_"+curSignal->name+") ;");
         }
-        else if ((converType == "toLREAL")|| (converType == "xtoLREAL")){
-            ST.append("\nCont_"+signalName+"				:= ULINT_TO_LREAL(LWORD_TO_ULINT(Raw_"+signalName+"))*"+QString::number(resolution,'g',(length>32)? 20:15)+" + "+QString::number(offset,'g',(length>32)? 20:15)+";");
+        else if ((curSignal->convMethod == "toLREAL")|| (curSignal->convMethod == "xtoLREAL")){
+            ST.append("\nCont_"+curSignal->name+"				:= ULINT_TO_LREAL(LWORD_TO_ULINT(Raw_"+curSignal->name+"))"+((curSignal->resolution == 1)? (""):("*"+QString::number(curSignal->resolution,'g',15)))+((curSignal->offset == 0)? (""):("+"+QString::number(curSignal->offset,'g',15)))+";");
         }
-        ST.append((j1939==true)? ("\nGVL."+this->dutHeader+"."+signalName+".e              := (Raw_"+signalName+" > 16#FDFFFFFFFFFFFFFF;") : ("\nGVL."+this->dutHeader+"."+signalName+".e				:= FALSE;"));
-        ST.append((j1939==true)? ("\nGVL."+this->dutHeader+"."+signalName+".na             := (Raw_"+signalName+" > 16#FEFFFFFFFFFFFFFF;") : ("\nGVL."+this->dutHeader+"."+signalName+".na				:= FALSE;"));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e              := (Raw_"+curSignal->name+" > 16#FDFFFFFFFFFFFFFF;") : ("\nGVL."+this->dutHeader+"."+curSignal->name+".e				:= FALSE;"));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na             := (Raw_"+curSignal->name+" > 16#FEFFFFFFFFFFFFFF;") : ("\nGVL."+this->dutHeader+"."+curSignal->name+".na				:= FALSE;"));
 
     }// TYPE CONVERTION AND E  NA CONTROL ENDS
 // ADD COMMON PART EXCEPT BOOL AND 2XBOOLS
-    if((length!= 1) && (!(length==2 && (converType !="toByte")))){
-        ST.append("\nGVL."+this->dutHeader+"."+signalName+".RangeExcd 		:= NOT ((Cont_"+signalName+" >= "+QString::number(minValue,'g',(length>32)? 20:15)+") AND ("+QString::number(minValue,'g',(length>32)? 20:15)+" <= "+QString::number(maxValue,'g',(length>32)? 20:15)+"));"
-        "\nGVL."+this->dutHeader+"."+signalName+".v				:= NOT( S_Msg_TmOut OR GVL."+this->dutHeader+"."+signalName+".RangeExcd OR (( GVL."+this->dutHeader+"."+signalName+".e OR GVL."+this->dutHeader+"."+signalName+".na) AND GVL."+this->dutHeader+"."+signalName+".J1939)) OR FrcEn_"+signalName+";"
+    if((curSignal->length!= 1) && (!(curSignal->length==2 && (curSignal->convMethod !="toByte")))){
+        ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".RangeExcd 		:= NOT ((Cont_"+curSignal->name+" >= "+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+") AND (Cont_"+curSignal->name+" <= "+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+"));"
+        "\nGVL."+this->dutHeader+"."+curSignal->name+".v				:= NOT( GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" OR GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd "+((curSignal->isJ1939 ==true)?("OR GVL."+this->dutHeader+"."+curSignal->name+".e OR GVL."+this->dutHeader+"."+curSignal->name+".na) OR "):(") OR "))+"FrcVar."+curSignal->name+".v ;"
         "\n"
-        "\nIF FrcEn_"+signalName+" THEN"
-        "\n	GVL."+this->dutHeader+"."+signalName+".x 		   	:= FrcVal_"+signalName+";"
-        "\nELSIF GVL."+this->dutHeader+"."+signalName+".v THEN"
-        "\n	GVL."+this->dutHeader+"."+signalName+".x 		   	:= Cont_"+signalName+";"
+        "\nIF FrcVar."+curSignal->name+".v  THEN"
+        "\n	GVL."+this->dutHeader+"."+curSignal->name+".x 		   	:= FrcVar."+curSignal->name+".x ;"
+        "\nELSIF GVL."+this->dutHeader+"."+curSignal->name+".v THEN"
+        "\n	GVL."+this->dutHeader+"."+curSignal->name+".x 		   	:= Cont_"+curSignal->name+";"
         "\nELSE"
-        "\n	GVL."+this->dutHeader+"."+signalName+".x 		   	:= "+QString::number(defValue,'g',(length>32)? 20:15)+";"
+        "\n	GVL."+this->dutHeader+"."+curSignal->name+".x 		   	:= "+QString::number(curSignal->defValue,'g',15)+";"
         "\nEND_IF;\n");
     }
-    ST.append("\n\n\n{endregion}\n\n\n");
+    ST.append("\n{endregion}");
     return ST;
-}///******************************************************************************
+
+
+}
+///******************************************************************************
 /// TRANSMIT MESSAGES FUNCTION BLOCK ST GENERATOR
 ///******************************************************************************
 void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
@@ -2129,364 +1717,92 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
     QDomAttr attr;
     QDomText text;
 
-    foreach (dataContainer * curMessage , comInterface){
-        if(curMessage->getIfSelected()){
-            QDomElement pou = doc.createElement("pou");
-            structFbdBlock* newBlock = new structFbdBlock;
+    QString namePou = "P_"+this->dutHeader;
+     //For AND and OR gate to manipulate timeout and disturbance flags
 
+            /*generate block struct type new block*/
+
+            structFbdBlock* newBlock = new structFbdBlock;
+            QDomElement pou = doc.createElement("pou");
             /*set pou name*/
             attr=doc.createAttribute("name");
-            attr.setValue("_FB_"+this->dutHeader+"_"+curMessage->getName()+"_0X"+curMessage->getID());
-            newBlock->name="_FB_"+this->dutHeader+"_"+curMessage->getName()+"_0X"+curMessage->getID();
+            attr.setValue(namePou);
             pou.setAttributeNode(attr);
             /*set pouType*/
             attr=doc.createAttribute("pouType");
-            attr.setValue("functionBlock");
+            attr.setValue("program");
             pou.setAttributeNode(attr);
+
             /*Interface*/
             QDomElement interface = doc.createElement("interface");
-            {
-                QDomElement inputVars = doc.createElement("inputVars");
 
-                /*Generate Input Variables - inputVars*/
-                /*C_Init_Can*/
-                {
-                    QDomElement variable = doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("C_Init_Can");
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement BOOL = doc.createElement("BOOL");
-                    type.appendChild(BOOL);
-                    variable.appendChild(type);
-                    inputVars.appendChild(variable);
-                    newBlock->inputVars.append({"C_Init_Can","GVL."+dutHeader+".S_CAN_Init","BOOL"," "});
-                }
-                /*Ptr_Obj_Can*/
-                {
-                    QDomElement variable = doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("Ptr_Obj_Can");
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement pointer = doc.createElement("pointer");
-                    QDomElement baseType = doc.createElement("baseType");
-                    QDomElement derived =doc.createElement("derived");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("tCan");
-                    derived.setAttributeNode(attr);
-                    baseType.appendChild(derived);
-                    pointer.appendChild(baseType);
-                    type.appendChild(pointer);
-                    variable.appendChild(type);
-                    inputVars.appendChild(variable);
-                    newBlock->inputVars.append({"Ptr_Obj_Can","ADR("+canLine+")","POINTER to tCan"," "});
-                }
-                /*Start to generate variables*/
-                for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
-                    /*Bool signals has FrcHi and FrcLo, others FrcEn FrcVal*/
-                    if(curSignal->appDataType != "BOOL"){
-                        /*Create FrcEn */
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("FrcEn_"+curSignal->name);
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BOOL = doc.createElement("BOOL");
-                        type.appendChild(BOOL);
-                        variable.appendChild(type);
-                        inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"FrcEn_"+curSignal->name,"FrcVar."+curSignal->name+".v","BOOL"," "});
-                        /*Create FrcVal */
-                        variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("FrcVal_"+curSignal->name);
-                        variable.setAttributeNode(attr);
-                        type = doc.createElement("type");
-                        QDomElement signalDataType = doc.createElement(curSignal->appDataType);
-                        type.appendChild(signalDataType);
-                        variable.appendChild(type);
-                        inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"FrcVal_"+curSignal->name,"FrcVar."+curSignal->name+".x",curSignal->comDataType," "});
-                    }
-                    else {
-                        /*Create FrcHi */
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("FrcHi_"+curSignal->name);
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BOOL = doc.createElement("BOOL");
-                        type.appendChild(BOOL);
-                        variable.appendChild(type);
-                        inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"FrcHi_"+curSignal->name,"FrcVar."+curSignal->name+".x","BOOL"," "});
-                        /*Create FrcLo */
-                        variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("FrcLo_"+curSignal->name);
-                        variable.setAttributeNode(attr);
-                        type = doc.createElement("type");
-                        BOOL = doc.createElement("BOOL");
-                        type.appendChild(BOOL);
-                        variable.appendChild(type);
-                        inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"FrcLo_"+curSignal->name,"FrcVar."+curSignal->name+".x","BOOL"," "});
-                    }
-
-                }
-                interface.appendChild(inputVars);
-            }
-            /*Generate Output Variables - outputVars*/
-            {
-                QDomElement outputVars = doc.createElement("outputVars");;
-                {
-                    QDomElement variable = doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("S_Msg_Snt_Ok");
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement BOOL = doc.createElement("BOOL");
-                    type.appendChild(BOOL);
-                    variable.appendChild(type);
-                    outputVars.appendChild(variable);
-                    newBlock->outputVars.append({"S_Msg_Snt_Ok","GVL."+dutHeader+".S_SentOk_"+curMessage->getName()+"_0X"+curMessage->getID(),"BOOL"," "});
-                }
-                interface.appendChild(outputVars);
-            }
-            /*
-             * This part deleted after v.1.0.037
-             * reason : to reduce memory allocation GVL variables directly will be used
-             */
-            /*Generate Output Input Variables - inoutVars*/
-             /*{
-                QDomElement inoutVars = doc.createElement("inOutVars");
-                {
-                    QDomElement variable = doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue(dutHeader);
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement dataVarType = doc.createElement("derived");
-                    attr=doc.createAttribute("name");
-                    attr.setValue(dutName);
-                    dataVarType.setAttributeNode(attr);
-                    type.appendChild(dataVarType);
-                    variable.appendChild(type);
-                    inoutVars.appendChild(variable);
-                }
-                interface.appendChild(inoutVars);
-            }*/
-            QString STcode;
-            this->generateIOST(&STcode,curMessage);
             /*Generate Local Variables - localVars*/
+            QString STcode;
+            this->generateIOST(&STcode);
+//Generate local vars
             {
                 QDomElement localVars= doc.createElement("localVars");
                 /*Function block declaration*/
+                foreach (dataContainer * curMessage , comInterface){
+                    if(curMessage->getIfSelected()){
+                        QDomElement variable=doc.createElement("variable");
+                        attr=doc.createAttribute("name");
+                        attr.setValue(curMessage->getIfBitOperation()?("_FB_CanTx_Message_Unpack_"+curMessage->getID()):("_FB_CanTx_Message_"+curMessage->getID()));
+                        variable.setAttributeNode(attr);
+                        QDomElement type = doc.createElement("type");
+                        QDomElement derived = doc.createElement("derived");
+                        attr=doc.createAttribute("name");
+                        attr.setValue(curMessage->getIfBitOperation()?("_FB_CanTx_Message_Unpack"):("_FB_CanTx_Message"));
+                        derived.setAttributeNode(attr);
+                        type.appendChild(derived);
+                        variable.appendChild(type);
+                        localVars.appendChild(variable);
+                    }
+                }
+
+                foreach (dataContainer * curMessage , comInterface){
+                    if(curMessage->getIfSelected()){
+                        for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
+                            QDomElement variable=doc.createElement("variable");
+                            attr=doc.createAttribute("name");
+                            attr.setValue("Cont_"+curSignal->name);
+                            variable.setAttributeNode(attr);
+                            QDomElement type = doc.createElement("type");
+                            QDomElement dataType = doc.createElement(curSignal->comDataType);
+                            type.appendChild(dataType);
+                            variable.appendChild(type);
+                            localVars.appendChild(variable);
+                        }
+                    }
+                }
                 {
                     QDomElement variable=doc.createElement("variable");
                     attr=doc.createAttribute("name");
-                    attr.setValue(curMessage->getIfBitOperation()?("_FB_CanTx_Message_Unpack_0"):("_FB_CanTx_Message_0"));
+                    attr.setValue("FrcVar");
                     variable.setAttributeNode(attr);
                     QDomElement type = doc.createElement("type");
                     QDomElement derived = doc.createElement("derived");
                     attr=doc.createAttribute("name");
-                    attr.setValue(curMessage->getIfBitOperation()?("_FB_CanTx_Message_Unpack"):("_FB_CanTx_Message"));
+                    attr.setValue(this->dutName);
                     derived.setAttributeNode(attr);
                     type.appendChild(derived);
                     variable.appendChild(type);
                     localVars.appendChild(variable);
                 }
-                /*P_ID_Can*/
-                {
-                    QDomElement variable=doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("P_ID_Can");
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement dataVarType = doc.createElement("UDINT");
-                    type.appendChild(dataVarType);
-                    QDomElement initialValue = doc.createElement("initialValue");
-                    QDomElement simpleValue = doc.createElement("simpleValue");
-                    attr=doc.createAttribute("value");
-                    attr.setValue("16#"+curMessage->getID());
-                    simpleValue.setAttributeNode(attr);
-                    initialValue.appendChild(simpleValue);
-                    variable.appendChild(type);
-                    variable.appendChild(initialValue);
-                    localVars.appendChild(variable);
-                }
-                /*P_Tm_CycleTime*/
-                {
-                    QDomElement variable=doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("P_Tm_CycleTime");
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement dataVarType = doc.createElement("TIME");
-                    type.appendChild(dataVarType);
-                    QDomElement initialValue = doc.createElement("initialValue");
-                    QDomElement simpleValue = doc.createElement("simpleValue");
-                    attr=doc.createAttribute("value");
-                    attr.setValue("TIME#"+curMessage->getMsCycleTime()+"ms");
-                    simpleValue.setAttributeNode(attr);
-                    initialValue.appendChild(simpleValue);
-                    variable.appendChild(type);
-                    variable.appendChild(initialValue);
-                    localVars.appendChild(variable);
-                }
-                /*P_Msg_Dlc*/
-                {
-                    QDomElement variable=doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("P_Msg_Dlc");
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement dataVarType = doc.createElement("BYTE");
-                    type.appendChild(dataVarType);
-                    QDomElement initialValue = doc.createElement("initialValue");
-                    QDomElement simpleValue = doc.createElement("simpleValue");
-                    attr=doc.createAttribute("value");
-                    attr.setValue(QString::number(curMessage->getDLC()));
-                    simpleValue.setAttributeNode(attr);
-                    initialValue.appendChild(simpleValue);
-                    variable.appendChild(type);
-                    variable.appendChild(initialValue);
-                    localVars.appendChild(variable);
-                }
-                /*P_Msg_Extd*/
-                {
-                    QDomElement variable=doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("P_Msg_Extd");
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement dataVarType = doc.createElement("BOOL");
-                    type.appendChild(dataVarType);
-                    QDomElement initialValue = doc.createElement("initialValue");
-                    QDomElement simpleValue = doc.createElement("simpleValue");
-                    attr=doc.createAttribute("value");
-                    attr.setValue(QString::number(curMessage->getIfExtended()).toUpper());
-                    simpleValue.setAttributeNode(attr);
-                    initialValue.appendChild(simpleValue);
-                    variable.appendChild(type);
-                    variable.appendChild(initialValue);
-                    localVars.appendChild(variable);
-                }
 
-                for(unsigned i=0; i<64;i++){
-                    if(i==9){
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("X_IO_BYTE_0");
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BYTE = doc.createElement("BYTE");
-                        type.appendChild(BYTE);
-                        variable.appendChild(type);
-                        localVars.appendChild(variable);
-                    }else if(i==17){
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("X_IO_BYTE_1");
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BYTE = doc.createElement("BYTE");
-                        type.appendChild(BYTE);
-                        variable.appendChild(type);
-                        localVars.appendChild(variable);
-                    }
-                    else if(i==25){
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("X_IO_BYTE_2");
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BYTE = doc.createElement("BYTE");
-                        type.appendChild(BYTE);
-                        variable.appendChild(type);
-                        localVars.appendChild(variable);
-                    }
-                    else if(i==33){
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("X_IO_BYTE_3");
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BYTE = doc.createElement("BYTE");
-                        type.appendChild(BYTE);
-                        variable.appendChild(type);
-                        localVars.appendChild(variable);
-                    }
-                    else if(i==41){
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("X_IO_BYTE_4");
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BYTE = doc.createElement("BYTE");
-                        type.appendChild(BYTE);
-                        variable.appendChild(type);
-                        localVars.appendChild(variable);
-                    }
-                    else if(i==49){
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("X_IO_BYTE_5");
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BYTE = doc.createElement("BYTE");
-                        type.appendChild(BYTE);
-                        variable.appendChild(type);
-                        localVars.appendChild(variable);
-                    }
-                    else if(i==57){
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("X_IO_BYTE_6");
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BYTE = doc.createElement("BYTE");
-                        type.appendChild(BYTE);
-                        variable.appendChild(type);
-                        localVars.appendChild(variable);
-                    }
-
-                    {
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("S_IO_BIT_"+QString::number(i));
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BOOL = doc.createElement("BOOL");
-                        type.appendChild(BOOL);
-                        variable.appendChild(type);
-                        localVars.appendChild(variable);
-                    }
-
-                    if(i==63){
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("X_IO_BYTE_7");
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BYTE = doc.createElement("BYTE");
-                        type.appendChild(BYTE);
-                        variable.appendChild(type);
-                        localVars.appendChild(variable);
-                    }
-                }
-                for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
+                if(this->enableTest){
                     QDomElement variable=doc.createElement("variable");
                     attr=doc.createAttribute("name");
-                    attr.setValue("Cont_"+curSignal->name);
+                    attr.setValue("FrcTest");
                     variable.setAttributeNode(attr);
                     QDomElement type = doc.createElement("type");
-                    QDomElement dataType = doc.createElement(curSignal->comDataType);
-                    type.appendChild(dataType);
+                    QDomElement derived = doc.createElement("derived");
+                    attr=doc.createAttribute("name");
+                    attr.setValue(this->dutName);
+                    derived.setAttributeNode(attr);
+                    type.appendChild(derived);
                     variable.appendChild(type);
                     localVars.appendChild(variable);
-
                 }
                 for (unsigned i =0; i<counterfbLWORDTOBYTE; i++){
                     QDomElement variable=doc.createElement("variable");
@@ -2551,11 +1867,11 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
                 counterfbWORDTOBYTE = 0;
                 counterfbBYTETO8BIT = 0;
 
+
                 interface.appendChild(localVars);
-
             }
-
             pou.appendChild(interface);
+
             /*Create Body*/
             QDomElement body = doc.createElement("body");
             QDomElement ST = doc.createElement("ST");
@@ -2563,7 +1879,6 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
             attr=doc.createAttribute("xmlns");
             attr.setValue("http://www.w3.org/1999/xhtml");
             xhtml.setAttributeNode(attr);
-
             text=doc.createTextNode(STcode);
             xhtml.appendChild(text);
             ST.appendChild(xhtml);
@@ -2580,38 +1895,33 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
             attr.setValue("discard");
             data.setAttributeNode(attr);
             QDomElement ObjectId = doc.createElement("ObjectId");
-            for(QList<QString> curVal : this->fbNameandObjId){
-                if(curVal.at(0)== ("_FB_"+this->dutHeader+"_"+curMessage->getName()+"_0X"+curMessage->getID())){
-                    text=doc.createTextNode(curVal.at(1));
-                }
-            }
+            text=doc.createTextNode(this->pouObjID);
             ObjectId.appendChild(text);
             data.appendChild(ObjectId);
             addData.appendChild(data);
             pou.appendChild(addData);
             pous->appendChild(pou);
 
-            fbdBlocks.append(newBlock);
-        }
 
-    }
+           fbdBlocks.append(newBlock);
+           // append input variables to AND gate to check disturbance -> EXP format : GVL.IIXC.S_TmOut_Motor_Messages_3_0X512
 
 
 }
-void DBCHandler::generateIOST(QString *const ST,dataContainer *const curMessage)
+void DBCHandler::generateIOST(QString *const ST)
 {       ST->append("(*\n"
                    "**********************************************************************\n"
                    "Bozankaya A.Ş.\n"
                    "**********************************************************************\n"
-                   "Name					: _FB_"+dutHeader+"_"+curMessage->getName()+"_"+curMessage->getID()+"\n"
-                   "POU Type				: FB\n"
+                   "Name					: P_"+dutHeader+"\n"
+                   "POU Type				: Program\n"
                    "Created by              : COMMUNICATION INTERFACE GENERATOR("+QHostInfo::localHostName()+"), BZK.\n"
                    "Creation Date 			: "+creationDate.toString(Qt::DateFormat::ISODate)+"\n"
                    "Modifications			: see version description below\n"
                    "\n"
                    "\n"
-                   "FB Description:"
-                   "This FB which is created by automatically by communication interface generator \n handles the TX (OUTPUT) can messages according to CAN_500_LIB \n"
+                   "Program Description:"
+                   "This program which is created by automatically by communication interface generator \n handles the TX (OUTPUT) can messages according to CAN_500_LIB \n"
                    "*********************************************************************\n"
                    "\n"
                    "Version 1	\n"
@@ -2620,1564 +1930,489 @@ void DBCHandler::generateIOST(QString *const ST,dataContainer *const curMessage)
                    "- initial version\n"
                    "*********************************************************************\n"
                    "*)");
-    for( const dataContainer::signal * curSignal : *curMessage->getSignalList()){
-        ST->append(convTypeApptoCom(curSignal->name,curSignal->startBit,curSignal->length,curSignal->convMethod,curSignal->resolution,curSignal->offset, curSignal->maxValue, curSignal->minValue, curSignal->defValue,curSignal->isJ1939));
-    }
-    ST->append((curMessage->getIfBitOperation())?
-                   ("_FB_CanTx_Message_Unpack_0(\n"
-                   "    C_Enable:= C_Init_Can,\n"
-                   "    Obj_CAN:= Ptr_Obj_Can,\n"
-                   "    X_MsgID:= P_ID_Can,\n"
-                   "    Tm_CycleTime:= P_Tm_CycleTime,\n"
-                   "    N_Msg_Dlc:=P_Msg_Dlc,\n"
-                   "    S_Extended:= P_Msg_Extd,\n"
-                   "    S_Bit_0     :=	S_IO_BIT_0	,\n"
-                   "    S_Bit_1     :=	S_IO_BIT_1	,\n"
-                   "    S_Bit_2     :=	S_IO_BIT_2	,\n"
-                   "    S_Bit_3     :=	S_IO_BIT_3	,\n"
-                   "    S_Bit_4     :=	S_IO_BIT_4	,\n"
-                   "    S_Bit_5     :=	S_IO_BIT_5	,\n"
-                   "    S_Bit_6     :=	S_IO_BIT_6	,\n"
-                   "    S_Bit_7     :=	S_IO_BIT_7	,\n"
-                   "    X_Byte_0    := 	X_IO_BYTE_0	,\n"
-                   "    S_Bit_8     := 	S_IO_BIT_8	,\n"
-                   "    S_Bit_9     := 	S_IO_BIT_9	,\n"
-                   "    S_Bit_10    := 	S_IO_BIT_10	,\n"
-                   "    S_Bit_11    := 	S_IO_BIT_11	,\n"
-                   "    S_Bit_12    := 	S_IO_BIT_12	,\n"
-                   "    S_Bit_13    := 	S_IO_BIT_13	,\n"
-                   "    S_Bit_14    := 	S_IO_BIT_14	,\n"
-                   "    S_Bit_15    := 	S_IO_BIT_15	,\n"
-                   "    X_Byte_1    := 	X_IO_BYTE_1	,\n"
-                   "    S_Bit_16    := 	S_IO_BIT_16	,\n"
-                   "    S_Bit_17    := 	S_IO_BIT_17	,\n"
-                   "    S_Bit_18    := 	S_IO_BIT_18	,\n"
-                   "    S_Bit_19    := 	S_IO_BIT_19	,\n"
-                   "    S_Bit_20    := 	S_IO_BIT_20	,\n"
-                   "    S_Bit_21    := 	S_IO_BIT_21	,\n"
-                   "    S_Bit_22    := 	S_IO_BIT_22	,\n"
-                   "    S_Bit_23    := 	S_IO_BIT_23	,\n"
-                   "    X_Byte_2    := 	X_IO_BYTE_2	,\n"
-                   "    S_Bit_24    := 	S_IO_BIT_24	,\n"
-                   "    S_Bit_25    := 	S_IO_BIT_25	,\n"
-                   "    S_Bit_26    := 	S_IO_BIT_26	,\n"
-                   "    S_Bit_27    := 	S_IO_BIT_27	,\n"
-                   "    S_Bit_28    := 	S_IO_BIT_28	,\n"
-                   "    S_Bit_29    := 	S_IO_BIT_29	,\n"
-                   "    S_Bit_30    := 	S_IO_BIT_30	,\n"
-                   "    S_Bit_31    := 	S_IO_BIT_31	,\n"
-                   "    X_Byte_3    := 	X_IO_BYTE_3	,\n"
-                   "    S_Bit_32    := 	S_IO_BIT_32	,\n"
-                   "    S_Bit_33    := 	S_IO_BIT_33	,\n"
-                   "    S_Bit_34    := 	S_IO_BIT_34	,\n"
-                   "    S_Bit_35    := 	S_IO_BIT_35	,\n"
-                   "    S_Bit_36    := 	S_IO_BIT_36	,\n"
-                   "    S_Bit_37    := 	S_IO_BIT_37	,\n"
-                   "    S_Bit_38    := 	S_IO_BIT_38	,\n"
-                   "    S_Bit_39    := 	S_IO_BIT_39	,\n"
-                   "    X_Byte_4    := 	X_IO_BYTE_4	,\n"
-                   "    S_Bit_40    := 	S_IO_BIT_40	,\n"
-                   "    S_Bit_41    := 	S_IO_BIT_41	,\n"
-                   "    S_Bit_42    := 	S_IO_BIT_42	,\n"
-                   "    S_Bit_43    := 	S_IO_BIT_43	,\n"
-                   "    S_Bit_44    := 	S_IO_BIT_44	,\n"
-                   "    S_Bit_45    := 	S_IO_BIT_45	,\n"
-                   "    S_Bit_46    := 	S_IO_BIT_46	,\n"
-                   "    S_Bit_47    := 	S_IO_BIT_47	,\n"
-                   "    X_Byte_5    := 	X_IO_BYTE_5	,\n"
-                   "    S_Bit_48    := 	S_IO_BIT_48	,\n"
-                   "    S_Bit_49    := 	S_IO_BIT_49	,\n"
-                   "    S_Bit_50    := 	S_IO_BIT_50	,\n"
-                   "    S_Bit_51    := 	S_IO_BIT_51	,\n"
-                   "    S_Bit_52    := 	S_IO_BIT_52	,\n"
-                   "    S_Bit_53    := 	S_IO_BIT_53	,\n"
-                   "    S_Bit_54    := 	S_IO_BIT_54	,\n"
-                   "    S_Bit_55    := 	S_IO_BIT_55	,\n"
-                   "    X_Byte_6    := 	X_IO_BYTE_6	,\n"
-                   "    S_Bit_56    := 	S_IO_BIT_56	,\n"
-                   "    S_Bit_57    := 	S_IO_BIT_57	,\n"
-                   "    S_Bit_58    := 	S_IO_BIT_58	,\n"
-                   "    S_Bit_59    := 	S_IO_BIT_59	,\n"
-                   "    S_Bit_60    := 	S_IO_BIT_60	,\n"
-                   "    S_Bit_61    := 	S_IO_BIT_61	,\n"
-                   "    S_Bit_62    := 	S_IO_BIT_62	,\n"
-                   "    S_Bit_63    := 	S_IO_BIT_63	,\n"
-                   "    X_Byte_7    := 	X_IO_BYTE_7	,\n"
-                   "    S_Sent_Ok   => S_Msg_Snt_Ok);\n") :
-                   ("\n_FB_CanTx_Message_0("
-                   "\n	C_Enable:= C_Init_Can, "
-                   "\n	Obj_CAN:= Ptr_Obj_Can, "
-                   "\n	X_MsgID:= P_ID_Can, "
-                   "\n	Tm_CycleTime:= P_Tm_CycleTime,"
-                   "\n 	N_Msg_Dlc:=P_Msg_Dlc,"
-                   "\n	S_Extended:= P_Msg_Extd, "
-                   "\n	X_Byte_0:= X_IO_BYTE_0, "
-                   "\n	X_Byte_1:= X_IO_BYTE_1, "
-                   "\n	X_Byte_2:= X_IO_BYTE_2, "
-                   "\n	X_Byte_3:= X_IO_BYTE_3, "
-                   "\n	X_Byte_4:= X_IO_BYTE_4, "
-                   "\n	X_Byte_5:= X_IO_BYTE_5, "
-                   "\n	X_Byte_6:= X_IO_BYTE_6, "
-                   "\n	X_Byte_7:= X_IO_BYTE_7, "
-                   "\n	S_Sent_Ok=> S_Msg_Snt_Ok);"));
-
-
-
-}
-QString DBCHandler::convTypeApptoCom (QString signalName, unsigned short startbit,unsigned short length,  QString converType,double resolution, double offset, double maxValue, double minValue, double defValue,bool j1939)
-{
-
-    QString ST="\n\n\n{region \""+signalName+"\"}\n\n\n";
-    // TYPE CONVERTION AND E  NA CONTROL STARTS
-    if((length<9)){
-        if((converType == "toBYTE")|| (converType == "xtoBYTE")){
-            ST.append("GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  ("+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x) OR ("+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x);"
-            "\n //Transmit Data : Range Control End"
-            "\n IF FrcEn_"+signalName+" THEN"
-            "\n 	//Transmit Data : Force variable Start"
-            "\n 	Cont_"+signalName+"	:= FrcVal_"+signalName+";"
-            "\n 	//Transmit Data : Force variable Start"
-            "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
-            "\n 	//Transmit Data : Normal Start"
-            "\n 	Cont_"+signalName+"	:= GVL."+this->dutHeader+"."+signalName+".x ;"
-            "\n 	 //Transmit Data : Normal End"
-            "\n ELSE"
-            +((j1939==true)? "\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN": "")
-            +((j1939==true)? "\n 	//Transmit Data : Data not valid J1939 error transmission Start": "")
-            +((j1939==true)? "\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN": "")
-            +((j1939==true)? "\n 		Cont_"+signalName+":= 16#FF;": "")
-            +((j1939==true)? "\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN": "")
-            +((j1939==true)? "\n 		Cont_"+signalName+":= 16#FE;": "")
-            +((j1939==true)? "\n 	ELSE": "")
-            +((j1939==true)? "\n 		Cont_"+signalName+":= 16#FE;": "")
-            +((j1939==true)? "\n 	END_IF;": "")
-            +((j1939==true)? "\n 	//Transmit Data : Data not valid J1939 error transmission End": "")
-            +((j1939==true)? "\n 	ELSE": "")+
-            "\n 	//Transmit Data : Data not valid  Start"
-            "\n 		Cont_"+signalName+":= "+QString::number(defValue,'g',(length>32)? 20:15)+" ;"
-            "\n 	//Transmit Data : Data not valid  End"
-            +((j1939==true)? "\n 	END_IF;": "")+
-            "\n END_IF;");
-        }
-        else if ((converType == "toUSINT")|| (converType == "xtoUSINT")){
-
-            ST.append("<GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  ("+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x )OR ("+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x);"
-            "\n //Transmit Data : Range Control End"
-            "\n IF FrcEn_"+signalName+" THEN"
-            "\n 	//Transmit Data : Force variable Start"
-            "\n 	Cont_"+signalName+"	:= USINT_TO_BYTE(FrcVal_"+signalName+");"
-            "\n 	//Transmit Data : Force variable Start"
-            "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
-            "\n 	//Transmit Data : Normal Start"
-            "\n 	Cont_"+signalName+"	:= USINT_TO_BYTE(GVL."+this->dutHeader+"."+signalName+".x );"
-            "\n 	 //Transmit Data : Normal End"
-            "\n ELSE"
-            +((j1939==true)? "\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN": "")
-            +((j1939==true)? "\n 	//Transmit Data : Data not valid J1939 error transmission Start": "")
-            +((j1939==true)? "\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN": "")
-            +((j1939==true)? "\n 		Cont_"+signalName+":= 16#FF;": "")
-            +((j1939==true)? "\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN": "")
-            +((j1939==true)? "\n 		Cont_"+signalName+":= 16#FE;": "")
-            +((j1939==true)? "\n 	ELSE": "")
-            +((j1939==true)? "\n 		Cont_"+signalName+":= 16#FE;": "")
-            +((j1939==true)? "\n 	END_IF;": "")
-            +((j1939==true)? "\n 	//Transmit Data : Data not valid J1939 error transmission End": "")
-            +((j1939==true)? "\n 	ELSE": "")+
-            "\n 	//Transmit Data : Data not valid  Start"
-            "\n 		Cont_"+signalName+":= "+QString::number(defValue,'g',(length>32)? 20:15)+";"
-            "\n 	//Transmit Data : Data not valid  End"
-            +((j1939==true)? "\n 	END_IF;": "")+
-            "\n END_IF;");
-
-        }
-        else if ((converType == "toREAL")|| (converType == "xtoREAL")){
-
-
-            ST.append("GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  ("+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x )OR ("+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x);"
-            "\n //Transmit Data : Range Control End"
-            "\n IF FrcEn_"+signalName+" THEN"
-            "\n 	//Transmit Data : Force variable Start"
-            "\n 	Cont_"+signalName+"	:= USINT_TO_BYTE(REAL_TO_USINT(( FrcVal_"+signalName+" - "+QString::number(offset,'g',(length>32)? 20:15)+")/ "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
-            "\n 	//Transmit Data : Force variable Start"
-            "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
-            "\n 	//Transmit Data : Normal Start"
-            "\n 	Cont_"+signalName+"	:= USINT_TO_BYTE(REAL_TO_USINT((GVL."+this->dutHeader+"."+signalName+".x - "+QString::number(offset,'g',(length>32)? 20:15)+")/ "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
-            "\n 	 //Transmit Data : Normal End"
-            "\n ELSE"
-            +((j1939==true)?"\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN": "")
-            +((j1939==true)?"\n 	//Transmit Data : Data not valid J1939 error transmission Start": "")
-            +((j1939==true)?"\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN": "")
-            +((j1939==true)?"\n 		Cont_"+signalName+":= 16#FF;": "")
-            +((j1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN": "")
-            +((j1939==true)?"\n 		Cont_"+signalName+":= 16#FE;": "")
-            +((j1939==true)?"\n 	ELSE": "")
-            +((j1939==true)?"\n 		Cont_"+signalName+":= 16#FE;": "")
-            +((j1939==true)?"\n 	END_IF;": "")
-            +((j1939==true)?"\n 	//Transmit Data : Data not valid J1939 error transmission End": "")
-            +((j1939==true)?"\n 	ELSE": "")+
-            "\n 	//Transmit Data : Data not valid  Start"
-            "\n 		Cont_"+signalName+":= USINT_TO_BYTE(REAL_TO_USINT(("+ ((defValue==0)? "" : (QString::number(defValue,'g',(length>32)? 20:15)+" + "))+QString::number((-1*offset),'g',(length>32)? 20:15)+")/"+QString::number(resolution,'g',(length>32)? 20:15)+"));"
-            "\n 	//Transmit Data : Data not valid  End"
-            +((j1939==true)?"\n 	END_IF;": "")+
-            "\n END_IF;");
-
-        }
-
-    }else if((length<17)){
-        if((converType == "toWORD")|| (converType == "xtoWORD")){
-            ST.append("GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  ("+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x )OR ("+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x);"
-           "\n //Transmit Data : Range Control End"
-           "\n IF FrcEn_"+signalName+" THEN"
-           "\n 	//Transmit Data : Force variable Start"
-           "\n 	Cont_"+signalName+"	:= FrcVal_"+signalName+";"
-           "\n 	//Transmit Data : Force variable Start"
-           "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
-           "\n 	//Transmit Data : Normal Start"
-           "\n 	Cont_"+signalName+"	:= GVL."+this->dutHeader+"."+signalName+".x ;"
-           "\n 	 //Transmit Data : Normal End"
-           "\n ELSE"
-           +((j1939==true)?"\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN": "")
-           +((j1939==true)?"\n 	//Transmit Data : Data not valid J1939 error transmission Start": "")
-           +((j1939==true)?"\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN": "")
-           +((j1939==true)?"\n 		Cont_"+signalName+":= 16#FF01;": "")
-           +((j1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN": "")
-           +((j1939==true)?"\n 		Cont_"+signalName+":= 16#FE01;": "")
-           +((j1939==true)?"\n 	ELSE": "")
-           +((j1939==true)?"\n 		Cont_"+signalName+":= 16#FE01;": "")
-           +((j1939==true)?"\n 	END_IF;": "")
-           +((j1939==true)?"\n 	//Transmit Data : Data not valid J1939 error transmission End": "")
-           +((j1939==true)?"\n 	ELSE": "")+
-           "\n 	//Transmit Data : Data not valid  Start"
-           "\n 		Cont_"+signalName+":= "+QString::number(defValue,'g',(length>32)? 20:15)+" ;"
-           "\n 	//Transmit Data : Data not valid  End"
-           +((j1939==true)?"\n 	END_IF;": "")+
-           "\n END_IF;");
-        }
-        else if ((converType == "toUINT")|| (converType == "xtoUINT")){
-
-            ST.append("<GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  ("+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x )OR ("+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x);"
-            "\n //Transmit Data : Range Control End"
-            "\n IF FrcEn_"+signalName+" THEN"
-            "\n 	//Transmit Data : Force variable Start"
-            "\n 	Cont_"+signalName+"	:= UINT_TO_WORD(FrcVal_"+signalName+");"
-            "\n 	//Transmit Data : Force variable Start"
-            "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
-            "\n 	//Transmit Data : Normal Start"
-            "\n 	Cont_"+signalName+"	:= UINT_TO_WORD(GVL."+this->dutHeader+"."+signalName+".x );"
-            "\n 	 //Transmit Data : Normal End"
-            "\n ELSE"
-            +((j1939==true)?"\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN": "")
-            +((j1939==true)?"\n 	//Transmit Data : Data not valid J1939 error transmission Start": "")
-            +((j1939==true)?"\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN": "")
-            +((j1939==true)?"\n 		Cont_"+signalName+":= 16#FF01;": "")
-            +((j1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN": "")
-            +((j1939==true)?"\n 		Cont_"+signalName+":= 16#FE01;": "")
-            +((j1939==true)?"\n 	ELSE": "")
-            +((j1939==true)?"\n 		Cont_"+signalName+":= 16#FE01;": "")
-            +((j1939==true)?"\n 	END_IF;": "")
-            +((j1939==true)?"\n 	//Transmit Data : Data not valid J1939 error transmission End": "")
-            +((j1939==true)?"\n 	ELSE": "")+
-            "\n 	//Transmit Data : Data not valid  Start"
-            "\n 		Cont_"+signalName+":= "+QString::number(defValue,'g',(length>32)? 20:15)+";"
-            "\n 	//Transmit Data : Data not valid  End"
-            +((j1939==true)?"\n 	END_IF;": "")+
-            "\n END_IF;");
-
-        }
-        else if ((converType == "toREAL")|| (converType == "xtoREAL")){
-            ST.append("GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  ("+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x )OR ("+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x);"
-            "\n //Transmit Data : Range Control End"
-            "\n IF FrcEn_"+signalName+" THEN"
-            "\n 	//Transmit Data : Force variable Start"
-            "\n 	Cont_"+signalName+"	:= UINT_TO_WORD(REAL_TO_UINT(( FrcVal_"+signalName+" - "+QString::number(minValue,'g',(length>32)? 20:15)+")/ "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
-            "\n 	//Transmit Data : Force variable Start"
-            "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
-            "\n 	//Transmit Data : Normal Start"
-            "\n 	Cont_"+signalName+"	:= UINT_TO_WORD(REAL_TO_UINT((GVL."+this->dutHeader+"."+signalName+".x - "+QString::number(minValue,'g',(length>32)? 20:15)+")/ "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
-            "\n 	 //Transmit Data : Normal End"
-            "\n ELSE"
-            +((j1939==true)?"\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN": "")
-            +((j1939==true)?"\n 	//Transmit Data : Data not valid J1939 error transmission Start": "")
-            +((j1939==true)?"\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN": "")
-            +((j1939==true)?"\n 		Cont_"+signalName+":= 16#FF01;": "")
-            +((j1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN": "")
-            +((j1939==true)?"\n 		Cont_"+signalName+":= 16#FE01;": "")
-            +((j1939==true)?"\n 	ELSE": "")
-            +((j1939==true)?"\n 		Cont_"+signalName+":= 16#FE01;": "")
-            +((j1939==true)?"\n 	END_IF;": "")
-            +((j1939==true)?"\n 	//Transmit Data : Data not valid J1939 error transmission End": "")
-            +((j1939==true)?"\n 	ELSE": "")+
-            "\n 	//Transmit Data : Data not valid  Start"
-            "\n 		Cont_"+signalName+":= UINT_TO_WORD(REAL_TO_UINT(("+((defValue==0) ? "" : (QString::number(defValue,'g',(length>32)? 20:15)+" + "))+QString::number((-1*offset),'g',(length>32)? 20:15)+")/"+QString::number(resolution,'g',(length>32)? 20:15)+"));"
-            "\n 	//Transmit Data : Data not valid  End"
-            +((j1939==true)?"\n 	END_IF;": "")+
-            "\n END_IF;");
-        }
-
-    }else if((length<33)){
-        if((converType == "toDWORD")|| (converType == "xtoDWORD")){
-            ST.append("GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  "+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x OR "+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x;"
-           "\n //Transmit Data : Range Control End"
-           "\n IF FrcEn_"+signalName+" THEN"
-           "\n 	//Transmit Data : Force variable Start"
-           "\n 	Cont_"+signalName+"	:= FrcVal_"+signalName+";"
-           "\n 	//Transmit Data : Force variable Start"
-           "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
-           "\n 	//Transmit Data : Normal Start"
-           "\n 	Cont_"+signalName+"	:= GVL."+this->dutHeader+"."+signalName+".x ;"
-           "\n 	 //Transmit Data : Normal End"
-           "\n ELSE"
-           +((j1939==true)?"\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN": "")
-           +((j1939==true)?"\n 	//Transmit Data : Data not valid J1939 error transmission Start": "")
-           +((j1939==true)?"\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN	": "")
-           +((j1939==true)?"\n 	Cont_"+signalName+":= 16#FF000001;": "")
-           +((j1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN": "")
-           +((j1939==true)?"\n 	Cont_"+signalName+":= 16#FE000001;": "")
-           +((j1939==true)?"\n 	ELSE": "")
-           +((j1939==true)?"\n 	Cont_"+signalName+":= 16#FE000001;": "")
-           +((j1939==true)?"\n 	END_IF;": "")
-           +((j1939==true)?"\n 	//Transmit Data : Data not valid J1939 error transmission End": "")
-           +((j1939==true)?"\n 	ELSE": "")+
-           "\n 	//Transmit Data : Data not valid  Start"
-           "\n 		Cont_"+signalName+":= "+QString::number(defValue,'g',(length>32)? 20:15)+" ;"
-           "\n 	//Transmit Data : Data not valid  End"
-           +((j1939==true)?"\n 	END_IF;": "")+
-           "\n END_IF;");
-        }
-        else if ((converType == "toUDINT")|| (converType == "xtoUDINT")){
-
-            ST.append("<GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  ("+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x )OR ("+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x);"
-           "\n //Transmit Data : Range Control End"
-           "\n IF FrcEn_"+signalName+" THEN"
-           "\n 	//Transmit Data : Force variable Start"
-           "\n 	Cont_"+signalName+"	:= UDINT_TO_DWORD(FrcVal_"+signalName+");"
-           "\n 	//Transmit Data : Force variable Start"
-           "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
-           "\n 	//Transmit Data : Normal Start"
-           "\n 	Cont_"+signalName+"	:= UDINT_TO_DWORD(GVL."+this->dutHeader+"."+signalName+".x );"
-           "\n 	 //Transmit Data : Normal End"
-           "\n ELSE"
-           +((j1939==true)?"\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN": "")
-           +((j1939==true)?"\n 	//Transmit Data : Data not valid J1939 error transmission Start": "")
-           +((j1939==true)?"\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN	": "")
-           +((j1939==true)?"\n 	Cont_"+signalName+":= 16#FF000001;": "")
-           +((j1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN": "")
-           +((j1939==true)?"\n 	Cont_"+signalName+":= 16#FE000001;": "")
-           +((j1939==true)?"\n 	ELSE": "")
-           +((j1939==true)?"\n 	Cont_"+signalName+":= 16#FE000001;": "")
-           +((j1939==true)?"\n 	END_IF;": "")
-           +((j1939==true)?"\n 	//Transmit Data : Data not valid J1939 error transmission End": "")
-           +((j1939==true)?"\n 	ELSE": "")+
-           "\n 	//Transmit Data : Data not valid  Start"
-           "\n 		Cont_"+signalName+":= "+QString::number(defValue,'g',(length>32)? 20:15)+";"
-           "\n 	//Transmit Data : Data not valid  End"
-           +((j1939==true)?"\n 	END_IF;": "")+
-           "\n END_IF;");
-
-        }
-        else if ((converType == "toREAL")|| (converType == "xtoREAL")){
-            ST.append("GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  ("+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x )OR ("+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x);"
-            "\n //Transmit Data : Range Control End"
-            "\n IF FrcEn_"+signalName+" THEN"
-            "\n 	//Transmit Data : Force variable Start"
-            "\n 	Cont_"+signalName+"	:= UDINT_TO_DWORD(REAL_TO_UDINT(( FrcVal_"+signalName+" - "+QString::number(offset,'g',(length>32)? 20:15)+")/ "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
-            "\n 	//Transmit Data : Force variable Start"
-            "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
-            "\n 	//Transmit Data : Normal Start"
-            "\n 	Cont_"+signalName+"	:= UDINT_TO_DWORD(REAL_TO_UDINT((GVL."+this->dutHeader+"."+signalName+".x - "+QString::number(offset,'g',(length>32)? 20:15)+")/ "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
-            "\n 	 //Transmit Data : Normal End"
-            "\n ELSE"
-            +((j1939==true)?"\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN": "")
-            +((j1939==true)?"\n 	//Transmit Data : Data not valid J1939 error transmission Start": "")
-            +((j1939==true)?"\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN	": "")
-            +((j1939==true)?"\n 	Cont_"+signalName+":= 16#FF000001;": "")
-            +((j1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN": "")
-            +((j1939==true)?"\n 	Cont_"+signalName+":= 16#FE000001;": "")
-            +((j1939==true)?"\n 	ELSE": "")
-            +((j1939==true)?"\n 	Cont_"+signalName+":= 16#FE000001;": "")
-            +((j1939==true)?"\n 	END_IF;": "")
-            +((j1939==true)?"\n 	//Transmit Data : Data not valid J1939 error transmission End": "")
-            +((j1939==true)?"\n 	ELSE": "")+
-            "\n 	//Transmit Data : Data not valid  Start"
-            "\n 		Cont_"+signalName+":= UDINT_TO_DWORD(REAL_TO_UDINT(("+((defValue==0) ? "" : (QString::number(defValue,'g',(length>32)? 20:15)+" + "))+QString::number((-1*offset),'g',(length>32)? 20:15)+")/"+QString::number(resolution,'g',(length>32)? 20:15)+"));"
-            "\n 	//Transmit Data : Data not valid  End"
-            +((j1939==true)?"\n 	END_IF;": "")+
-            "\n END_IF;");
-        }
-    }else if((length<65)){
-        if((converType == "toLWORD")|| (converType == "xtoLWORD")){
-            ST.append("GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  ("+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x )OR ("+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x);"
-            "\n //Transmit Data : Range Control End"
-            "\n IF FrcEn_"+signalName+" THEN"
-            "\n 	//Transmit Data : Force variable Start"
-            "\n 	Cont_"+signalName+"	:= FrcVal_"+signalName+";"
-            "\n 	//Transmit Data : Force variable Start"
-            "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
-            "\n 	//Transmit Data : Normal Start"
-            "\n 	Cont_"+signalName+"	:= GVL."+this->dutHeader+"."+signalName+".x ;"
-            "\n 	 //Transmit Data : Normal End"
-            "\n ELSE"
-            +((j1939==true)?"\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN": "")
-            +((j1939==true)?"\n 	//Transmit Data : Data not valid J1939 error transmission Start": "")
-            +((j1939==true)?"\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN	": "")
-            +((j1939==true)?"\n 	Cont_"+signalName+":= 16#FF00000000000001;": "")
-            +((j1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN": "")
-            +((j1939==true)?"\n 	Cont_"+signalName+":= 16#FE00000000000001;": "")
-            +((j1939==true)?"\n 	ELSE": "")
-            +((j1939==true)?"\n 	Cont_"+signalName+":= 16#FE00000000000001;": "")
-            +((j1939==true)?"\n 	END_IF;": "")
-            +((j1939==true)?"\n 	//Transmit Data : Data not valid J1939 error transmission End": "")
-            +((j1939==true)?"\n 	ELSE": "")+
-            "\n 	//Transmit Data : Data not valid  Start"
-            "\n 		Cont_"+signalName+":= "+QString::number(defValue,'g',(length>32)? 20:15)+" ;"
-            "\n 	//Transmit Data : Data not valid  End"
-            +((j1939==true)?"\n 	END_IF;": "")+
-            "\n END_IF;");
-        }
-        else if ((converType == "toULINT")|| (converType == "xtoULINT")){
-            ST.append("<GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  ("+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x )OR ("+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x);"
-            "\n //Transmit Data : Range Control End"
-            "\n IF FrcEn_"+signalName+" THEN"
-            "\n 	//Transmit Data : Force variable Start"
-            "\n 	Cont_"+signalName+"	:= ULINT_TO_LWORD(FrcVal_"+signalName+");"
-            "\n 	//Transmit Data : Force variable Start"
-            "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
-            "\n 	//Transmit Data : Normal Start"
-            "\n 	Cont_"+signalName+"	:= ULINT_TO_LWORD(GVL."+this->dutHeader+"."+signalName+".x );"
-            "\n 	 //Transmit Data : Normal End"
-            "\n ELSE"
-            +((j1939==true)?"\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN": "")
-            +((j1939==true)?"\n 	//Transmit Data : Data not valid J1939 error transmission Start": "")
-            +((j1939==true)?"\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN	": "")
-            +((j1939==true)?"\n 	Cont_"+signalName+":= 16#FF00000000000001;": "")
-            +((j1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN": "")
-            +((j1939==true)?"\n 	Cont_"+signalName+":= 16#FE00000000000001;": "")
-            +((j1939==true)?"\n 	ELSE": "")
-            +((j1939==true)?"\n 	Cont_"+signalName+":= 16#FE00000000000001;": "")
-            +((j1939==true)?"\n 	END_IF;": "")
-            +((j1939==true)?"\n 	//Transmit Data : Data not valid J1939 error transmission End": "")
-            +((j1939==true)?"\n 	ELSE": "")+
-            "\n 	//Transmit Data : Data not valid  Start"
-            "\n 		Cont_"+signalName+":= "+QString::number(defValue,'g',(length>32)? 20:15)+";"
-            "\n 	//Transmit Data : Data not valid  End"
-            +((j1939==true)?"\n 	END_IF;": "")+
-            "\n END_IF;");
-        }
-        else if ((converType == "toLREAL")|| (converType == "xtoLREAL")){
-            ST.append("GVL."+this->dutHeader+"."+signalName+".RangeExcd :=  ("+QString::number(maxValue,'g',(length>32)? 20:15)+" < GVL."+this->dutHeader+"."+signalName+".x )OR ("+QString::number(minValue,'g',(length>32)? 20:15)+" > GVL."+this->dutHeader+"."+signalName+".x);"
-            "\n //Transmit Data : Range Control End"
-            "\n IF FrcEn_"+signalName+" THEN"
-            "\n 	//Transmit Data : Force variable Start"
-            "\n 	Cont_"+signalName+"	:= ULINT_TO_LWORD(LREAL_TO_ULINT(( FrcVal_"+signalName+" - "+QString::number(offset,'g',(length>32)? 20:15)+") / "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
-            "\n 	//Transmit Data : Force variable Start"
-            "\n ELSIF (GVL."+this->dutHeader+"."+signalName+".v AND NOT GVL."+this->dutHeader+"."+signalName+".RangeExcd) THEN"
-            "\n 	//Transmit Data : Normal Start"
-            "\n 	Cont_"+signalName+"	:= ULINT_TO_LWORD(LREAL_TO_ULINT((GVL."+this->dutHeader+"."+signalName+".x - "+QString::number(offset,'g',(length>32)? 20:15)+") / "+QString::number(resolution,'g',(length>32)? 20:15)+"));"
-            "\n 	 //Transmit Data : Normal End"
-            "\n ELSE"
-            +((j1939==true)?"\n 	IF GVL."+this->dutHeader+"."+signalName+".J1939 THEN": "")
-            +((j1939==true)?"\n 	//Transmit Data : Data not valid J1939 error transmission Start": "")
-            +((j1939==true)?"\n 	IF GVL."+this->dutHeader+"."+signalName+".na THEN	": "")
-            +((j1939==true)?"\n 	Cont_"+signalName+":= 16#FF00000000000001;": "")
-            +((j1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+signalName+".e THEN": "")
-            +((j1939==true)?"\n 	Cont_"+signalName+":= 16#FE00000000000001;": "")
-            +((j1939==true)?"\n 	ELSE": "")
-            +((j1939==true)?"\n 	Cont_"+signalName+":= 16#FE00000000000001;": "")
-            +((j1939==true)?"\n 	END_IF;": "")
-            +((j1939==true)?"\n 	//Transmit Data : Data not valid J1939 error transmission End": "")
-            +((j1939==true)?"\n 	ELSE": "")+
-            "\n 	//Transmit Data : Data not valid  Start"
-            "\n 		Cont_"+signalName+":= ULINT_TO_LWORD(REAL_TO_ULINT(("+((defValue==0) ? "" : (QString::number(defValue,'g',(length>32)? 20:15)+" + "))+QString::number((-1*offset),'g',(length>32)? 20:15)+")/"+QString::number(resolution,'g',(length>32)? 20:15)+"));"
-            "\n 	//Transmit Data : Data not valid  End"
-            +((j1939==true)?"\n 	END_IF;": "")+
-            "\n END_IF;");
-        }
-    }
-
-
-    if(converType=="BOOL:BOOL"){
-        ST.append("\nS_IO_Bit_"+QString::number(startbit)+"               :=	(GVL."+this->dutHeader+"."+signalName+".x OR FrcHi_"+signalName+") AND NOT FrcLo_"+signalName+" AND GVL."+this->dutHeader+"."+signalName+".v ;");
-    }else if(converType=="2BOOL:BOOL"){
-        ST.append("\nS_IO_Bit_"+QString::number(startbit)+"               :=	(GVL."+this->dutHeader+"."+signalName+".x OR FrcHi_"+signalName+") AND NOT FrcLo_"+signalName+";"
-                  "\nS_IO_Bit_"+QString::number(startbit+1)+"             :=	(NOT GVL."+this->dutHeader+"."+signalName+".v ) AND NOT (FrcHi_"+signalName+" OR FrcLo_"+signalName+"); ");
-    }else if((converType=="xtoBYTE")||(converType=="xtoUSINT")||((converType=="xtoREAL") && (length==8))){
-        ST.append("\nX_IO_BYTE_"+QString::number(startbit/8)+"            :=Cont_"+signalName+";");
-    }else if((converType=="xtoWORD")||(converType=="xtoUINT")||((converType=="xtoREAL") && (length==16))){
-        ST.append("\n_FB_UNPACK_WORD_TO_BYTE_"+QString::number(counterfbWORDTOBYTE)+"(X_WORD_0:= Cont_"+signalName+", X_BYTE_0=> X_IO_BYTE_"+QString::number(startbit/8)+", X_BYTE_1=> X_IO_BYTE_"+QString::number((startbit/8)+1)+");");
-        counterfbWORDTOBYTE++;
-    }else if((converType=="xtoDWORD")||(converType=="xtoUDINT")||((converType=="xtoREAL") && (length==32))){
-        ST.append("\n_FB_UNPACK_DWORD_TO_BYTE_"+QString::number(counterfbDWORDTOBYTE)+"(X_DWORD_0:= Cont_"+signalName+", X_BYTE_0=> X_IO_BYTE_"+QString::number(startbit/8)+", X_BYTE_1=> X_IO_BYTE_"+QString::number((startbit/8)+1)+", X_BYTE_2=>X_IO_BYTE_"+QString::number((startbit/8)+2)+", X_BYTE_3=>X_IO_BYTE_"+QString::number((startbit/8)+3)+");");
-        counterfbDWORDTOBYTE++;
-    }else if((converType=="xtoLWORD")||(converType=="xtoULINT")||(converType=="xtoLREAL") ){
-        ST.append("\n_FB_UNPACK_LWORD_TO_BYTE_"+QString::number(counterfbDWORDTOBYTE)+"(X_LWORD_0:= Cont_"+signalName+", X_BYTE_0=> X_IO_BYTE_"+QString::number(startbit/8)+", X_BYTE_1=> X_IO_BYTE_"+QString::number((startbit/8)+1)+", X_BYTE_2=> X_IO_BYTE_"+QString::number((startbit/8)+2)+", X_BYTE_3=> X_IO_BYTE_"+QString::number((startbit/8)+3)+", X_BYTE_4=> X_IO_BYTE_"+QString::number((startbit/8)+4)+", X_BYTE_5=> X_IO_BYTE_"+QString::number((startbit/8)+5)+", X_BYTE_6=> X_IO_BYTE_"+QString::number((startbit/8)+6)+", X_BYTE_7=> X_IO_BYTE_"+QString::number((startbit/8)+7)+");");
-        counterfbLWORDTOBYTE++;
-    }else{
-        bool flagPack = false;
-        if((length>8)){
-            if(length<17){
-            ST.append("\n_FB_UNPACK_WORD_TO_BYTE_"+QString::number(counterfbWORDTOBYTE)+"(X_WORD_0:=Cont_"+signalName+");");
-            counterfbWORDTOBYTE++;
-            }else if(length <33){
-             ST.append("_FB_UNPACK_DWORD_TO_BYTE_"+QString::number(counterfbDWORDTOBYTE)+"(X_DWORD_0:=Cont_"+signalName+");");
-             counterfbDWORDTOBYTE++;
-            }else {
-              ST.append("\n_FB_UNPACK_LWORD_TO_BYTE_"+QString::number(counterfbLWORDTOBYTE)+"(X_LWORD_0:=Cont_"+signalName+");");
-              counterfbLWORDTOBYTE++;
-           }
-        }
-        unsigned packID=0;
-        unsigned packByteID=0;
-        unsigned counterBITBYTE=0;
-        unsigned counterBYTEWORD=0;
-        unsigned counterBYTEDWORD=0;
-        for(unsigned i =0; i<length;i++){
-
-            if(((i%8 == 0) && ((i/8)<8) )&& (!flagPack)){
-                ST.append("\n_FB_UNPACK_BYTE_TO_8BITS_"+QString::number(counterfbBYTETO8BIT+qFloor(i/8.0))+"(");
-                counterBITBYTE++;
-                flagPack=true;
-            }
-            if(flagPack){
-                    ST.append("S_BIT_"+QString::number(i%8)+"=> S_IO_BIT_"+QString::number(startbit+i)+"");
-                    if(((i%8 != 7) &&(i%(length-1) != 0)) || (i==0)) {
-                        ST.append(",");
-                    }
-            }
-            if(flagPack){
-                if(((i%8 == 7)||(i%(length-1) == 0) )&& (i>0)){
-                    ST.append(" ,X_BYTE_0:=");
-                    if(length<9){
-                    ST.append("Cont_"+signalName);
-                    ST.append(");");
-                    }else if (length <17){
-                    ST.append("_FB_UNPACK_WORD_TO_BYTE_"+QString::number(counterfbWORDTOBYTE-1));
-                    ST.append(".X_BYTE_"+QString::number(packByteID)+");");
-                    }else if (length <33){
-                    ST.append("_FB_UNPACK_DWORD_TO_BYTE_"+QString::number(counterfbDWORDTOBYTE-1)+"");
-                    ST.append(".X_BYTE_"+QString::number(packByteID)+");");
-                    }else{
-                    ST.append("_FB_UNPACK_LWORD_TO_BYTE_"+QString::number(counterfbLWORDTOBYTE-1)+"");
-                    ST.append(".X_BYTE_"+QString::number(packByteID)+");");
-                    }
-
-                    flagPack=false;
-                    packByteID++;
+        foreach (dataContainer * curMessage , comInterface){
+            if(curMessage->getIfSelected()){
+                 ST->append("\n{region \" User Area : "+curMessage->getName()+"- ID:"+curMessage->getID()+"\"}\n");
+                for( const dataContainer::signal * curSignal : *curMessage->getSignalList()){
+                 ST->append("\nGVL."+this->dutHeader+"."+curSignal->name+".v := "+((this->enableTest==true)?("FrcTest."+curSignal->name+".v;"):("ASSIGN HERE VALIDITY VARIABLE !!;")));
+                 ST->append("\nGVL."+this->dutHeader+"."+curSignal->name+".x := "+((this->enableTest==true)?("FrcTest."+curSignal->name+".x;"):("ASSIGN HERE VALIDITY VARIABLE !!;")));
+                 if(curSignal->isJ1939){
+                    ST->append("\nGVL."+this->dutHeader+"."+curSignal->name+".e := "+((this->enableTest==true)?("FrcTest."+curSignal->name+".e;"):("ASSIGN HERE ERROR FLAG VARIABLE !!;")));
+                    ST->append("\nGVL."+this->dutHeader+"."+curSignal->name+".na := "+((this->enableTest==true)?("FrcTest."+curSignal->name+".na;"):("ASSIGN HERE NOT AVAILABLE FLAG VARIABLE !!;")));
+                 }  
                 }
+                ST->append("\n{endregion}");
             }
-
         }
-
-
-        counterfbBYTETO8BIT = counterfbBYTETO8BIT+ counterBITBYTE;
-    }
-
-    ST.append("\n\n\n{endregion}\n\n\n");
-    return ST;
-
-}
-
-///******************************************************************************
-/// PLACE HANDLERS
-///******************************************************************************
-void DBCHandler::generateHandlers(QDomElement *pous, QDomDocument &doc)
-{
-    QDomAttr attr;
-    QDomText text;
-
-    unsigned long counterJ1939=0;
     foreach (dataContainer * curMessage , comInterface){
-        if(curMessage->getIfSelected())
-        for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
-            if(curSignal->isJ1939){
-                counterJ1939++;
+        if(curMessage->getIfSelected()){
+            ST->append("\n{region \""+curMessage->getName()+"- ID:"+curMessage->getID()+"\"}\n");
+            QString nameFb = (curMessage->getIfBitOperation())? ("_FB_CanTx_Message_Unpack_"+curMessage->getID()) : ("_FB_CanTx_Message_"+curMessage->getID());
+            ST->append("\n"+nameFb+"("
+                       "\n   C_Enable:= GVL."+dutHeader+".S_CAN_Init,"
+                       "\n   Obj_CAN:= ADR("+this->canLine+"),"
+                       "\n   X_MsgID:= 16#"+curMessage->getID()+","
+                       "\n   Tm_CycleTime:= TIME#"+curMessage->getMsCycleTime()+"ms,"
+                       "\n   N_Msg_Dlc:="+QString::number(curMessage->getDLC())+","
+                       "\n   S_Extended:= "+QString::number(curMessage->getIfExtended()).toUpper()+","
+                       "\n   S_Sent_Ok   => GVL."+dutHeader+".S_SentOk_"+curMessage->getName()+"_0X"+curMessage->getID()+");");
+
+            for( const dataContainer::signal * curSignal : *curMessage->getSignalList()){
+                ST->append(convTypeApptoCom(curSignal,curMessage->getID(),curMessage->getName(),nameFb));
             }
+            ST->append("\n{endregion}");
         }
     }
-    if(counterJ1939>1){
 
-        /*ERROR HANDLER*/
-        {
-            structFbdBlock* newBlock = new structFbdBlock;
-            newBlock->name="_FB_"+this->dutHeader+"_ERR_Handler";
-            QDomElement pou = doc.createElement("pou");
-            /*set pou name*/
-            attr=doc.createAttribute("name");
-            attr.setValue("_FB_"+this->dutHeader+"_ERR_Handler");
-            pou.setAttributeNode(attr);
-            /*set pouType*/
-            attr=doc.createAttribute("pouType");
-            attr.setValue("functionBlock");
-            pou.setAttributeNode(attr);
-
-            QDomElement interface = doc.createElement("interface");
-            /*Input Variables*/
-            QDomElement inputVars = doc.createElement("inputVars");
-
-            foreach (dataContainer * curMessage , comInterface){
-                if(curMessage->getIfSelected())
-                for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
-                    if(curSignal->isJ1939){
-
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("ERR_"+curSignal->name);
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BOOL = doc.createElement("BOOL");
-                        type.appendChild(BOOL);
-                        variable.appendChild(type);
-                        inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"ERR_"+curSignal->name,this->enableTest?"FrcTest."+curSignal->name+".e":"ASSIGN_ERROR_TRANSMISSION_SIGNAL","BOOL"," "});
-                    }
-                }
-            }
-            interface.appendChild(inputVars);
-            /*
-             * This part is deleted after v1.000.037
-             * reason : To reduce memory alocation GVL variables will be used
-             */
-            /*Generate Output Input Variables - inoutVars*/
-            /*QDomElement inoutVars = doc.createElement("inOutVars");
-            {
-                QDomElement variable = doc.createElement("variable");
-                attr=doc.createAttribute("name");
-                attr.setValue(dutHeader);
-                variable.setAttributeNode(attr);
-                QDomElement type = doc.createElement("type");
-                QDomElement dataVarType = doc.createElement("derived");
-                attr=doc.createAttribute("name");
-                attr.setValue(dutName);
-                dataVarType.setAttributeNode(attr);
-                type.appendChild(dataVarType);
-                variable.appendChild(type);
-                inoutVars.appendChild(variable);
-            };
-            interface.appendChild(inoutVars);
-            */
-            pou.appendChild(interface);
-
-            QDomElement body = doc.createElement("body");
-            QDomElement ST = doc.createElement("ST");
-            QDomElement xhtml = doc.createElement("xhtml");
-            attr=doc.createAttribute("xmlns");
-            attr.setValue("http://www.w3.org/1999/xhtml");
-            xhtml.setAttributeNode(attr);
-            QString handlerText="";
-            handlerText.append("(*\n"
-                               "**********************************************************************\n"
-                               "Bozankaya A.Ş.\n"
-                               "**********************************************************************\n"
-                               "Name					: _FB_"+this->dutHeader+"_ERR_Handler\n"
-                               "POU Type				: FB\n"
-                               "Created by              : COMMUNICATION INTERFACE GENERATOR , BZK.\n"
-                               "Creation Date 			: "+creationDate.toString(Qt::DateFormat::ISODate)+"\n"
-                               "Modifications			: see version description below\n"
-                               "\n"
-                               "\n"
-                               "FB Description:"
-                               "This FB which is created by automatically by communication interface generator \n"
-                               "\n to assign error status of signals to actual signal object. \n"
-                               "*********************************************************************\n"
-                               "\n"
-                               "Version 1	\n"
-                               "*********************************************************************\n"
-                               "Version Description:\n"
-                               "- initial version\n"
-                               "*********************************************************************\n"
-                               "*)");
-            /*ST text of Error Handler*/
-            foreach (dataContainer * curMessage , comInterface){
-                if(curMessage->getIfSelected())
-                for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
-                    if(curSignal->isJ1939){
-                        handlerText.append("\n"+this->dutHeader+ "."+curSignal->name+ ".e 					:=	ERR_"+curSignal->name+ ";");
-                    }
-                }
-            }
-            /*ST text of Error Handler*/
-            text=doc.createTextNode(handlerText);
-            xhtml.appendChild(text);
-            ST.appendChild(xhtml);
-            body.appendChild(ST);
-            pou.appendChild(body);
-
-            /*Create addData*/
-            QDomElement addData = doc.createElement("addData");
-            QDomElement data = doc.createElement("data");
-            attr=doc.createAttribute("name");
-            attr.setValue("http://www.3s-software.com/plcopenxml/objectid");
-            data.setAttributeNode(attr);
-            attr=doc.createAttribute("handleUnknown");
-            attr.setValue("discard");
-            data.setAttributeNode(attr);
-            QDomElement ObjectId = doc.createElement("ObjectId");
-
-            for(QList<QString> curVal : this->fbNameandObjId){
-                if(curVal.at(0)== ("_FB_"+this->dutHeader+"_ERR_Handler")){
-                    text=doc.createTextNode(curVal.at(1));
-                }
-            }
-
-            ObjectId.appendChild(text);
-            data.appendChild(ObjectId);
-            addData.appendChild(data);
-            pou.appendChild(addData);
-            pous->appendChild(pou);
-            fbdBlocks.append(newBlock);
-        }
-
-        /*NA HANDLER*/
-        {
-            structFbdBlock* newBlock = new structFbdBlock;
-            newBlock->name="_FB_"+this->dutHeader+"_NA_Handler";
-            QDomElement pou = doc.createElement("pou");
-            /*set pou name*/
-            attr=doc.createAttribute("name");
-            attr.setValue("_FB_"+this->dutHeader+"_NA_Handler");
-            pou.setAttributeNode(attr);
-            /*set pouType*/
-            attr=doc.createAttribute("pouType");
-            attr.setValue("functionBlock");
-            pou.setAttributeNode(attr);
-
-            QDomElement interface = doc.createElement("interface");
-            /*Input Variables*/
-            QDomElement inputVars = doc.createElement("inputVars");
-
-            foreach (dataContainer * curMessage , comInterface){
-                if(curMessage->getIfSelected())
-                for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
-                    if(curSignal->isJ1939){
-
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("NA_"+curSignal->name);
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BOOL = doc.createElement("BOOL");
-                        type.appendChild(BOOL);
-                        variable.appendChild(type);
-                        inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"NA_"+curSignal->name,this->enableTest?"FrcTest."+curSignal->name+".na":"ASSIGN_NOT_AVAILABLITY_SIGNAL","BOOL"," "});
-                    }
-                }
-            }
-            interface.appendChild(inputVars);
-            /*
-             * This part is deleted after v1.000.037
-             * reason : To reduce memory alocation GVL variables will be used
-             */
-            /*Generate Output Input Variables - inoutVars*/
-            /*QDomElement inoutVars = doc.createElement("inOutVars");
-            {
-                QDomElement variable = doc.createElement("variable");
-                attr=doc.createAttribute("name");
-                attr.setValue(dutHeader);
-                variable.setAttributeNode(attr);
-                QDomElement type = doc.createElement("type");
-                QDomElement dataVarType = doc.createElement("derived");
-                attr=doc.createAttribute("name");
-                attr.setValue(dutName);
-                dataVarType.setAttributeNode(attr);
-                type.appendChild(dataVarType);
-                variable.appendChild(type);
-                inoutVars.appendChild(variable);
-            };
-            interface.appendChild(inoutVars);
-            */
-            pou.appendChild(interface);
-
-            QDomElement body = doc.createElement("body");
-            QDomElement ST = doc.createElement("ST");
-            QDomElement xhtml = doc.createElement("xhtml");
-            attr=doc.createAttribute("xmlns");
-            attr.setValue("http://www.w3.org/1999/xhtml");
-            xhtml.setAttributeNode(attr);
-            QString handlerText="";
-            /*ST text of Validity Handler*/
-            handlerText.append("(*\n"
-                               "**********************************************************************\n"
-                               "Bozankaya A.Ş.\n"
-                               "**********************************************************************\n"
-                               "Name					: _FB_"+this->dutHeader+"_NA_Handler\n"
-                               "POU Type				: FB\n"
-                               "Created by              : COMMUNICATION INTERFACE GENERATOR , BZK.\n"
-                               "Creation Date 			: "+creationDate.toString(Qt::DateFormat::ISODate)+"\n"
-                               "Modifications			: see version description below\n"
-                               "\n"
-                               "\n"
-                               "FB Description:"
-                               "This FB which is created by automatically by communication interface generator \n"
-                               "\n to assign not available status of signals to actual signal object. \n"
-                               "*********************************************************************\n"
-                               "\n"
-                               "Version 1	\n"
-                               "*********************************************************************\n"
-                               "Version Description:\n"
-                               "- initial version\n"
-                               "*********************************************************************\n"
-                               "*)");
-            foreach (dataContainer * curMessage , comInterface){
-                if(curMessage->getIfSelected())
-                for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
-                    if(curSignal->isJ1939){
-                        handlerText.append("\nGVL."+this->dutHeader+ "."+curSignal->name+ ".na 					:=	NA_"+curSignal->name+ ";");
-                    }
-                }
-            }
-            /*ST text of Validty Handler*/
-            text=doc.createTextNode(handlerText);
-            xhtml.appendChild(text);
-            ST.appendChild(xhtml);
-            body.appendChild(ST);
-            pou.appendChild(body);
-
-            /*Create addData*/
-            QDomElement addData = doc.createElement("addData");
-            QDomElement data = doc.createElement("data");
-            attr=doc.createAttribute("name");
-            attr.setValue("http://www.3s-software.com/plcopenxml/objectid");
-            data.setAttributeNode(attr);
-            attr=doc.createAttribute("handleUnknown");
-            attr.setValue("discard");
-            data.setAttributeNode(attr);
-            QDomElement ObjectId = doc.createElement("ObjectId");
-
-            foreach(QList<QString> curVal , this->fbNameandObjId){
-                if(curVal.at(0)== ("_FB_"+this->dutHeader+"_NA_Handler")){
-                    text=doc.createTextNode(curVal.at(1));
-                }
-            }
-
-            ObjectId.appendChild(text);
-            data.appendChild(ObjectId);
-            addData.appendChild(data);
-            pou.appendChild(addData);
-            pous->appendChild(pou);
-            fbdBlocks.append(newBlock);
-        }
-        }else{
-        dataContainer::setWarning("INFO","J1939 mesajı bulunamadığı için NA  ve ERR Handler yerleştirilmedi");
-        emit infoListChanged();
-        }
-        /*VALITIY HANDLER*/
-        {
-            structFbdBlock* newBlock = new structFbdBlock;
-            newBlock->name="_FB_"+this->dutHeader+"_Validity_Handler";
-            QDomElement pou = doc.createElement("pou");
-            /*set pou name*/
-            attr=doc.createAttribute("name");
-            attr.setValue("_FB_"+this->dutHeader+"_Validity_Handler");
-            pou.setAttributeNode(attr);
-            /*set pouType*/
-            attr=doc.createAttribute("pouType");
-            attr.setValue("functionBlock");
-            pou.setAttributeNode(attr);
-
-            QDomElement interface = doc.createElement("interface");
-            /*Input Variables*/
-            QDomElement inputVars = doc.createElement("inputVars");
-
-            foreach (dataContainer * curMessage , comInterface){
-                if(curMessage->getIfSelected())
-                for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
-
-
-                        QDomElement variable = doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("VALID_"+curSignal->name);
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement BOOL = doc.createElement("BOOL");
-                        type.appendChild(BOOL);
-                        variable.appendChild(type);
-                        inputVars.appendChild(variable);
-                        newBlock->inputVars.append({"VALID_"+curSignal->name,this->enableTest?"FrcTest."+curSignal->name+".v":"ASSIGN_VALIDITY_SIGNAL","BOOL"," "});
-
-
-                }
-            }
-            interface.appendChild(inputVars);
-            /*
-             * This part is deleted after v1.000.037
-             * reason : To reduce memory alocation GVL variables will be used
-             */
-
-            /*Generate Output Input Variables - inoutVars*/
-            /*
-            QDomElement inoutVars = doc.createElement("inOutVars");
-            {
-                QDomElement variable = doc.createElement("variable");
-                attr=doc.createAttribute("name");
-                attr.setValue(dutHeader);
-                variable.setAttributeNode(attr);
-                QDomElement type = doc.createElement("type");
-                QDomElement dataVarType = doc.createElement("derived");
-                attr=doc.createAttribute("name");
-                attr.setValue(dutName);
-                dataVarType.setAttributeNode(attr);
-                type.appendChild(dataVarType);
-                variable.appendChild(type);
-                inoutVars.appendChild(variable);
-            };
-            interface.appendChild(inoutVars);
-            */
-            pou.appendChild(interface);
-
-            QDomElement body = doc.createElement("body");
-            QDomElement ST = doc.createElement("ST");
-            QDomElement xhtml = doc.createElement("xhtml");
-            attr=doc.createAttribute("xmlns");
-            attr.setValue("http://www.w3.org/1999/xhtml");
-            xhtml.setAttributeNode(attr);
-            QString handlerText="";
-            handlerText.append("(*\n"
-                               "**********************************************************************\n"
-                               "Bozankaya A.Ş.\n"
-                               "**********************************************************************\n"
-                               "Name					: _FB_"+this->dutHeader+"_Validity_Handler\n"
-                               "POU Type				: FB\n"
-                               "Created by              : COMMUNICATION INTERFACE GENERATOR , BZK.\n"
-                               "Creation Date 			: "+creationDate.toString(Qt::DateFormat::ISODate)+"\n"
-                               "Modifications			: see version description below\n"
-                               "\n"
-                               "\n"
-                               "FB Description:"
-                               "This FB which is created by automatically by communication interface generator \n"
-                               "\n to assign validity status of signals to actual signal object. \n"
-                               "*********************************************************************\n"
-                               "\n"
-                               "Version 1	\n"
-                               "*********************************************************************\n"
-                               "Version Description:\n"
-                               "- initial version\n"
-                               "*********************************************************************\n"
-                               "*)");
-            /*ST text of validity Handler*/
-            foreach (dataContainer * curMessage , comInterface){
-                if(curMessage->getIfSelected())
-                for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
-                        handlerText.append("\nGVL."+this->dutHeader+ "."+curSignal->name+ ".v					:=	VALID_"+curSignal->name+ ";");
-                }
-            }
-            /*ST text of Error Handler*/
-            text=doc.createTextNode(handlerText);
-            xhtml.appendChild(text);
-            ST.appendChild(xhtml);
-            body.appendChild(ST);
-            pou.appendChild(body);
-
-            /*Create addData*/
-            QDomElement addData = doc.createElement("addData");
-            QDomElement data = doc.createElement("data");
-            attr=doc.createAttribute("name");
-            attr.setValue("http://www.3s-software.com/plcopenxml/objectid");
-            data.setAttributeNode(attr);
-            attr=doc.createAttribute("handleUnknown");
-            attr.setValue("discard");
-            data.setAttributeNode(attr);
-            QDomElement ObjectId = doc.createElement("ObjectId");
-
-            for(QList<QString> curVal : this->fbNameandObjId){
-                if(curVal.at(0)== ("_FB_"+this->dutHeader+"_Validity_Handler")){
-                    text=doc.createTextNode(curVal.at(1));
-                }
-            }
-
-            ObjectId.appendChild(text);
-            data.appendChild(ObjectId);
-            addData.appendChild(data);
-            pou.appendChild(addData);
-            pous->appendChild(pou);
-            fbdBlocks.append(newBlock);
-
-        }
-
-        /*OUTPUT HANDLER*/
-    {
-                structFbdBlock* newBlock = new structFbdBlock;
-                newBlock->name="_FB_"+this->dutHeader+"_Output_Handler";
-                QDomElement pou = doc.createElement("pou");
-                /*set pou name*/
-                attr=doc.createAttribute("name");
-                attr.setValue("_FB_"+this->dutHeader+"_Output_Handler");
-                pou.setAttributeNode(attr);
-                /*set pouType*/
-                attr=doc.createAttribute("pouType");
-                attr.setValue("functionBlock");
-                pou.setAttributeNode(attr);
-
-                QDomElement interface = doc.createElement("interface");
-                /*Input Variables*/
-                QDomElement inputVars = doc.createElement("inputVars");
-
-                foreach (dataContainer * curMessage , comInterface){
-                    if(curMessage->getIfSelected())
-                    for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
-
-
-                            QDomElement variable = doc.createElement("variable");
-                            attr=doc.createAttribute("name");
-                            attr.setValue("VALUE_"+curSignal->name);
-                            variable.setAttributeNode(attr);
-                            QDomElement type = doc.createElement("type");
-                            QDomElement BOOL = doc.createElement(curSignal->appDataType);
-                            type.appendChild(BOOL);
-                            variable.appendChild(type);
-                            inputVars.appendChild(variable);
-                            newBlock->inputVars.append({"VALUE_"+curSignal->name,this->enableTest?"FrcTest."+curSignal->name+".x":"ASSIGN_VARIABLE_OF_SIGNAL",curSignal->appDataType," "});
-
-                    }
-                }
-                interface.appendChild(inputVars);
-                /*
-                 * This part is deleted after v1.000.037
-                 * reason : To reduce memory alocation GVL variables will be used
-                 */
-                /*Generate Output Input Variables - inoutVars*/
-                /*
-                QDomElement inoutVars = doc.createElement("inOutVars");
-                {
-                    QDomElement variable = doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue(dutHeader);
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement dataVarType = doc.createElement("derived");
-                    attr=doc.createAttribute("name");
-                    attr.setValue(dutName);
-                    dataVarType.setAttributeNode(attr);
-                    type.appendChild(dataVarType);
-                    variable.appendChild(type);
-                    inoutVars.appendChild(variable);
-                };
-                interface.appendChild(inoutVars);
-                */
-                pou.appendChild(interface);
-
-                QDomElement body = doc.createElement("body");
-                QDomElement ST = doc.createElement("ST");
-                QDomElement xhtml = doc.createElement("xhtml");
-                attr=doc.createAttribute("xmlns");
-                attr.setValue("http://www.w3.org/1999/xhtml");
-                xhtml.setAttributeNode(attr);
-                QString handlerText="";
-                /*ST text of NA Handler*/
-                foreach (dataContainer * curMessage , comInterface){
-                    if(curMessage->getIfSelected())
-                    for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
-                            handlerText.append("\nGVL."+this->dutHeader+ "."+curSignal->name+ ".x					:=	VALUE_"+curSignal->name+ ";");
-                    }
-                }
-                /*ST text of Error Handler*/
-                text=doc.createTextNode(handlerText);
-                xhtml.appendChild(text);
-                ST.appendChild(xhtml);
-                body.appendChild(ST);
-                pou.appendChild(body);
-
-                /*Create addData*/
-                QDomElement addData = doc.createElement("addData");
-                QDomElement data = doc.createElement("data");
-                attr=doc.createAttribute("name");
-                attr.setValue("http://www.3s-software.com/plcopenxml/objectid");
-                data.setAttributeNode(attr);
-                attr=doc.createAttribute("handleUnknown");
-                attr.setValue("discard");
-                data.setAttributeNode(attr);
-                QDomElement ObjectId = doc.createElement("ObjectId");
-
-                for(QList<QString> curVal : this->fbNameandObjId){
-                    if(curVal.at(0)== ("_FB_"+this->dutHeader+"_Output_Handler")){
-                        text=doc.createTextNode(curVal.at(1));
-                    }
-                }
-
-                ObjectId.appendChild(text);
-                data.appendChild(ObjectId);
-                addData.appendChild(data);
-                pou.appendChild(addData);
-                pous->appendChild(pou);
-                fbdBlocks.append(newBlock);
-
-            }
 }
-///******************************************************************************
-/// Generate POUS
-///******************************************************************************
-void DBCHandler::generatePouFpd(QDomElement *pous, QDomDocument &doc)
+QString DBCHandler::convTypeApptoCom (const dataContainer::signal *curSignal, QString idMessage, QString nameMessage,  QString nameFb)
 {
-    QDomAttr attr;
-    QDomText text;
-    /*set pou name*/
-    QDomElement pou = doc.createElement("pou");
-    attr=doc.createAttribute("name");
-    attr.setValue("P_"+this->dutHeader);
-    pou.setAttributeNode(attr);
-    /*set pouType*/
-    attr=doc.createAttribute("pouType");
-    attr.setValue("program");
-    pou.setAttributeNode(attr);
-
-
-
-    {/*INTERFACE*/
-
-        QDomElement interface = doc.createElement("interface");
-
-        {/*LOCAL VARS*/
-                QDomElement localVars = doc.createElement("localVars");
-
-                for(DBCHandler::structFbdBlock * curStruct : fbdBlocks){
-                    if(curStruct->name != "AND" && curStruct->name != "OR"){
-                        QDomElement variable=doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue(curStruct->name+"_0");
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement derived = doc.createElement("derived");
-                        attr=doc.createAttribute("name");
-                        attr.setValue(curStruct->name);
-                        derived.setAttributeNode(attr);
-                        type.appendChild(derived);
-                        variable.appendChild(type);
-                        localVars.appendChild(variable);
-                    }
-                }
-
-            {
-                QDomElement variable = doc.createElement("variable");
-                attr=doc.createAttribute("name");
-                attr.setValue("FrcVar");
-                variable.setAttributeNode(attr);
-                QDomElement type = doc.createElement("type");
-                QDomElement dataVarType = doc.createElement("derived");
-                attr=doc.createAttribute("name");
-                attr.setValue(dutName);
-                dataVarType.setAttributeNode(attr);
-                type.appendChild(dataVarType);
-                variable.appendChild(type);
-                localVars.appendChild(variable);
+    QString ST="\n{region \""+curSignal->name+"\"}";
+        // TYPE CONVERTION AND E  NA CONTROL STARTS
+        if((curSignal->length<9)){
+            if((curSignal->convMethod == "toBYTE")|| (curSignal->convMethod == "xtoBYTE")){
+                ST.append("GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x) OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
+                "\n //Transmit Data : Range Control End"
+                "\n IF FrcVar."+curSignal->name+".v THEN"
+                "\n 	//Force variable active start"
+                "\n 	Cont_"+curSignal->name+"	:= FrcVar."+curSignal->name+".x ;"
+                "\n 	 //Force variable active end"
+                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
+                "\n 	//Transmit Data : Normal Start"
+                "\n 	Cont_"+curSignal->name+"	:= GVL."+this->dutHeader+"."+curSignal->name+".x ;"
+                "\n 	 //Transmit Data : Normal End"
+                "\n ELSE"
+                +((curSignal->isJ1939==true)? "\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
+                +((curSignal->isJ1939==true)? "\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
+                +((curSignal->isJ1939==true)? "\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN": "")
+                +((curSignal->isJ1939==true)? "\n 		Cont_"+curSignal->name+":= 16#FF;": "")
+                +((curSignal->isJ1939==true)? "\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
+                +((curSignal->isJ1939==true)? "\n 		Cont_"+curSignal->name+":= 16#FE;": "")
+                +((curSignal->isJ1939==true)? "\n 	ELSE": "")
+                +((curSignal->isJ1939==true)? "\n 		Cont_"+curSignal->name+":= 16#FE;": "")
+                +((curSignal->isJ1939==true)? "\n 	END_IF;": "")
+                +((curSignal->isJ1939==true)? "\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
+                +((curSignal->isJ1939==true)? "\n 	ELSE": "")+
+                "\n 	//Transmit Data : Data not valid  Start"
+                "\n 		Cont_"+curSignal->name+":= "+QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+" ;"
+                "\n 	//Transmit Data : Data not valid  End"
+                +((curSignal->isJ1939==true)? "\n 	END_IF;": "")+
+                "\n END_IF;");
             }
-            if(this->enableTest){
-                QDomElement variable = doc.createElement("variable");
-                attr=doc.createAttribute("name");
-                attr.setValue("FrcTest");
-                variable.setAttributeNode(attr);
-                QDomElement type = doc.createElement("type");
-                QDomElement dataVarType = doc.createElement("derived");
-                attr=doc.createAttribute("name");
-                attr.setValue(dutName);
-                dataVarType.setAttributeNode(attr);
-                type.appendChild(dataVarType);
-                variable.appendChild(type);
-                localVars.appendChild(variable);
+            else if ((curSignal->convMethod == "toUSINT")|| (curSignal->convMethod == "xtoUSINT")){
+
+                ST.append("<GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
+                "\n //Transmit Data : Range Control End"
+                "\n IF FrcVar."+curSignal->name+".v THEN"
+                "\n 	//Force variable active start"
+                "\n 	Cont_"+curSignal->name+"	:= USINT_TO_BYTE(FrcVar."+curSignal->name+".x) ;"
+                "\n 	 //Force variable active end"
+                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
+                "\n 	//Transmit Data : Normal Start"
+                "\n 	Cont_"+curSignal->name+"	:= USINT_TO_BYTE(GVL."+this->dutHeader+"."+curSignal->name+".x );"
+                "\n 	 //Transmit Data : Normal End"
+                "\n ELSE"
+                +((curSignal->isJ1939==true)? "\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
+                +((curSignal->isJ1939==true)? "\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
+                +((curSignal->isJ1939==true)? "\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN": "")
+                +((curSignal->isJ1939==true)? "\n 		Cont_"+curSignal->name+":= 16#FF;": "")
+                +((curSignal->isJ1939==true)? "\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
+                +((curSignal->isJ1939==true)? "\n 		Cont_"+curSignal->name+":= 16#FE;": "")
+                +((curSignal->isJ1939==true)? "\n 	ELSE": "")
+                +((curSignal->isJ1939==true)? "\n 		Cont_"+curSignal->name+":= 16#FE;": "")
+                +((curSignal->isJ1939==true)? "\n 	END_IF;": "")
+                +((curSignal->isJ1939==true)? "\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
+                +((curSignal->isJ1939==true)? "\n 	ELSE": "")+
+                "\n 	//Transmit Data : Data not valid  Start"
+                "\n 		Cont_"+curSignal->name+":= "+QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+";"
+                "\n 	//Transmit Data : Data not valid  End"
+                +((curSignal->isJ1939==true)? "\n 	END_IF;": "")+
+                "\n END_IF;");
+
             }
-            interface.appendChild(localVars);
+            else if ((curSignal->convMethod == "toREAL")|| (curSignal->convMethod == "xtoREAL")){
+
+
+                ST.append("GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
+                "\n //Transmit Data : Range Control End"
+                "\n IF FrcVar."+curSignal->name+".v THEN"
+                "\n 	//Force variable active start"
+                "\n 	Cont_"+curSignal->name+"	:= USINT_TO_BYTE(REAL_TO_USINT((FrcVar."+curSignal->name+".x - "+QString::number(curSignal->offset,'g',15)+")/ "+QString::number(curSignal->resolution,'g',15)+"));"
+                "\n 	 //Force variable active end"
+                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
+                "\n 	//Transmit Data : Normal Start"
+                "\n 	Cont_"+curSignal->name+"	:= USINT_TO_BYTE(REAL_TO_USINT((GVL."+this->dutHeader+"."+curSignal->name+".x - "+QString::number(curSignal->offset,'g',15)+")/ "+QString::number(curSignal->resolution,'g',15)+"));"
+                "\n 	 //Transmit Data : Normal End"
+                "\n ELSE"
+                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
+                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
+                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN": "")
+                +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FF;": "")
+                +((curSignal->isJ1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
+                +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FE;": "")
+                +((curSignal->isJ1939==true)?"\n 	ELSE": "")
+                +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FE;": "")
+                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")
+                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
+                +((curSignal->isJ1939==true)?"\n 	ELSE": "")+
+                "\n 	//Transmit Data : Data not valid  Start"
+                "\n 		Cont_"+curSignal->name+":= USINT_TO_BYTE(REAL_TO_USINT(("+ ((curSignal->defValue==0)? "" : (QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+" + "))+QString::number((-1*curSignal->offset),'g',(curSignal->length>32)? 20:15)+")/"+QString::number(curSignal->resolution,'g',15)+"));"
+                "\n 	//Transmit Data : Data not valid  End"
+                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")+
+                "\n END_IF;");
+
+            }
+
+        }else if((curSignal->length<17)){
+            if((curSignal->convMethod == "toWORD")|| (curSignal->convMethod == "xtoWORD")){
+                ST.append("GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
+               "\n //Transmit Data : Range Control End"
+               "\n IF FrcVar."+curSignal->name+".v THEN"
+                "\n 	//Force variable active start"
+                "\n 	Cont_"+curSignal->name+"	:= FrcVar."+curSignal->name+".x ;"
+                "\n 	 //Force variable active end"
+                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
+               "\n 	//Transmit Data : Normal Start"
+               "\n 	Cont_"+curSignal->name+"	:= GVL."+this->dutHeader+"."+curSignal->name+".x ;"
+               "\n 	 //Transmit Data : Normal End"
+               "\n ELSE"
+               +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
+               +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
+               +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN": "")
+               +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FF01;": "")
+               +((curSignal->isJ1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
+               +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FE01;": "")
+               +((curSignal->isJ1939==true)?"\n 	ELSE": "")
+               +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FE01;": "")
+               +((curSignal->isJ1939==true)?"\n 	END_IF;": "")
+               +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
+               +((curSignal->isJ1939==true)?"\n 	ELSE": "")+
+               "\n 	//Transmit Data : Data not valid  Start"
+               "\n 		Cont_"+curSignal->name+":= "+QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+" ;"
+               "\n 	//Transmit Data : Data not valid  End"
+               +((curSignal->isJ1939==true)?"\n 	END_IF;": "")+
+               "\n END_IF;");
+            }
+            else if ((curSignal->convMethod == "toUINT")|| (curSignal->convMethod == "xtoUINT")){
+
+                ST.append("<GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
+                " \n //Transmit Data : Range Control End"
+                "\n IF FrcVar."+curSignal->name+".v THEN"
+                "\n 	//Force variable active start"
+                "\n 	Cont_"+curSignal->name+"	:= UINT_TO_WORD(FrcVar."+curSignal->name+".x) ;"
+                "\n 	 //Force variable active end"
+                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
+                "\n 	//Transmit Data : Normal Start"
+                "\n 	Cont_"+curSignal->name+"	:= UINT_TO_WORD(GVL."+this->dutHeader+"."+curSignal->name+".x );"
+                "\n 	 //Transmit Data : Normal End"
+                "\n ELSE"
+                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
+                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
+                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN": "")
+                +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FF01;": "")
+                +((curSignal->isJ1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
+                +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FE01;": "")
+                +((curSignal->isJ1939==true)?"\n 	ELSE": "")
+                +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FE01;": "")
+                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")
+                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
+                +((curSignal->isJ1939==true)?"\n 	ELSE": "")+
+                "\n 	//Transmit Data : Data not valid  Start"
+                "\n 		Cont_"+curSignal->name+":= "+QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+";"
+                "\n 	//Transmit Data : Data not valid  End"
+                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")+
+                "\n END_IF;");
+
+            }
+            else if ((curSignal->convMethod == "toREAL")|| (curSignal->convMethod == "xtoREAL")){
+                ST.append("GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
+                "\n //Transmit Data : Range Control End"
+                "\n IF FrcVar."+curSignal->name+".v THEN"
+                "\n 	//Force variable active start"
+                "\n 	Cont_"+curSignal->name+"	:= UINT_TO_WORD(REAL_TO_UINT((FrcVar."+curSignal->name+".x - "+QString::number(curSignal->offset,'g',15)+")/ "+QString::number(curSignal->resolution,'g',15)+"));"
+                "\n 	 //Force variable active end"
+                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
+                "\n 	//Transmit Data : Normal Start"
+                "\n 	Cont_"+curSignal->name+"	:= UINT_TO_WORD(REAL_TO_UINT((GVL."+this->dutHeader+"."+curSignal->name+".x - "+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+")/ "+QString::number(curSignal->resolution,'g',15)+"));"
+                "\n 	 //Transmit Data : Normal End"
+                "\n ELSE"
+                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
+                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
+                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN": "")
+                +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FF01;": "")
+                +((curSignal->isJ1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
+                +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FE01;": "")
+                +((curSignal->isJ1939==true)?"\n 	ELSE": "")
+                +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FE01;": "")
+                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")
+                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
+                +((curSignal->isJ1939==true)?"\n 	ELSE": "")+
+                "\n 	//Transmit Data : Data not valid  Start"
+                "\n 		Cont_"+curSignal->name+":= UINT_TO_WORD(REAL_TO_UINT(("+((curSignal->defValue==0) ? "" : (QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+" + "))+QString::number((-1*curSignal->offset),'g',(curSignal->length>32)? 20:15)+")/"+QString::number(curSignal->resolution,'g',15)+"));"
+                "\n 	//Transmit Data : Data not valid  End"
+                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")+
+                "\n END_IF;");
+            }
+
+        }else if((curSignal->length<33)){
+            if((curSignal->convMethod == "toDWORD")|| (curSignal->convMethod == "xtoDWORD")){
+                ST.append("GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  "+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x OR "+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x;"
+               "\n //Transmit Data : Range Control End"
+               "\n IF FrcVar."+curSignal->name+".v THEN"
+                "\n 	//Force variable active start"
+                "\n 	Cont_"+curSignal->name+"	:= FrcVar."+curSignal->name+".x ;"
+                "\n 	 //Force variable active end"
+                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
+               "\n 	//Transmit Data : Normal Start"
+               "\n 	Cont_"+curSignal->name+"	:= GVL."+this->dutHeader+"."+curSignal->name+".x ;"
+               "\n 	 //Transmit Data : Normal End"
+               "\n ELSE"
+               +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
+               +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
+               +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN	": "")
+               +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FF000001;": "")
+               +((curSignal->isJ1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
+               +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE000001;": "")
+               +((curSignal->isJ1939==true)?"\n 	ELSE": "")
+               +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE000001;": "")
+               +((curSignal->isJ1939==true)?"\n 	END_IF;": "")
+               +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
+               +((curSignal->isJ1939==true)?"\n 	ELSE": "")+
+               "\n 	//Transmit Data : Data not valid  Start"
+               "\n 		Cont_"+curSignal->name+":= "+QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+" ;"
+               "\n 	//Transmit Data : Data not valid  End"
+               +((curSignal->isJ1939==true)?"\n 	END_IF;": "")+
+               "\n END_IF;");
+            }
+            else if ((curSignal->convMethod == "toUDINT")|| (curSignal->convMethod == "xtoUDINT")){
+
+                ST.append("<GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
+               "\n //Transmit Data : Range Control End"
+               "\n IF FrcVar."+curSignal->name+".v THEN"
+                "\n 	//Force variable active start"
+                "\n 	Cont_"+curSignal->name+"	:= UDINT_TO_DWORD(FrcVar."+curSignal->name+".x) ;"
+                "\n 	 //Force variable active end"
+                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
+               "\n 	//Transmit Data : Normal Start"
+               "\n 	Cont_"+curSignal->name+"	:= UDINT_TO_DWORD(GVL."+this->dutHeader+"."+curSignal->name+".x );"
+               "\n 	 //Transmit Data : Normal End"
+               "\n ELSE"
+               +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
+               +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
+               +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN	": "")
+               +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FF000001;": "")
+               +((curSignal->isJ1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
+               +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE000001;": "")
+               +((curSignal->isJ1939==true)?"\n 	ELSE": "")
+               +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE000001;": "")
+               +((curSignal->isJ1939==true)?"\n 	END_IF;": "")
+               +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
+               +((curSignal->isJ1939==true)?"\n 	ELSE": "")+
+               "\n 	//Transmit Data : Data not valid  Start"
+               "\n 		Cont_"+curSignal->name+":= "+QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+";"
+               "\n 	//Transmit Data : Data not valid  End"
+               +((curSignal->isJ1939==true)?"\n 	END_IF;": "")+
+               "\n END_IF;");
+
+            }
+            else if ((curSignal->convMethod == "toREAL")|| (curSignal->convMethod == "xtoREAL")){
+                ST.append("GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
+                "\n //Transmit Data : Range Control End"
+                "\n IF FrcVar."+curSignal->name+".v THEN"
+                "\n 	//Force variable active start"
+                "\n 	Cont_"+curSignal->name+"	:= UDINT_TO_DWORD(REAL_TO_UDINT((FrcVar."+curSignal->name+".x - "+QString::number(curSignal->offset,'g',15)+")/ "+QString::number(curSignal->resolution,'g',15)+"));"
+                "\n 	 //Force variable active end"
+                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
+                "\n 	//Transmit Data : Normal Start"
+                "\n 	Cont_"+curSignal->name+"	:= UDINT_TO_DWORD(REAL_TO_UDINT((GVL."+this->dutHeader+"."+curSignal->name+".x - "+QString::number(curSignal->offset,'g',15)+")/ "+QString::number(curSignal->resolution,'g',15)+"));"
+                "\n 	 //Transmit Data : Normal End"
+                "\n ELSE"
+                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
+                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
+                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN	": "")
+                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FF000001;": "")
+                +((curSignal->isJ1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
+                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE000001;": "")
+                +((curSignal->isJ1939==true)?"\n 	ELSE": "")
+                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE000001;": "")
+                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")
+                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
+                +((curSignal->isJ1939==true)?"\n 	ELSE": "")+
+                "\n 	//Transmit Data : Data not valid  Start"
+                "\n 		Cont_"+curSignal->name+":= UDINT_TO_DWORD(REAL_TO_UDINT(("+((curSignal->defValue==0) ? "" : (QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+" + "))+QString::number((-1*curSignal->offset),'g',(curSignal->length>32)? 20:15)+")/"+QString::number(curSignal->resolution,'g',15)+"));"
+                "\n 	//Transmit Data : Data not valid  End"
+                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")+
+                "\n END_IF;");
+            }
+        }else if((curSignal->length<65)){
+            if((curSignal->convMethod == "toLWORD")|| (curSignal->convMethod == "xtoLWORD")){
+                ST.append("GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
+                "\n //Transmit Data : Range Control End"
+                "\n IF FrcVar."+curSignal->name+".v THEN"
+                "\n 	//Force variable active start"
+                "\n 	Cont_"+curSignal->name+"	:= FrcVar."+curSignal->name+".x ;"
+                "\n 	 //Force variable active end"
+                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
+                "\n 	//Transmit Data : Normal Start"
+                "\n 	Cont_"+curSignal->name+"	:= GVL."+this->dutHeader+"."+curSignal->name+".x ;"
+                "\n 	 //Transmit Data : Normal End"
+                "\n ELSE"
+                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
+                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
+                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN	": "")
+                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FF00000000000001;": "")
+                +((curSignal->isJ1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
+                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE00000000000001;": "")
+                +((curSignal->isJ1939==true)?"\n 	ELSE": "")
+                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE00000000000001;": "")
+                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")
+                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
+                +((curSignal->isJ1939==true)?"\n 	ELSE": "")+
+                "\n 	//Transmit Data : Data not valid  Start"
+                "\n 		Cont_"+curSignal->name+":= "+QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+" ;"
+                "\n 	//Transmit Data : Data not valid  End"
+                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")+
+                "\n END_IF;");
+            }
+            else if ((curSignal->convMethod == "toULINT")|| (curSignal->convMethod == "xtoULINT")){
+                ST.append("<GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
+                "\n //Transmit Data : Range Control End"
+                "\n IF FrcVar."+curSignal->name+".v THEN"
+                "\n 	//Force variable active start"
+                "\n 	Cont_"+curSignal->name+"	:= ULINT_TO_LWORD(FrcVar."+curSignal->name+".x );"
+                "\n 	 //Force variable active end"
+                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
+                "\n 	//Transmit Data : Normal Start"
+                "\n 	Cont_"+curSignal->name+"	:= ULINT_TO_LWORD(GVL."+this->dutHeader+"."+curSignal->name+".x );"
+                "\n 	 //Transmit Data : Normal End"
+                "\n ELSE"
+                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
+                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
+                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN	": "")
+                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FF00000000000001;": "")
+                +((curSignal->isJ1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
+                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE00000000000001;": "")
+                +((curSignal->isJ1939==true)?"\n 	ELSE": "")
+                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE00000000000001;": "")
+                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")
+                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
+                +((curSignal->isJ1939==true)?"\n 	ELSE": "")+
+                "\n 	//Transmit Data : Data not valid  Start"
+                "\n 		Cont_"+curSignal->name+":= "+QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+";"
+                "\n 	//Transmit Data : Data not valid  End"
+                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")+
+                "\n END_IF;");
+            }
+            else if ((curSignal->convMethod == "toLREAL")|| (curSignal->convMethod == "xtoLREAL")){
+                ST.append("GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
+                "\n //Transmit Data : Range Control End"
+                "\n IF FrcVar."+curSignal->name+".v THEN"
+                "\n 	//Force variable active start"
+                "\n 	Cont_"+curSignal->name+"	:=  ULINT_TO_LWORD(LREAL_TO_ULINT((FrcVar."+curSignal->name+".x - "+QString::number(curSignal->offset,'g',15)+")/ "+QString::number(curSignal->resolution,'g',15)+"));"
+                "\n 	 //Force variable active end"
+                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
+                "\n 	//Transmit Data : Normal Start"
+                "\n 	Cont_"+curSignal->name+"	:= ULINT_TO_LWORD(LREAL_TO_ULINT((GVL."+this->dutHeader+"."+curSignal->name+".x - "+QString::number(curSignal->offset,'g',15)+") / "+QString::number(curSignal->resolution,'g',15)+"));"
+                "\n 	 //Transmit Data : Normal End"
+                "\n ELSE"
+                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
+                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
+                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN	": "")
+                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FF00000000000001;": "")
+                +((curSignal->isJ1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
+                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE00000000000001;": "")
+                +((curSignal->isJ1939==true)?"\n 	ELSE": "")
+                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE00000000000001;": "")
+                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")
+                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
+                +((curSignal->isJ1939==true)?"\n 	ELSE": "")+
+                "\n 	//Transmit Data : Data not valid  Start"
+                "\n 		Cont_"+curSignal->name+":= ULINT_TO_LWORD(REAL_TO_ULINT(("+((curSignal->defValue==0) ? "" : (QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+" + "))+QString::number((-1*curSignal->offset),'g',(curSignal->length>32)? 20:15)+")/"+QString::number(curSignal->resolution,'g',15)+"));"
+                "\n 	//Transmit Data : Data not valid  End"
+                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")+
+                "\n END_IF;");
+            }
         }
-        pou.appendChild(interface);
-    }
-/*BODY*/
-    {
-        QDomElement body = doc.createElement("body");
-        /*FBD*/
-        {
-            QDomElement FBD = doc.createElement("FBD");
 
-            {
-                const unsigned long long  baseLocalID= 10000000000;
-                unsigned long long countLocalID = 0;
-                unsigned long long countNetworkID = 1;
-                {
-                    QDomElement vendorElement = doc.createElement("vendorElement");
-                    {
-                        QDomElement position = doc.createElement("position");
-                        attr=doc.createAttribute("x");
-                        attr.setValue("0");
-                        position.setAttributeNode(attr);
-                        attr=doc.createAttribute("y");
-                        attr.setValue("0");
-                        position.setAttributeNode(attr);
-                        vendorElement.appendChild(position);
-                    }
-                    {
-                        QDomElement alternativeText = doc.createElement("alternativeText");
-                        QDomElement xhtml = doc.createElement("xhtml");
-                        attr=doc.createAttribute("xmlns");
-                        attr.setValue("http://www.w3.org/1999/xhtml");
-                        xhtml.setAttributeNode(attr);
-                        text=doc.createTextNode("FBD Implementation Attributes");
-                        xhtml.appendChild(text);
-                        alternativeText.appendChild(xhtml);
-                        vendorElement.appendChild(alternativeText);
-                    }
-                    {
-                        QDomElement addData = doc.createElement("addData");
-                        QDomElement data = doc.createElement("data");
-                        attr= doc.createAttribute("name");
-                        attr.setValue("http://www.3s-software.com/plcopenxml/fbd/implementationattributes");
-                        data.setAttributeNode(attr);
-                        attr=doc.createAttribute("handleUnknown");
-                        attr.setValue("implementation");
-                        data.setAttributeNode(attr);
-                        QDomElement fbdattributes=doc.createElement("fbdattributes");
-                        attr=doc.createAttribute("xmlns");
-                        attr.setValue("");
-                        fbdattributes.setAttributeNode(attr);
-                        QDomElement attribute =doc.createElement("attribute");
-                        attr=doc.createAttribute("name");
-                        attr.setValue("BoxInputFlagsSupported");
-                        attribute.setAttributeNode(attr);
-                        attr=doc.createAttribute("value");
-                        attr.setValue("true");
-                        attribute.setAttributeNode(attr);
-                        fbdattributes.appendChild(attribute);
-                        data.appendChild(fbdattributes);
-                        addData.appendChild(data);
-                        vendorElement.appendChild(addData);
-                    }
-                    attr=doc.createAttribute("localId");
-                    attr.setValue(QString::number(baseLocalID));
-                    vendorElement.setAttributeNode(attr);
-                    FBD.appendChild(vendorElement);
+
+        if(curSignal->convMethod=="BOOL:BOOL"){
+            ST.append("\n"+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+"               :=	GVL."+this->dutHeader+"."+curSignal->name+".x AND GVL."+this->dutHeader+"."+curSignal->name+".v ;");
+        }else if(curSignal->convMethod=="2BOOL:BOOL"){
+            ST.append("\n"+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+"               :=	 GVL."+this->dutHeader+"."+curSignal->name+".x ;"
+                      "\n"+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+"             :=	 NOT GVL."+this->dutHeader+"."+curSignal->name+".v ; ");
+        }else if((curSignal->convMethod=="xtoBYTE")||(curSignal->convMethod=="xtoUSINT")||((curSignal->convMethod=="xtoREAL") && (curSignal->length==8))){
+            ST.append("\n"+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+"            :=Cont_"+curSignal->name+";");
+        }else if((curSignal->convMethod=="xtoWORD")||(curSignal->convMethod=="xtoUINT")||((curSignal->convMethod=="xtoREAL") && (curSignal->length==16))){
+            ST.append("\n_FB_UNPACK_WORD_TO_BYTE_"+QString::number(counterfbWORDTOBYTE)+"(X_WORD_0:= Cont_"+curSignal->name+", X_BYTE_0=> "+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+", X_BYTE_1=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+1)+");");
+            counterfbWORDTOBYTE++;
+        }else if((curSignal->convMethod=="xtoDWORD")||(curSignal->convMethod=="xtoUDINT")||((curSignal->convMethod=="xtoREAL") && (curSignal->length==32))){
+            ST.append("\n_FB_UNPACK_DWORD_TO_BYTE_"+QString::number(counterfbDWORDTOBYTE)+"(X_DWORD_0:= Cont_"+curSignal->name+", X_BYTE_0=> "+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+", X_BYTE_1=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+1)+", X_BYTE_2=>"+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+2)+", X_BYTE_3=>"+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+3)+");");
+            counterfbDWORDTOBYTE++;
+        }else if((curSignal->convMethod=="xtoLWORD")||(curSignal->convMethod=="xtoULINT")||(curSignal->convMethod=="xtoLREAL") ){
+            ST.append("\n_FB_UNPACK_LWORD_TO_BYTE_"+QString::number(counterfbLWORDTOBYTE)+"(X_LWORD_0:= Cont_"+curSignal->name+", X_BYTE_0=> "+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+", X_BYTE_1=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+1)+", X_BYTE_2=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+2)+", X_BYTE_3=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+3)+", X_BYTE_4=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+4)+", X_BYTE_5=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+5)+", X_BYTE_6=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+6)+", X_BYTE_7=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+7)+");");
+            counterfbLWORDTOBYTE++;
+            qInfo()<<"counter: "+QString::number(counterfbLWORDTOBYTE);
+        }else{
+            bool flagPack = false;
+            if((curSignal->length>8)){
+                if(curSignal->length<17){
+                ST.append("\n_FB_UNPACK_WORD_TO_BYTE_"+QString::number(counterfbWORDTOBYTE)+"(X_WORD_0:=Cont_"+curSignal->name+");");
+                counterfbWORDTOBYTE++;
+                }else if(curSignal->length <33){
+                 ST.append("_FB_UNPACK_DWORD_TO_BYTE_"+QString::number(counterfbDWORDTOBYTE)+"(X_DWORD_0:=Cont_"+curSignal->name+");");
+                 counterfbDWORDTOBYTE++;
+                }else {
+                  ST.append("\n_FB_UNPACK_LWORD_TO_BYTE_"+QString::number(counterfbLWORDTOBYTE)+"(X_LWORD_0:=Cont_"+curSignal->name+");");
+                  counterfbLWORDTOBYTE++;
+                  qInfo()<<"counter: "+QString::number(counterfbLWORDTOBYTE);
+               }
+            }
+            unsigned packID=0;
+            unsigned packByteID=0;
+            unsigned counterBITBYTE=0;
+
+            for(unsigned i =0; i<curSignal->length;i++){
+
+                if(((i%8 == 0) && ((i/8)<8) )&& (!flagPack)){
+                    ST.append("\n_FB_UNPACK_BYTE_TO_8BITS_"+QString::number(counterfbBYTETO8BIT+qFloor(i/8.0))+"(");
+                    counterBITBYTE++;
+                    flagPack=true;
                 }
-
-                {
-                    QDomElement comment = doc.createElement("comment");
-
-                    {
-                        QDomElement position = doc.createElement("position");
-                        attr=doc.createAttribute("x");
-                        attr.setValue("0");
-                        position.setAttributeNode(attr);
-                        attr=doc.createAttribute("y");
-                        attr.setValue("0");
-                        position.setAttributeNode(attr);
-                        attr=doc.createAttribute("height");
-                        attr.setValue("0");
-                        comment.setAttributeNode(attr);
-                        attr=doc.createAttribute("width");
-                        attr.setValue("0");
-                        comment.setAttributeNode(attr);
-                        comment.appendChild(position);
-
-                    }
-
-                    {
-                        QDomElement content = doc.createElement("content");
-                        QDomElement xhtml = doc.createElement("xhtml");
-                        attr=doc.createAttribute("xmlns");
-                        attr.setValue("http://www.w3.org/1999/xhtml");
-                        xhtml.setAttributeNode(attr);
-                        QString creationHeader="THIS POU AUTOMATICALLY GENERATED BY INTERFACE GENERATOR AT"+creationDate.toString(Qt::DateFormat::ISODate);
-                        text=doc.createTextNode(creationHeader);
-                        xhtml.appendChild(text);
-                        content.appendChild(xhtml);
-                        comment.appendChild(content);
-
-                    }
-                    attr=doc.createAttribute("localId");
-                    attr.setValue(QString::number(baseLocalID+1));
-                    comment.setAttributeNode(attr);
-                    FBD.appendChild(comment);
+                if(flagPack){
+                        ST.append("S_Bit_"+QString::number(i%8)+"=> "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+i)+"");
+                        if(((i%8 != 7) &&(i%(curSignal->length-1) != 0)) || (i==0)) {
+                            ST.append(",");
+                        }
                 }
-
-                countNetworkID++;
-
-
-                for(DBCHandler::structFbdBlock * curStruct : fbdBlocks){
-
-                    QString dutHeaderLocalId;
-
-                    for(QList<QString>  curVar : curStruct->inputVars){
-
-
-                        QDomElement inVariable = doc.createElement("inVariable");
-                        QDomElement position = doc.createElement("position");
-                        QDomElement connectionPointOut = doc.createElement("connectionPointOut");
-                        QDomElement expression = doc.createElement("expression");
-                        attr=doc.createAttribute("x");
-                        attr.setValue("0");
-                        position.setAttributeNode(attr);
-                        attr=doc.createAttribute("y");
-                        attr.setValue("0");
-                        position.setAttributeNode(attr);
-                        inVariable.appendChild(position);
-                        inVariable.appendChild(connectionPointOut);
-                        text=doc.createTextNode(curVar.at(1));
-                        expression.appendChild(text);
-                        inVariable.appendChild(expression);
-                        attr=doc.createAttribute("localId");
-                        attr.setValue(QString::number((baseLocalID*countNetworkID)+countLocalID));
-                        inVariable.setAttributeNode(attr);
-                        FBD.appendChild(inVariable);
-                        countLocalID++;
-                    }
-                    /*
-                     * This part is deleted after v1.000.037
-                     * reason : To reduce memory alocation GVL variables will be used
-                     */
-                    /*if(curStruct->name != "AND" && curStruct->name != "OR")
-                    {
-                        QDomElement inVariable = doc.createElement("inVariable");
-                        QDomElement position = doc.createElement("position");
-                        QDomElement connectionPointOut = doc.createElement("connectionPointOut");
-                        QDomElement expression = doc.createElement("expression");
-                        attr=doc.createAttribute("x");
-                        attr.setValue("0");
-                        position.setAttributeNode(attr);
-                        attr=doc.createAttribute("y");
-                        attr.setValue("0");
-                        position.setAttributeNode(attr);
-                        inVariable.appendChild(position);
-                        inVariable.appendChild(connectionPointOut);
-                        text=doc.createTextNode("GVL."+this->dutHeader);
-                        expression.appendChild(text);
-                        inVariable.appendChild(expression);
-                        attr=doc.createAttribute("localId");
-                        attr.setValue(QString::number((baseLocalID*countNetworkID)+countLocalID));
-                        dutHeaderLocalId=QString::number((baseLocalID*countNetworkID)+countLocalID);
-                        inVariable.setAttributeNode(attr);
-                        FBD.appendChild(inVariable);
-                        countLocalID++;
-                    }*/
-                    {
-                        QDomElement block = doc.createElement("block");
-                        attr=doc.createAttribute("localId");
-                        attr.setValue(QString::number((baseLocalID*countNetworkID)+countLocalID));
-                        block.setAttributeNode(attr);
-                        attr=doc.createAttribute("typeName");
-                        attr.setValue(curStruct->name);
-                        block.setAttributeNode(attr);
-                        //Add instaceName if only It is user derived fb, dont add for OR,AND etc.
-                        if(curStruct->name != "AND" && curStruct->name != "OR")
-                        {
-                            attr=doc.createAttribute("instanceName");
-                            attr.setValue(curStruct->name+"_0");
-                            block.setAttributeNode(attr);
+                if(flagPack){
+                    if(((i%8 == 7)||(i%(curSignal->length-1) == 0) )&& (i>0)){
+                        ST.append(" ,X_BYTE_0:=");
+                        if(curSignal->length<9){
+                        ST.append("Cont_"+curSignal->name);
+                        ST.append(");");
+                        }else if (curSignal->length <17){
+                        ST.append("_FB_UNPACK_WORD_TO_BYTE_"+QString::number(counterfbWORDTOBYTE-1));
+                        ST.append(".X_BYTE_"+QString::number(packByteID)+");");
+                        }else if (curSignal->length <33){
+                        ST.append("_FB_UNPACK_DWORD_TO_BYTE_"+QString::number(counterfbDWORDTOBYTE-1)+"");
+                        ST.append(".X_BYTE_"+QString::number(packByteID)+");");
+                        }else{
+                        ST.append("_FB_UNPACK_LWORD_TO_BYTE_"+QString::number(counterfbLWORDTOBYTE-1)+"");
+                        ST.append(".X_BYTE_"+QString::number(packByteID)+");");
                         }
 
-                        QDomElement position = doc.createElement("position");
-                        attr=doc.createAttribute("x");
-                        attr.setValue("0");
-                        position.setAttributeNode(attr);
-                        attr=doc.createAttribute("y");
-                        attr.setValue("0");
-                        position.setAttributeNode(attr);
-                        block.appendChild(position);
-
-
-                        {
-                        unsigned long long localxId =0;
-                        QDomElement inputVariables = doc.createElement("inputVariables");
-                            foreach(QList<QString> curVar , curStruct->inputVars){
-
-                                QDomElement variable = doc.createElement("variable");
-                                attr=doc.createAttribute("formalParameter");
-                                attr.setValue(curVar.at(0));
-                                variable.setAttributeNode(attr);
-                                QDomElement connectionPointIn = doc.createElement("connectionPointIn");
-                                QDomElement connection = doc.createElement("connection");
-                                attr=doc.createAttribute("refLocalId");
-                                attr.setValue(QString::number((baseLocalID*countNetworkID)+localxId));
-                                connection.setAttributeNode(attr);
-                                connectionPointIn.appendChild(connection);
-                                variable.appendChild(connectionPointIn);
-                                inputVariables.appendChild(variable);
-
-                                localxId++;
-                            }
-                            block.appendChild(inputVariables);
-
-
-                        QDomElement inoutVariables = doc.createElement("inOutVariables");
-                        /*
-                         * This part is deleted after v1.000.037
-                         * reason : To reduce memory alocation GVL variables will be used
-                         */
-                        /*
-                        if(curStruct->name != "AND" && curStruct->name != "OR"){
-                            QDomElement variable = doc.createElement("variable");
-                            attr=doc.createAttribute("formalParameter");
-                            attr.setValue(this->dutHeader);
-                            variable.setAttributeNode(attr);
-                            QDomElement connectionPointIn = doc.createElement("connectionPointIn");
-                            QDomElement connection = doc.createElement("connection");
-                            attr=doc.createAttribute("refLocalId");
-                            attr.setValue(dutHeaderLocalId);
-                            connection.setAttributeNode(attr);
-                            connectionPointIn.appendChild(connection);
-                            variable.appendChild(connectionPointIn);
-                            inoutVariables.appendChild(variable);
-
-                            }
-
-                        */
-                        block.appendChild(inoutVariables);
-                        QDomElement outputVariables = doc.createElement("outputVariables");
-                            foreach(QList<QString> curVar , curStruct->outputVars){
-
-                                QDomElement variable = doc.createElement("variable");
-                                attr=doc.createAttribute("formalParameter");
-                                attr.setValue(curVar.at(0));
-                                variable.setAttributeNode(attr);
-                                //Add negated attribute if only It is OR or AND gate
-                                if(curStruct->name == "AND" || curStruct->name == "OR")
-                                {
-                                    attr=doc.createAttribute("negated");
-                                    attr.setValue("true");
-                                    variable.setAttributeNode(attr);
-                                }
-                                QDomElement connectionPointIn = doc.createElement("connectionPointOut");
-                                variable.appendChild(connectionPointIn);
-                                outputVariables.appendChild(variable);
-
-                            }
-                             block.appendChild(outputVariables);
-                        }
-                        /*ADDDATA OF Block*/
-                        QDomElement addData = doc.createElement("addData");
-
-                        {
-                            {
-                            QDomElement data = doc.createElement("data");
-                            attr=doc.createAttribute("name");
-                            attr.setValue("http://www.3s-software.com/plcopenxml/fbdcalltype");
-                            data.setAttributeNode(attr);
-                            attr=doc.createAttribute("handleUnknown");
-                            attr.setValue("implementation");
-                            data.setAttributeNode(attr);
-                            QDomElement CallType = doc.createElement("CallType");
-                            attr=doc.createAttribute("xmlns");
-                            attr.setValue("");
-                            CallType.setAttributeNode(attr);
-                            text=doc.createTextNode("functionblock");
-                            CallType.appendChild(text);
-                            data.appendChild(CallType);
-                            addData.appendChild(data);
-                            }
-                            {
-                            QDomElement data = doc.createElement("data");
-                            attr=doc.createAttribute("name");
-                            attr.setValue("http://www.3s-software.com/plcopenxml/inputparamtypes");
-                            data.setAttributeNode(attr);
-                            attr=doc.createAttribute("handleUnknown");
-                            attr.setValue("implementation");
-                            data.setAttributeNode(attr);
-                            QDomElement InputParamTypes = doc.createElement("InputParamTypes");
-                            attr=doc.createAttribute("xmlns");
-                            attr.setValue("");
-                            InputParamTypes.setAttributeNode(attr);
-                            QString dataTypes="";
-                            foreach(QList<QString> curVar , curStruct->inputVars){
-                            dataTypes.append(curVar.at(2)+" ");
-                            }
-                            text=doc.createTextNode(dataTypes);
-                            InputParamTypes.appendChild(text);
-                            data.appendChild(InputParamTypes);
-                            addData.appendChild(data);
-                            }
-                            {
-                            QDomElement data = doc.createElement("data");
-                            attr=doc.createAttribute("name");
-                            attr.setValue("http://www.3s-software.com/plcopenxml/outputparamtypes");
-                            data.setAttributeNode(attr);
-                            attr=doc.createAttribute("handleUnknown");
-                            attr.setValue("implementation");
-                            data.setAttributeNode(attr);
-                            QDomElement OutputParamTypes = doc.createElement("OutputParamTypes");
-                            attr=doc.createAttribute("xmlns");
-                            attr.setValue("");
-                            OutputParamTypes.setAttributeNode(attr);
-                            QString dataTypes="";
-                            foreach(QList<QString> curVar , curStruct->outputVars){
-                            dataTypes.append(curVar.at(2)+" ");
-                            }
-                            text=doc.createTextNode(dataTypes);
-                            OutputParamTypes.appendChild(text);
-                            data.appendChild(OutputParamTypes);
-                            addData.appendChild(data);
-                            }
-                        }
-
-
-
-                        block.appendChild(addData);
-                        FBD.appendChild(block);
-                        countLocalID++;
+                        flagPack=false;
+                        packByteID++;
                     }
-
-                    foreach(QList<QString> curVar , curStruct->outputVars){
-
-
-                        QDomElement outVariable = doc.createElement("outVariable");
-                        QDomElement position = doc.createElement("position");
-                        QDomElement connectionPointIn = doc.createElement("connectionPointIn");
-                        QDomElement connection = doc.createElement("connection");
-                        QDomElement expression = doc.createElement("expression");
-                        text=doc.createTextNode(curVar.at(1));
-                        expression.appendChild(text);
-                        attr=doc.createAttribute("x");
-                        attr.setValue("0");
-                        position.setAttributeNode(attr);
-                        attr=doc.createAttribute("y");
-                        attr.setValue("0");
-                        position.setAttributeNode(attr);
-                        outVariable.appendChild(position);
-                        attr=doc.createAttribute("refLocalId");
-                        attr.setValue(QString::number((baseLocalID*countNetworkID)+countLocalID-1));
-                        connection.setAttributeNode(attr);
-                        attr=doc.createAttribute("formalParameter ");
-                        attr.setValue(curVar.at(1));
-                        connection.setAttributeNode(attr);
-                        connectionPointIn.appendChild(connection);
-                        outVariable.appendChild(connectionPointIn);
-                        outVariable.appendChild(expression);
-                        attr=doc.createAttribute("localId");
-                        attr.setValue(QString::number((baseLocalID*countNetworkID)+countLocalID));
-                        outVariable.setAttributeNode(attr);
-                        FBD.appendChild(outVariable);
-                        countLocalID++;
-
-                    }
-
-                    countLocalID=0;
-                    countNetworkID++;
                 }
-
 
             }
 
 
-
-            body.appendChild(FBD);
+            counterfbBYTETO8BIT = counterfbBYTETO8BIT+ counterBITBYTE;
         }
-        pou.appendChild(body);
-    }
 
-/*ADDDATA*/
-    {
-        /*Create addData*/
-        QDomElement addData = doc.createElement("addData");
-        QDomElement data = doc.createElement("data");
-        attr=doc.createAttribute("name");
-        attr.setValue("http://www.3s-software.com/plcopenxml/objectid");
-        data.setAttributeNode(attr);
-        attr=doc.createAttribute("handleUnknown");
-        attr.setValue("discard");
-        data.setAttributeNode(attr);
-        QDomElement ObjectId = doc.createElement("ObjectId");
-        text=doc.createTextNode(pouObjID);
-        ObjectId.appendChild(text);
-        data.appendChild(ObjectId);
-        addData.appendChild(data);
+        ST.append("\n{endregion}");
+        return ST;
 
-        pou.appendChild(addData);
-    }
-    pous->appendChild(pou);
-    foreach(DBCHandler::structFbdBlock * curStruct , fbdBlocks){
-        delete curStruct;
-    }
-    fbdBlocks.clear();
 }
-

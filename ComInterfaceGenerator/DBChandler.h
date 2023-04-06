@@ -27,15 +27,15 @@ public:
 
     static unsigned long long selectedMessageCounter;
     static QList<QList<QString>> pouHolder;
-    static unsigned counterfbBYTETOWORD;
-    static unsigned counterfbBYTETODWORD;
-    static unsigned counterfbBYTETOLWORD;
-    static unsigned counterfb8BITTOBYTE;
-    static unsigned counterfbDWORDTOLWORD;
-    static unsigned counterfbLWORDTOBYTE;
-    static unsigned counterfbDWORDTOBYTE;
-    static unsigned counterfbWORDTOBYTE;
-    static unsigned counterfbBYTETO8BIT;
+    static unsigned int counterfbBYTETOWORD;
+    static unsigned int counterfbBYTETODWORD;
+    static unsigned int counterfbBYTETOLWORD;
+    static unsigned int counterfb8BITTOBYTE;
+    static unsigned int counterfbDWORDTOLWORD;
+    static unsigned int counterfbLWORDTOBYTE;
+    static unsigned int counterfbDWORDTOBYTE;
+    static unsigned int counterfbWORDTOBYTE;
+    static unsigned int counterfbBYTETO8BIT;
     static bool allSelected;
     explicit DBCHandler(QObject *parent = nullptr);
     ~DBCHandler();
@@ -154,16 +154,14 @@ private:
     void extracted(QDomDocument &doc, QDomText &text,
                    dataContainer *&curMessage);
     void generateIOPous(QDomElement *pous, QDomDocument &doc);
-    void generateHandlers(QDomElement *pous, QDomDocument &doc);
-    void generatePouFpd(QDomElement *pous, QDomDocument &doc);
     //***********************************
     //Generate XML file end
     //***********************************
     //Conversion Methods
-    void generateIIST(QString *const ST, dataContainer * const curMessage);
-    void generateIOST(QString *const ST,dataContainer *const curMessage);
-    QString convTypeComtoApp(QString signalName, unsigned short startbit, unsigned short length, QString converType,double resolution, double offset, double maxValue, double minValue, double defValue,bool j1939);
-    QString convTypeApptoCom(QString signalName, unsigned short startbit, unsigned short length, QString converType,double resolution, double offset, double maxValue, double minValue, double defValue,bool j1939);
+    void generateIIST(QString *const ST);
+    void generateIOST(QString *const ST);
+    QString convTypeComtoApp(const dataContainer::signal * curSignal, QString idMessage, QString nameMessage,QString nameFb);
+    QString convTypeApptoCom(const dataContainer::signal * curSignal, QString idMessage, QString nameMessage,QString nameFb);
 
 
 };
