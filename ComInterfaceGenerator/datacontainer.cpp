@@ -183,17 +183,19 @@ void dataContainer::setWarning(QString ID,const QString &warningCode)
 
 void dataContainer::dataTypeAss(signal *signalPtr)
 {
+    signalPtr->enJ1939 = false;
     if(signalPtr->length == 1 ){
         signalPtr->appDataType = "BOOL";
         signalPtr->comDataType = "BOOL";
         signalPtr->convMethod="BOOL:BOOL";
         this->setBitOperation(true);
     }else if (signalPtr->length == 2){ 
-        if((signalPtr->isJ1939) || signalPtr->name.contains("C_") || signalPtr->name.contains("S_")){
+        /*if((signalPtr->isJ1939) || signalPtr->name.contains("C_") || signalPtr->name.contains("S_")){*/
             signalPtr->appDataType = "BOOL";
             signalPtr->convMethod="2BOOL:BOOL";
             signalPtr->comDataType = "BOOL";
-        }else if (signalPtr->name.contains("Z_")){
+            signalPtr->enJ1939 = true;
+        /*}else if (signalPtr->name.contains("Z_")){
             signalPtr->appDataType = "BYTE";
             signalPtr->convMethod="toBYTE";
             signalPtr->comDataType = "BYTE";
@@ -202,7 +204,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             signalPtr->convMethod="toBYTE";
             signalPtr->comDataType = "BYTE";
             this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde C_ S_ Z_ işareti bulunmuyor");
-        }
+        }*/
         this->setBitOperation(true);
     }else if (signalPtr->length < 8){
         signalPtr->comDataType = "BYTE";
@@ -247,6 +249,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
                 signalPtr->convMethod="xtoBYTE";
                 this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
             }
+
         }else{
             signalPtr->comDataType = "BYTE";
             if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
@@ -271,6 +274,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             this->setWarning(this->messageID,signalPtr->name+" sinyali başlangıç biti 8 ve katları değil, düşük performans");
 
         }
+        signalPtr->enJ1939 = true;
     }else if (signalPtr->length <  16){
         if((signalPtr->startBit == 0 )||(signalPtr->startBit == 8 )||(signalPtr->startBit == 16 )||(signalPtr->startBit == 24 )||(signalPtr->startBit == 32 )||(signalPtr->startBit == 40 )||(signalPtr->startBit == 48 )){
             signalPtr->comDataType = "WORD";
@@ -361,7 +365,9 @@ void dataContainer::dataTypeAss(signal *signalPtr)
 
             }
             this->setWarning(this->messageID,signalPtr->name+" sinyali başlangıç biti 16 ve katları değil, düşük performans");
+
         }
+        signalPtr->enJ1939 = true;
     }else if (signalPtr->length < 32){
         if((signalPtr->startBit == 0 )||(signalPtr->startBit == 8 )||(signalPtr->startBit == 16 )||(signalPtr->startBit == 24 )||(signalPtr->startBit == 32 )){
             signalPtr->comDataType = "DWORD";
@@ -452,8 +458,10 @@ void dataContainer::dataTypeAss(signal *signalPtr)
                 this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
 
             }
+
             this->setWarning(this->messageID,signalPtr->name+" sinyali başlangıç biti 8 ve katları değil,düşük performans");
         }
+        signalPtr->enJ1939 = true;
     }else if (signalPtr->length < 64){
         if((signalPtr->startBit == 0 )||(signalPtr->startBit == 8 )||(signalPtr->startBit == 16 )||(signalPtr->startBit == 24 )){
             signalPtr->comDataType = "LWORD";
@@ -519,6 +527,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             signalPtr->appDataType = "LWORD";
             this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
         }
+        signalPtr->enJ1939 = true;
     }
 }
 
@@ -678,7 +687,6 @@ void dataContainer::signalChecker(signal *signalPtr)
             if(signalPtr ->maxValue > 18446744073709550000.0 * signalPtr ->resolution + signalPtr ->offset){
                 this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri ölçek ve ofset dışında, 18446744073709551615 *ÖLÇEK-OFSET yapıldı");
                 signalPtr->maxValue =  18446744073709550000.0 * signalPtr ->resolution + signalPtr ->offset;
-                qInfo()<<QString::number(signalPtr->maxValue,'g',24)<<" "<<signalPtr ->resolution<<signalPtr ->offset;
             }
         }
     }else{

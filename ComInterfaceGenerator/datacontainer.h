@@ -91,6 +91,7 @@ struct dataContainer::signal{
     QString convMethod;
     QString comment;
     bool isJ1939;
+    bool enJ1939;
     bool isMotorola;
 
 };
