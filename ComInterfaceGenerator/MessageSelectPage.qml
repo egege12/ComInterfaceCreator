@@ -1053,7 +1053,8 @@ Rectangle {
                     text: qsTr("Test modu")
                     anchors.left:textFieldPreview.right
                     anchors.leftMargin:15
-                    anchors.verticalCenter: textFieldPreview.verticalCenter
+                    anchors.top: textHeaderPreview.top
+                    anchors.topMargin : 5
                     indicator: Rectangle {
                         implicitWidth: 48
                         implicitHeight: 26
@@ -1083,6 +1084,45 @@ Rectangle {
                     }
                     onCheckedChanged: {
                             comObj.setTestMode(switchTest.checked);
+                    }
+
+                }
+                Switch {
+                    id: switchFrc
+                    text: qsTr("Force Değişkenleri")
+                    anchors.left:textFieldPreview.right
+                    anchors.leftMargin:15
+                    anchors.top: switchTest.bottom
+                    anchors.topMargin: 5
+                    indicator: Rectangle {
+                        implicitWidth: 48
+                        implicitHeight: 26
+                        x: switchFrc.leftPadding
+                        y: parent.height / 2 - height / 2
+                        radius: 13
+                        color: switchFrc.checked ? "#17a81a" : "#ffffff"
+                        border.color: switchFrc.checked ? "#17a81a" : "#cccccc"
+
+                        Rectangle {
+                            x: switchFrc.checked ? parent.width - width : 0
+                            width: 26
+                            height: 26
+                            radius: 13
+                            color: switchFrc.down ? "#cccccc" : "#ffffff"
+                            border.color: switchFrc.checked ? (switchFrc.down ? "#17a81a" : "#21be2b") : "#999999"
+                        }
+                    }
+
+                    contentItem: Text {
+                        text: switchFrc.text
+                        font: switchFrc.font
+                        opacity: enabled ? 1.0 : 0.3
+                        color: switchFrc.down ? "#17a81a" : "#21be2b"
+                        verticalAlignment: Text.AlignVCenter
+                        leftPadding: switchFrc.indicator.width + switchFrc.spacing
+                    }
+                    onCheckedChanged: {
+                            comObj.setFrcVar(switchFrc.checked);
                     }
 
                 }

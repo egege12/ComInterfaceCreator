@@ -89,7 +89,7 @@ void DBCHandler::setErrCode(const QString &newErrCode)
 
 QList<QList<QString>> DBCHandler::messagesList()
 {
-	QList<QList<QString>> data;
+    QList<QList<QString>> data;
     if (isAllInserted){
         QList<QList<QString>> data;
         data.append({"  ","İsim","ID(HEX)","DLC","Çevrim Pryd.[ms]","Zaman Aşımı[ms]"});
@@ -102,7 +102,7 @@ QList<QList<QString>> DBCHandler::messagesList()
 
 QList<QList<QString> > DBCHandler::signalsList()
 {
-	 QList<QList<QString>> dataSignal;
+     QList<QList<QString>> dataSignal;
     if (isAllInserted){
         dataSignal.append({"İsim","Başlangıç","Boyut","Ölçek","Ofset","Minimum","Maksimum","Varsayılan","J1939","Uyg. Veri Tipi","Hbr.  Veri Tipi","Birim","Yorum"});
         for ( const dataContainer::signal *data : *comInterface.value(this->displayReqSignalID)->getSignalList()){
@@ -178,7 +178,7 @@ void DBCHandler::openFile()
                 if (!parseMessages(ascFile)){
                     ascFile->close();
                     throw QString("Arayüzü okurken bir şeyler yanlış gitti!");
-                }else{ 
+                }else{
                     setTmOutCycleTmWarnings();
                     emit interfaceReady();
                     this->setDisplayReqSignal(comInterface.firstKey());
@@ -276,7 +276,11 @@ void DBCHandler::setCANLine(QString canName){
 void DBCHandler::setTestMode(bool checkStat)
 {
     this->enableTest = checkStat;
-    qInfo()<< ((this->enableTest)?"Test mode on":"Test mode off");
+}
+
+void DBCHandler::setFrcVar(bool checkStat)
+{
+    this->enableFrc = checkStat;
 }
 
 bool DBCHandler::parseMessages(QFile *ascFile)
@@ -368,12 +372,12 @@ bool DBCHandler::parseMessages(QFile *ascFile)
                 if(configComment.contains("timeout",Qt::CaseInsensitive)){
                     msTimeout = this->getBetween("timeout","ms",configComment);
                     if(comInterface.contains(ID))
-                    comInterface.value(ID)->isTmOutSet = true;
+                        comInterface.value(ID)->isTmOutSet = true;
                 }
                 if(configComment.contains("cycletime",Qt::CaseInsensitive)){
                     msCycleTime = this->getBetween("cycletime","ms",configComment);
                     if(comInterface.contains(ID))
-                    comInterface.value(ID)->isCycleTmSet = true;
+                        comInterface.value(ID)->isCycleTmSet = true;
                 }
                 qInfo()<<configComment;
                 msgCommentList.append({ID,msTimeout,msCycleTime,commentContainer.remove(configComment)});
@@ -620,8 +624,11 @@ void DBCHandler::setTmOutCycleTmWarnings()
         if(!curMessage->isCycleTmSet){
             dataContainer::setWarning(curMessage->getID(),"mesajı için cycletime belirtilmediği için 100ms atandı");
         }
-        if(!curMessage->isTmOutSet){
+        if((!curMessage->isTmOutSet)&& (!curMessage->isCycleTmSet)){
             dataContainer::setWarning(curMessage->getID(),"mesajı için timeout belirtilmediği için 2500ms atandı");
+        }else if((curMessage->isCycleTmSet)&&(!curMessage->isTmOutSet)){
+            curMessage->setMsTimeOut(QString::number(curMessage->getMsCycleTime().toUInt()*3));
+            dataContainer::setWarning(curMessage->getID(),"mesajı için timeout belirtilmediği ancak cycletime belirtildiği için cycletime*3 yapıldı");
         }
     }
 
@@ -1344,7 +1351,7 @@ void DBCHandler::generateIIPous(QDomElement * pous, QDomDocument &doc)
                     }
                 }
 
-                {
+                if(this->enableFrc){
                     QDomElement variable=doc.createElement("variable");
                     attr=doc.createAttribute("name");
                     attr.setValue("FrcVar");
@@ -1518,26 +1525,57 @@ void DBCHandler::generateIIST(QString *const ST)
                 ST->append(convTypeComtoApp(curSignal,curMessage->getID(),curMessage->getName(),nameFb));
             }
             ST->append("\n{endregion}");
+
         }
     }
+    //Place communication fault flag that belongs to interface
+    ST->append("\n GVL."+dutHeader+".S_Com_Flt:=");
+    foreach (dataContainer * curMessage , comInterface){
+        if(curMessage->getIfSelected()){
+            for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
+                ST->append("GVL."+dutHeader+".S_TmOut_"+curMessage->getName()+"_0X"+curMessage->getID()+" AND ");
+            }
+        }
+    }
+    ST->append(" TRUE;");
+    //Place communication disturbance flag that belongs to interface
+    ST->append("\n GVL."+dutHeader+".S_Com_Distrb:=");
+    foreach (dataContainer * curMessage , comInterface){
+        if(curMessage->getIfSelected()){
+            for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
+                ST->append("GVL."+dutHeader+".S_TmOut_"+curMessage->getName()+"_0X"+curMessage->getID()+" OR ");
+            }
+        }
+    }
+    ST->append(" FALSE;");
 }
 QString DBCHandler::convTypeComtoApp(const dataContainer::signal * curSignal, QString idMessage, QString nameMessage, QString nameFb)
 {
     QString ST="\n{region \""+curSignal->name+"\"}";
     if(curSignal->convMethod=="BOOL:BOOL"){
+        if(this->enableFrc){
         ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".v               := NOT GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" OR FrcVar."+curSignal->name+".v ;"
                   "\nIF NOT FrcVar."+curSignal->name+".v THEN;"
                   "\nGVL."+this->dutHeader+"."+curSignal->name+".x               := GVL."+this->dutHeader+"."+curSignal->name+".v AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+";"
                   "\nELSE "
                   "\nGVL."+this->dutHeader+"."+curSignal->name+".x               := FrcVar."+curSignal->name+".x ;"
                   "\nEND_IF;");
+        }else{
+            ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".v               := NOT GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+";"
+                      "\nGVL."+this->dutHeader+"."+curSignal->name+".x               := GVL."+this->dutHeader+"."+curSignal->name+".v AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+";");
+        }
     }else if(curSignal->convMethod=="2BOOL:BOOL"){
-        ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".v               := ((NOT GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" AND NOT "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+") OR FrcVar."+curSignal->name+".v) ;"
+        if(this->enableFrc){
+        ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".v               := (NOT GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" AND NOT "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+") OR FrcVar."+curSignal->name+".v ;"
                    "\nIF NOT FrcVar."+curSignal->name+".v THEN;"
                    "\nGVL."+this->dutHeader+"."+curSignal->name+".x              := GVL."+this->dutHeader+"."+curSignal->name+".v AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+";"
                    "\nELSE "
                    "\nGVL."+this->dutHeader+"."+curSignal->name+".x              := FrcVar."+curSignal->name+".x ;"
                    "\nEND_IF;");
+        }else{
+            ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".v               := NOT GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" AND NOT "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+";"
+                       "\nGVL."+this->dutHeader+"."+curSignal->name+".x              := GVL."+this->dutHeader+"."+curSignal->name+".v AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+";");
+        }
     }else if((curSignal->convMethod=="xtoBYTE")||(curSignal->convMethod=="xtoUSINT")||((curSignal->convMethod=="xtoREAL") && (curSignal->length==8))){
         ST.append("\nRaw_"+curSignal->name+"             := "+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+";");
     }else if((curSignal->convMethod=="xtoWORD")||(curSignal->convMethod=="xtoUINT")||((curSignal->convMethod=="xtoREAL") && (curSignal->length==16))){
@@ -1630,13 +1668,12 @@ QString DBCHandler::convTypeComtoApp(const dataContainer::signal * curSignal, QS
     }
     // TYPE CONVERTION AND E  NA CONTROL STARTS
     if(curSignal->length==1){
-        ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".e				:= FALSE;");
-        ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".na				:= FALSE;");
+        //do nothing
     }
     else if((curSignal->length==2) && (curSignal->convMethod != "toBYTE")){
 
-        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e				    := "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+" AND NOT "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+" ;") : ("\nGVL."+this->dutHeader+"."+curSignal->name+".e				:= FALSE;"));
-        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na				:= "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+" AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+" ;") : ("\nGVL."+this->dutHeader+"."+curSignal->name+".na				:= FALSE;"));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e				    := "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+" AND NOT "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+" ;") : (""));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na				:= "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+" AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+" ;") : (""));
 
     }
     else if((curSignal->length<9)){
@@ -1649,8 +1686,8 @@ QString DBCHandler::convTypeComtoApp(const dataContainer::signal * curSignal, QS
         else if ((curSignal->convMethod == "toREAL")|| (curSignal->convMethod == "xtoREAL")){
             ST.append("\nCont_"+curSignal->name+"				:= USINT_TO_REAL(BYTE_TO_USINT(Raw_"+curSignal->name+"))"+((curSignal->resolution == 1)? (""):("*"+QString::number(curSignal->resolution,'g',15)))+((curSignal->offset == 0)? (""):("+"+QString::number(curSignal->offset,'g',15)))+";");
         }
-        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e              := (Raw_"+curSignal->name+" > 16#FD);") : ("\nGVL."+this->dutHeader+"."+curSignal->name+".e				:= FALSE;"));
-        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na             := (Raw_"+curSignal->name+" = 16#FF);") : ("\nGVL."+this->dutHeader+"."+curSignal->name+".na				:= FALSE;"));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e              := (Raw_"+curSignal->name+" > 16#FD);") : (""));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na             := (Raw_"+curSignal->name+" = 16#FF);") : (""));
 
     }else if((curSignal->length<17)){
         if((curSignal->convMethod == "toWORD")|| (curSignal->convMethod == "xtoWORD")){
@@ -1662,8 +1699,8 @@ QString DBCHandler::convTypeComtoApp(const dataContainer::signal * curSignal, QS
         else if ((curSignal->convMethod == "toREAL")|| (curSignal->convMethod == "xtoREAL")){
             ST.append("\n Cont_"+curSignal->name+"				:= UINT_TO_REAL(WORD_TO_UINT(Raw_"+curSignal->name+"))"+((curSignal->resolution == 1)? (""):("*"+QString::number(curSignal->resolution,'g',15)))+((curSignal->offset == 0)? (""):("+"+QString::number(curSignal->offset,'g',15)))+";");
         }
-        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e              := (Raw_"+curSignal->name+" > 16#FDFF;") : ("\nGVL."+this->dutHeader+"."+curSignal->name+".e				:= FALSE;"));
-        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na             := (Raw_"+curSignal->name+" > 16#FEFF;") : ("\nGVL."+this->dutHeader+"."+curSignal->name+".na				:= FALSE;"));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e              := (Raw_"+curSignal->name+" > 16#FDFF);") : (""));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na             := (Raw_"+curSignal->name+" > 16#FEFF);") : (""));
     }else if((curSignal->length<33)){
         if((curSignal->convMethod == "toDWORD")|| (curSignal->convMethod == "xtoDWORD")){
             ST.append("\nCont_"+curSignal->name+"               := Raw_"+curSignal->name+" ;");
@@ -1674,8 +1711,8 @@ QString DBCHandler::convTypeComtoApp(const dataContainer::signal * curSignal, QS
         else if ((curSignal->convMethod == "toREAL")|| (curSignal->convMethod == "xtoREAL")){
             ST.append("\nCont_"+curSignal->name+"				:= UDINT_TO_REAL(DWORD_TO_UDINT(Raw_"+curSignal->name+"))"+((curSignal->resolution == 1)? (""):("*"+QString::number(curSignal->resolution,'g',15)))+((curSignal->offset == 0)? (""):("+"+QString::number(curSignal->offset,'g',15)))+";");
         }
-        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e              := (Raw_"+curSignal->name+" > 16#FDFFFFFF;") : ("\nGVL."+this->dutHeader+"."+curSignal->name+".e				:= FALSE;"));
-        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na             := (Raw_"+curSignal->name+" > 16#FEFFFFFF;") : ("\nGVL."+this->dutHeader+"."+curSignal->name+".na				:= FALSE;"));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e              := (Raw_"+curSignal->name+" > 16#FDFFFFFF);") : (""));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na             := (Raw_"+curSignal->name+" > 16#FEFFFFFF);") : (""));
 
     }else if((curSignal->length<65)){
         if((curSignal->convMethod == "toLWORD")|| (curSignal->convMethod == "xtoLWORD")){
@@ -1687,23 +1724,37 @@ QString DBCHandler::convTypeComtoApp(const dataContainer::signal * curSignal, QS
         else if ((curSignal->convMethod == "toLREAL")|| (curSignal->convMethod == "xtoLREAL")){
             ST.append("\nCont_"+curSignal->name+"				:= ULINT_TO_LREAL(LWORD_TO_ULINT(Raw_"+curSignal->name+"))"+((curSignal->resolution == 1)? (""):("*"+QString::number(curSignal->resolution,'g',15)))+((curSignal->offset == 0)? (""):("+"+QString::number(curSignal->offset,'g',15)))+";");
         }
-        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e              := (Raw_"+curSignal->name+" > 16#FDFFFFFFFFFFFFFF;") : ("\nGVL."+this->dutHeader+"."+curSignal->name+".e				:= FALSE;"));
-        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na             := (Raw_"+curSignal->name+" > 16#FEFFFFFFFFFFFFFF;") : ("\nGVL."+this->dutHeader+"."+curSignal->name+".na				:= FALSE;"));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e              := (Raw_"+curSignal->name+" > 16#FDFFFFFFFFFFFFFF);") : (""));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na             := (Raw_"+curSignal->name+" > 16#FEFFFFFFFFFFFFFF);") : (""));
 
     }// TYPE CONVERTION AND E  NA CONTROL ENDS
 // ADD COMMON PART EXCEPT BOOL AND 2XBOOLS
+    //if((curSignal->length!= 1) && (!(curSignal->length==2 && (curSignal->convMethod !="toByte")))){
+    //    ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".RangeExcd 		:= NOT ((Cont_"+curSignal->name+" >= "+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+") AND (Cont_"+curSignal->name+" <= "+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+"));"
+    //    +((!this->enableFrc)?("\nGVL."+this->dutHeader+"."+curSignal->name+".v				:= NOT( GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" OR GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd "+((curSignal->isJ1939 ==true)?("OR GVL."+this->dutHeader+"."+curSignal->name+".e OR GVL."+this->dutHeader+"."+curSignal->name+".na) "):(") "))+";"):("\nGVL."+this->dutHeader+"."+curSignal->name+".v				:= NOT( GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" OR GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd "+((curSignal->isJ1939 ==true)?("OR GVL."+this->dutHeader+"."+curSignal->name+".e OR GVL."+this->dutHeader+"."+curSignal->name+".na) OR "):(") OR "))+"FrcVar."+curSignal->name+".v ;"))+
+    //    "\n"
+    //    +((!this->enableFrc)?(""):("\nIF FrcVar."+curSignal->name+".v  THEN"))+
+    //    ((!this->enableFrc)?(""):("\n	GVL."+this->dutHeader+"."+curSignal->name+".x 		   	:= FrcVar."+curSignal->name+".x ;\nELS"))+
+    //    "IF GVL."+this->dutHeader+"."+curSignal->name+".v THEN"
+    //    "\n	GVL."+this->dutHeader+"."+curSignal->name+".x 		   	:= Cont_"+curSignal->name+";"
+    //    "\nELSE"
+    //    "\n	GVL."+this->dutHeader+"."+curSignal->name+".x 		   	:= "+QString::number(curSignal->defValue,'g',15)+";"
+    //    "\nEND_IF;\n");
+    //}
+    //SEL version
     if((curSignal->length!= 1) && (!(curSignal->length==2 && (curSignal->convMethod !="toByte")))){
         ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".RangeExcd 		:= NOT ((Cont_"+curSignal->name+" >= "+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+") AND (Cont_"+curSignal->name+" <= "+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+"));"
-        "\nGVL."+this->dutHeader+"."+curSignal->name+".v				:= NOT( GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" OR GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd "+((curSignal->isJ1939 ==true)?("OR GVL."+this->dutHeader+"."+curSignal->name+".e OR GVL."+this->dutHeader+"."+curSignal->name+".na) OR "):(") OR "))+"FrcVar."+curSignal->name+".v ;"
-        "\n"
-        "\nIF FrcVar."+curSignal->name+".v  THEN"
-        "\n	GVL."+this->dutHeader+"."+curSignal->name+".x 		   	:= FrcVar."+curSignal->name+".x ;"
-        "\nELSIF GVL."+this->dutHeader+"."+curSignal->name+".v THEN"
-        "\n	GVL."+this->dutHeader+"."+curSignal->name+".x 		   	:= Cont_"+curSignal->name+";"
-        "\nELSE"
-        "\n	GVL."+this->dutHeader+"."+curSignal->name+".x 		   	:= "+QString::number(curSignal->defValue,'g',15)+";"
-        "\nEND_IF;\n");
+        +((!this->enableFrc)?("\nGVL."+this->dutHeader+"."+curSignal->name+".v				:= NOT( GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" OR GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd "+((curSignal->isJ1939 ==true)?("OR GVL."+this->dutHeader+"."+curSignal->name+".e OR GVL."+this->dutHeader+"."+curSignal->name+".na) "):(") "))+";"):("\nGVL."+this->dutHeader+"."+curSignal->name+".v				:= NOT( GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" OR GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd "+((curSignal->isJ1939 ==true)?("OR GVL."+this->dutHeader+"."+curSignal->name+".e OR GVL."+this->dutHeader+"."+curSignal->name+".na) OR "):(") OR "))+"FrcVar."+curSignal->name+".v ;"))+
+        "\n");
+        if(this->enableFrc){
+            ST.append("GVL."+this->dutHeader+"."+curSignal->name+".x 		   	:= SEL("+"FrcVar."+curSignal->name+".v"+","+"FrcVar."+curSignal->name+".x"+",SEL("+"GVL."+this->dutHeader+"."+curSignal->name+".v"+","+"Cont_"+curSignal->name+","+QString::number(curSignal->defValue,'g',15)+");");
+        }else{
+            ST.append("GVL."+this->dutHeader+"."+curSignal->name+".x 		   	:= SEL("+"GVL."+this->dutHeader+"."+curSignal->name+".v"+","+"Cont_"+curSignal->name+","+QString::number(curSignal->defValue,'g',15)+");");
+        }
+
     }
+
+
     ST.append("\n{endregion}");
     return ST;
 
@@ -1775,7 +1826,7 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
                         }
                     }
                 }
-                {
+                if(this->enableFrc){
                     QDomElement variable=doc.createElement("variable");
                     attr=doc.createAttribute("name");
                     attr.setValue("FrcVar");
@@ -1939,7 +1990,7 @@ void DBCHandler::generateIOST(QString *const ST)
                  if(curSignal->isJ1939){
                     ST->append("\nGVL."+this->dutHeader+"."+curSignal->name+".e := "+((this->enableTest==true)?("FrcTest."+curSignal->name+".e;"):("ASSIGN HERE ERROR FLAG VARIABLE !!;")));
                     ST->append("\nGVL."+this->dutHeader+"."+curSignal->name+".na := "+((this->enableTest==true)?("FrcTest."+curSignal->name+".na;"):("ASSIGN HERE NOT AVAILABLE FLAG VARIABLE !!;")));
-                 }  
+                 }
                 }
                 ST->append("\n{endregion}");
             }
@@ -1968,372 +2019,149 @@ void DBCHandler::generateIOST(QString *const ST)
 QString DBCHandler::convTypeApptoCom (const dataContainer::signal *curSignal, QString idMessage, QString nameMessage,  QString nameFb)
 {
     QString ST="\n{region \""+curSignal->name+"\"}";
+    bool flagConversion =false;
+    QString stat1,stat2,stat3,stat4,stat5 = "";
+
         // TYPE CONVERTION AND E  NA CONTROL STARTS
         if((curSignal->length<9)){
             if((curSignal->convMethod == "toBYTE")|| (curSignal->convMethod == "xtoBYTE")){
-                ST.append("GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x) OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
-                "\n //Transmit Data : Range Control End"
-                "\n IF FrcVar."+curSignal->name+".v THEN"
-                "\n 	//Force variable active start"
-                "\n 	Cont_"+curSignal->name+"	:= FrcVar."+curSignal->name+".x ;"
-                "\n 	 //Force variable active end"
-                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
-                "\n 	//Transmit Data : Normal Start"
-                "\n 	Cont_"+curSignal->name+"	:= GVL."+this->dutHeader+"."+curSignal->name+".x ;"
-                "\n 	 //Transmit Data : Normal End"
-                "\n ELSE"
-                +((curSignal->isJ1939==true)? "\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
-                +((curSignal->isJ1939==true)? "\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
-                +((curSignal->isJ1939==true)? "\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN": "")
-                +((curSignal->isJ1939==true)? "\n 		Cont_"+curSignal->name+":= 16#FF;": "")
-                +((curSignal->isJ1939==true)? "\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
-                +((curSignal->isJ1939==true)? "\n 		Cont_"+curSignal->name+":= 16#FE;": "")
-                +((curSignal->isJ1939==true)? "\n 	ELSE": "")
-                +((curSignal->isJ1939==true)? "\n 		Cont_"+curSignal->name+":= 16#FE;": "")
-                +((curSignal->isJ1939==true)? "\n 	END_IF;": "")
-                +((curSignal->isJ1939==true)? "\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
-                +((curSignal->isJ1939==true)? "\n 	ELSE": "")+
-                "\n 	//Transmit Data : Data not valid  Start"
-                "\n 		Cont_"+curSignal->name+":= "+QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+" ;"
-                "\n 	//Transmit Data : Data not valid  End"
-                +((curSignal->isJ1939==true)? "\n 	END_IF;": "")+
-                "\n END_IF;");
+
+                stat1 = "FrcVar."+curSignal->name+".x";
+                stat2 = "GVL."+this->dutHeader+"."+curSignal->name+".x";
+                stat3 = "16#FF";
+                stat4 = "16#FE";
+                stat5 = QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15);
+                flagConversion=true;
             }
             else if ((curSignal->convMethod == "toUSINT")|| (curSignal->convMethod == "xtoUSINT")){
 
-                ST.append("<GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
-                "\n //Transmit Data : Range Control End"
-                "\n IF FrcVar."+curSignal->name+".v THEN"
-                "\n 	//Force variable active start"
-                "\n 	Cont_"+curSignal->name+"	:= USINT_TO_BYTE(FrcVar."+curSignal->name+".x) ;"
-                "\n 	 //Force variable active end"
-                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
-                "\n 	//Transmit Data : Normal Start"
-                "\n 	Cont_"+curSignal->name+"	:= USINT_TO_BYTE(GVL."+this->dutHeader+"."+curSignal->name+".x );"
-                "\n 	 //Transmit Data : Normal End"
-                "\n ELSE"
-                +((curSignal->isJ1939==true)? "\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
-                +((curSignal->isJ1939==true)? "\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
-                +((curSignal->isJ1939==true)? "\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN": "")
-                +((curSignal->isJ1939==true)? "\n 		Cont_"+curSignal->name+":= 16#FF;": "")
-                +((curSignal->isJ1939==true)? "\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
-                +((curSignal->isJ1939==true)? "\n 		Cont_"+curSignal->name+":= 16#FE;": "")
-                +((curSignal->isJ1939==true)? "\n 	ELSE": "")
-                +((curSignal->isJ1939==true)? "\n 		Cont_"+curSignal->name+":= 16#FE;": "")
-                +((curSignal->isJ1939==true)? "\n 	END_IF;": "")
-                +((curSignal->isJ1939==true)? "\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
-                +((curSignal->isJ1939==true)? "\n 	ELSE": "")+
-                "\n 	//Transmit Data : Data not valid  Start"
-                "\n 		Cont_"+curSignal->name+":= "+QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+";"
-                "\n 	//Transmit Data : Data not valid  End"
-                +((curSignal->isJ1939==true)? "\n 	END_IF;": "")+
-                "\n END_IF;");
-
+                stat1 = "USINT_TO_BYTE(FrcVar."+curSignal->name+".x)";
+                stat2 = "USINT_TO_BYTE(GVL."+this->dutHeader+"."+curSignal->name+".x )";
+                stat3 = "16#FF";
+                stat4 = "16#FE";
+                stat5 = QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15);
+                flagConversion=true;
             }
             else if ((curSignal->convMethod == "toREAL")|| (curSignal->convMethod == "xtoREAL")){
 
-
-                ST.append("GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
-                "\n //Transmit Data : Range Control End"
-                "\n IF FrcVar."+curSignal->name+".v THEN"
-                "\n 	//Force variable active start"
-                "\n 	Cont_"+curSignal->name+"	:= USINT_TO_BYTE(REAL_TO_USINT((FrcVar."+curSignal->name+".x - "+QString::number(curSignal->offset,'g',15)+")/ "+QString::number(curSignal->resolution,'g',15)+"));"
-                "\n 	 //Force variable active end"
-                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
-                "\n 	//Transmit Data : Normal Start"
-                "\n 	Cont_"+curSignal->name+"	:= USINT_TO_BYTE(REAL_TO_USINT((GVL."+this->dutHeader+"."+curSignal->name+".x - "+QString::number(curSignal->offset,'g',15)+")/ "+QString::number(curSignal->resolution,'g',15)+"));"
-                "\n 	 //Transmit Data : Normal End"
-                "\n ELSE"
-                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
-                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
-                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN": "")
-                +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FF;": "")
-                +((curSignal->isJ1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
-                +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FE;": "")
-                +((curSignal->isJ1939==true)?"\n 	ELSE": "")
-                +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FE;": "")
-                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")
-                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
-                +((curSignal->isJ1939==true)?"\n 	ELSE": "")+
-                "\n 	//Transmit Data : Data not valid  Start"
-                "\n 		Cont_"+curSignal->name+":= USINT_TO_BYTE(REAL_TO_USINT(("+ ((curSignal->defValue==0)? "" : (QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+" + "))+QString::number((-1*curSignal->offset),'g',(curSignal->length>32)? 20:15)+")/"+QString::number(curSignal->resolution,'g',15)+"));"
-                "\n 	//Transmit Data : Data not valid  End"
-                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")+
-                "\n END_IF;");
-
+                stat1 = "USINT_TO_BYTE(REAL_TO_USINT((FrcVar."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + "+QString::number((-1*curSignal->offset),'g',15)))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
+                stat2 = "USINT_TO_BYTE(REAL_TO_USINT((GVL."+this->dutHeader+"."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + "+QString::number((-1*curSignal->offset),'g',15)))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
+                stat3 = "16#FF";
+                stat4 = "16#FE";
+                stat5 = (((curSignal->offset == 0) && (curSignal->defValue==0))? (" 0 "): ("USINT_TO_BYTE(REAL_TO_USINT(("+((curSignal->defValue==0) ? "" : (QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)))+(((!(curSignal->offset == 0) && !(curSignal->defValue==0))?("+"):(""))+((curSignal->offset ==0 )? (""): (QString::number((-1*curSignal->offset),'g',15))))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))"));
+                flagConversion=true;
             }
-
         }else if((curSignal->length<17)){
             if((curSignal->convMethod == "toWORD")|| (curSignal->convMethod == "xtoWORD")){
-                ST.append("GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
-               "\n //Transmit Data : Range Control End"
-               "\n IF FrcVar."+curSignal->name+".v THEN"
-                "\n 	//Force variable active start"
-                "\n 	Cont_"+curSignal->name+"	:= FrcVar."+curSignal->name+".x ;"
-                "\n 	 //Force variable active end"
-                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
-               "\n 	//Transmit Data : Normal Start"
-               "\n 	Cont_"+curSignal->name+"	:= GVL."+this->dutHeader+"."+curSignal->name+".x ;"
-               "\n 	 //Transmit Data : Normal End"
-               "\n ELSE"
-               +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
-               +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
-               +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN": "")
-               +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FF01;": "")
-               +((curSignal->isJ1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
-               +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FE01;": "")
-               +((curSignal->isJ1939==true)?"\n 	ELSE": "")
-               +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FE01;": "")
-               +((curSignal->isJ1939==true)?"\n 	END_IF;": "")
-               +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
-               +((curSignal->isJ1939==true)?"\n 	ELSE": "")+
-               "\n 	//Transmit Data : Data not valid  Start"
-               "\n 		Cont_"+curSignal->name+":= "+QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+" ;"
-               "\n 	//Transmit Data : Data not valid  End"
-               +((curSignal->isJ1939==true)?"\n 	END_IF;": "")+
-               "\n END_IF;");
+                stat1 = "FrcVar."+curSignal->name+".x";
+                stat2 = "GVL."+this->dutHeader+"."+curSignal->name+".x";
+                stat3 = "16#FFFF";
+                stat4 = "16#FEFE";
+                stat5 = QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15);
+                flagConversion=true;
             }
             else if ((curSignal->convMethod == "toUINT")|| (curSignal->convMethod == "xtoUINT")){
 
-                ST.append("<GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
-                " \n //Transmit Data : Range Control End"
-                "\n IF FrcVar."+curSignal->name+".v THEN"
-                "\n 	//Force variable active start"
-                "\n 	Cont_"+curSignal->name+"	:= UINT_TO_WORD(FrcVar."+curSignal->name+".x) ;"
-                "\n 	 //Force variable active end"
-                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
-                "\n 	//Transmit Data : Normal Start"
-                "\n 	Cont_"+curSignal->name+"	:= UINT_TO_WORD(GVL."+this->dutHeader+"."+curSignal->name+".x );"
-                "\n 	 //Transmit Data : Normal End"
-                "\n ELSE"
-                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
-                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
-                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN": "")
-                +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FF01;": "")
-                +((curSignal->isJ1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
-                +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FE01;": "")
-                +((curSignal->isJ1939==true)?"\n 	ELSE": "")
-                +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FE01;": "")
-                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")
-                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
-                +((curSignal->isJ1939==true)?"\n 	ELSE": "")+
-                "\n 	//Transmit Data : Data not valid  Start"
-                "\n 		Cont_"+curSignal->name+":= "+QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+";"
-                "\n 	//Transmit Data : Data not valid  End"
-                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")+
-                "\n END_IF;");
-
+                stat1 = "UINT_TO_WORD(FrcVar."+curSignal->name+".x)";
+                stat2 = "UINT_TO_WORD(GVL."+this->dutHeader+"."+curSignal->name+".x )";
+                stat3 = "16#FFFF";
+                stat4 = "16#FEFE";
+                stat5 = QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15);
+                flagConversion=true;
             }
             else if ((curSignal->convMethod == "toREAL")|| (curSignal->convMethod == "xtoREAL")){
-                ST.append("GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
-                "\n //Transmit Data : Range Control End"
-                "\n IF FrcVar."+curSignal->name+".v THEN"
-                "\n 	//Force variable active start"
-                "\n 	Cont_"+curSignal->name+"	:= UINT_TO_WORD(REAL_TO_UINT((FrcVar."+curSignal->name+".x - "+QString::number(curSignal->offset,'g',15)+")/ "+QString::number(curSignal->resolution,'g',15)+"));"
-                "\n 	 //Force variable active end"
-                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
-                "\n 	//Transmit Data : Normal Start"
-                "\n 	Cont_"+curSignal->name+"	:= UINT_TO_WORD(REAL_TO_UINT((GVL."+this->dutHeader+"."+curSignal->name+".x - "+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+")/ "+QString::number(curSignal->resolution,'g',15)+"));"
-                "\n 	 //Transmit Data : Normal End"
-                "\n ELSE"
-                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
-                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
-                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN": "")
-                +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FF01;": "")
-                +((curSignal->isJ1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
-                +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FE01;": "")
-                +((curSignal->isJ1939==true)?"\n 	ELSE": "")
-                +((curSignal->isJ1939==true)?"\n 		Cont_"+curSignal->name+":= 16#FE01;": "")
-                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")
-                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
-                +((curSignal->isJ1939==true)?"\n 	ELSE": "")+
-                "\n 	//Transmit Data : Data not valid  Start"
-                "\n 		Cont_"+curSignal->name+":= UINT_TO_WORD(REAL_TO_UINT(("+((curSignal->defValue==0) ? "" : (QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+" + "))+QString::number((-1*curSignal->offset),'g',(curSignal->length>32)? 20:15)+")/"+QString::number(curSignal->resolution,'g',15)+"));"
-                "\n 	//Transmit Data : Data not valid  End"
-                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")+
-                "\n END_IF;");
-            }
 
+                stat1 = "UINT_TO_WORD(REAL_TO_UINT((FrcVar."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + "+QString::number((-1*curSignal->offset),'g',15)))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
+                stat2 = "UINT_TO_WORD(REAL_TO_UINT((GVL."+this->dutHeader+"."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + "+QString::number((-1*curSignal->offset),'g',15)))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
+                stat3 = "16#FFFF";
+                stat4 = "16#FEFE";
+                stat5 = (((curSignal->offset == 0) && (curSignal->defValue==0))? (" 0 "): ("UINT_TO_WORD(REAL_TO_UINT(("+((curSignal->defValue==0) ? "" : (QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)))+(((!(curSignal->offset == 0) && !(curSignal->defValue==0))?("+"):(""))+((curSignal->offset ==0 )? (""): (QString::number((-1*curSignal->offset),'g',15))))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))"));
+                flagConversion=true;
+            }
         }else if((curSignal->length<33)){
             if((curSignal->convMethod == "toDWORD")|| (curSignal->convMethod == "xtoDWORD")){
-                ST.append("GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  "+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x OR "+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x;"
-               "\n //Transmit Data : Range Control End"
-               "\n IF FrcVar."+curSignal->name+".v THEN"
-                "\n 	//Force variable active start"
-                "\n 	Cont_"+curSignal->name+"	:= FrcVar."+curSignal->name+".x ;"
-                "\n 	 //Force variable active end"
-                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
-               "\n 	//Transmit Data : Normal Start"
-               "\n 	Cont_"+curSignal->name+"	:= GVL."+this->dutHeader+"."+curSignal->name+".x ;"
-               "\n 	 //Transmit Data : Normal End"
-               "\n ELSE"
-               +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
-               +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
-               +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN	": "")
-               +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FF000001;": "")
-               +((curSignal->isJ1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
-               +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE000001;": "")
-               +((curSignal->isJ1939==true)?"\n 	ELSE": "")
-               +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE000001;": "")
-               +((curSignal->isJ1939==true)?"\n 	END_IF;": "")
-               +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
-               +((curSignal->isJ1939==true)?"\n 	ELSE": "")+
-               "\n 	//Transmit Data : Data not valid  Start"
-               "\n 		Cont_"+curSignal->name+":= "+QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+" ;"
-               "\n 	//Transmit Data : Data not valid  End"
-               +((curSignal->isJ1939==true)?"\n 	END_IF;": "")+
-               "\n END_IF;");
+
+                stat1 = "FrcVar."+curSignal->name+".x";
+                stat2 = "GVL."+this->dutHeader+"."+curSignal->name+".x";
+                stat3 = "16#FFFFFFFF";
+                stat4 = "16#FEFEFEFE";
+                stat5 = QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15);
+                flagConversion=true;
             }
             else if ((curSignal->convMethod == "toUDINT")|| (curSignal->convMethod == "xtoUDINT")){
 
-                ST.append("<GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
-               "\n //Transmit Data : Range Control End"
-               "\n IF FrcVar."+curSignal->name+".v THEN"
-                "\n 	//Force variable active start"
-                "\n 	Cont_"+curSignal->name+"	:= UDINT_TO_DWORD(FrcVar."+curSignal->name+".x) ;"
-                "\n 	 //Force variable active end"
-                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
-               "\n 	//Transmit Data : Normal Start"
-               "\n 	Cont_"+curSignal->name+"	:= UDINT_TO_DWORD(GVL."+this->dutHeader+"."+curSignal->name+".x );"
-               "\n 	 //Transmit Data : Normal End"
-               "\n ELSE"
-               +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
-               +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
-               +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN	": "")
-               +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FF000001;": "")
-               +((curSignal->isJ1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
-               +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE000001;": "")
-               +((curSignal->isJ1939==true)?"\n 	ELSE": "")
-               +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE000001;": "")
-               +((curSignal->isJ1939==true)?"\n 	END_IF;": "")
-               +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
-               +((curSignal->isJ1939==true)?"\n 	ELSE": "")+
-               "\n 	//Transmit Data : Data not valid  Start"
-               "\n 		Cont_"+curSignal->name+":= "+QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+";"
-               "\n 	//Transmit Data : Data not valid  End"
-               +((curSignal->isJ1939==true)?"\n 	END_IF;": "")+
-               "\n END_IF;");
+
+                stat1 = "UDINT_TO_DWORD(FrcVar."+curSignal->name+".x)";
+                stat2 = "UDINT_TO_DWORD(GVL."+this->dutHeader+"."+curSignal->name+".x )";
+                stat3 = "16#FFFFFFFF";
+                stat4 = "16#FEFEFEFE";
+                stat5 = QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15);
+                flagConversion=true;
 
             }
             else if ((curSignal->convMethod == "toREAL")|| (curSignal->convMethod == "xtoREAL")){
-                ST.append("GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
-                "\n //Transmit Data : Range Control End"
-                "\n IF FrcVar."+curSignal->name+".v THEN"
-                "\n 	//Force variable active start"
-                "\n 	Cont_"+curSignal->name+"	:= UDINT_TO_DWORD(REAL_TO_UDINT((FrcVar."+curSignal->name+".x - "+QString::number(curSignal->offset,'g',15)+")/ "+QString::number(curSignal->resolution,'g',15)+"));"
-                "\n 	 //Force variable active end"
-                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
-                "\n 	//Transmit Data : Normal Start"
-                "\n 	Cont_"+curSignal->name+"	:= UDINT_TO_DWORD(REAL_TO_UDINT((GVL."+this->dutHeader+"."+curSignal->name+".x - "+QString::number(curSignal->offset,'g',15)+")/ "+QString::number(curSignal->resolution,'g',15)+"));"
-                "\n 	 //Transmit Data : Normal End"
-                "\n ELSE"
-                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
-                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
-                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN	": "")
-                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FF000001;": "")
-                +((curSignal->isJ1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
-                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE000001;": "")
-                +((curSignal->isJ1939==true)?"\n 	ELSE": "")
-                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE000001;": "")
-                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")
-                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
-                +((curSignal->isJ1939==true)?"\n 	ELSE": "")+
-                "\n 	//Transmit Data : Data not valid  Start"
-                "\n 		Cont_"+curSignal->name+":= UDINT_TO_DWORD(REAL_TO_UDINT(("+((curSignal->defValue==0) ? "" : (QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+" + "))+QString::number((-1*curSignal->offset),'g',(curSignal->length>32)? 20:15)+")/"+QString::number(curSignal->resolution,'g',15)+"));"
-                "\n 	//Transmit Data : Data not valid  End"
-                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")+
-                "\n END_IF;");
+
+                stat1 = "UDINT_TO_DWORD(REAL_TO_UDINT((FrcVar."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + "+QString::number((-1*curSignal->offset),'g',15)))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
+                stat2 = "UDINT_TO_DWORD(REAL_TO_UDINT((GVL."+this->dutHeader+"."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + "+QString::number((-1*curSignal->offset),'g',15)))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
+                stat3 = "16#FFFFFFFF";
+                stat4 = "16#FEFEFEFE";
+                stat5 = (((curSignal->offset == 0) && (curSignal->defValue==0))? (" 0 "): ("UDINT_TO_DWORD(REAL_TO_UDINT(("+((curSignal->defValue==0) ? "" : (QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)))+(((!(curSignal->offset == 0) && !(curSignal->defValue==0))?("+"):(""))+((curSignal->offset ==0 )? (""): (QString::number((-1*curSignal->offset),'g',15))))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))"));
+                flagConversion=true;
             }
+
         }else if((curSignal->length<65)){
             if((curSignal->convMethod == "toLWORD")|| (curSignal->convMethod == "xtoLWORD")){
-                ST.append("GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
-                "\n //Transmit Data : Range Control End"
-                "\n IF FrcVar."+curSignal->name+".v THEN"
-                "\n 	//Force variable active start"
-                "\n 	Cont_"+curSignal->name+"	:= FrcVar."+curSignal->name+".x ;"
-                "\n 	 //Force variable active end"
-                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
-                "\n 	//Transmit Data : Normal Start"
-                "\n 	Cont_"+curSignal->name+"	:= GVL."+this->dutHeader+"."+curSignal->name+".x ;"
-                "\n 	 //Transmit Data : Normal End"
-                "\n ELSE"
-                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
-                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
-                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN	": "")
-                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FF00000000000001;": "")
-                +((curSignal->isJ1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
-                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE00000000000001;": "")
-                +((curSignal->isJ1939==true)?"\n 	ELSE": "")
-                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE00000000000001;": "")
-                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")
-                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
-                +((curSignal->isJ1939==true)?"\n 	ELSE": "")+
-                "\n 	//Transmit Data : Data not valid  Start"
-                "\n 		Cont_"+curSignal->name+":= "+QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+" ;"
-                "\n 	//Transmit Data : Data not valid  End"
-                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")+
-                "\n END_IF;");
+
+                stat1 = "FrcVar."+curSignal->name+".x";
+                stat2 = "GVL."+this->dutHeader+"."+curSignal->name+".x";
+                stat3 = "16#FFFFFFFFFFFFFFFF";
+                stat4 = "16#FEFEFEFEFEFEFEFE";
+                stat5 = QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15);
+                flagConversion=true;
             }
             else if ((curSignal->convMethod == "toULINT")|| (curSignal->convMethod == "xtoULINT")){
-                ST.append("<GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
-                "\n //Transmit Data : Range Control End"
-                "\n IF FrcVar."+curSignal->name+".v THEN"
-                "\n 	//Force variable active start"
-                "\n 	Cont_"+curSignal->name+"	:= ULINT_TO_LWORD(FrcVar."+curSignal->name+".x );"
-                "\n 	 //Force variable active end"
-                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
-                "\n 	//Transmit Data : Normal Start"
-                "\n 	Cont_"+curSignal->name+"	:= ULINT_TO_LWORD(GVL."+this->dutHeader+"."+curSignal->name+".x );"
-                "\n 	 //Transmit Data : Normal End"
-                "\n ELSE"
-                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
-                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
-                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN	": "")
-                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FF00000000000001;": "")
-                +((curSignal->isJ1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
-                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE00000000000001;": "")
-                +((curSignal->isJ1939==true)?"\n 	ELSE": "")
-                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE00000000000001;": "")
-                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")
-                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
-                +((curSignal->isJ1939==true)?"\n 	ELSE": "")+
-                "\n 	//Transmit Data : Data not valid  Start"
-                "\n 		Cont_"+curSignal->name+":= "+QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+";"
-                "\n 	//Transmit Data : Data not valid  End"
-                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")+
-                "\n END_IF;");
+
+                stat1 = "ULINT_TO_LWORD(FrcVar."+curSignal->name+".x)";
+                stat2 = "ULINT_TO_LWORD(GVL."+this->dutHeader+"."+curSignal->name+".x )";
+                stat3 = "16#FFFFFFFFFFFFFFFF";
+                stat4 = "16#FEFEFEFEFEFEFEFE";
+                stat5 = QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15);
+                flagConversion=true;
             }
             else if ((curSignal->convMethod == "toLREAL")|| (curSignal->convMethod == "xtoLREAL")){
-                ST.append("GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
-                "\n //Transmit Data : Range Control End"
-                "\n IF FrcVar."+curSignal->name+".v THEN"
-                "\n 	//Force variable active start"
-                "\n 	Cont_"+curSignal->name+"	:=  ULINT_TO_LWORD(LREAL_TO_ULINT((FrcVar."+curSignal->name+".x - "+QString::number(curSignal->offset,'g',15)+")/ "+QString::number(curSignal->resolution,'g',15)+"));"
-                "\n 	 //Force variable active end"
-                "\n ELSIF (GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd) THEN"
-                "\n 	//Transmit Data : Normal Start"
-                "\n 	Cont_"+curSignal->name+"	:= ULINT_TO_LWORD(LREAL_TO_ULINT((GVL."+this->dutHeader+"."+curSignal->name+".x - "+QString::number(curSignal->offset,'g',15)+") / "+QString::number(curSignal->resolution,'g',15)+"));"
-                "\n 	 //Transmit Data : Normal End"
-                "\n ELSE"
-                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".curSignal->isJ1939 THEN": "")
-                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission Start": "")
-                +((curSignal->isJ1939==true)?"\n 	IF GVL."+this->dutHeader+"."+curSignal->name+".na THEN	": "")
-                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FF00000000000001;": "")
-                +((curSignal->isJ1939==true)?"\n 	ELSIF GVL."+this->dutHeader+"."+curSignal->name+".e THEN": "")
-                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE00000000000001;": "")
-                +((curSignal->isJ1939==true)?"\n 	ELSE": "")
-                +((curSignal->isJ1939==true)?"\n 	Cont_"+curSignal->name+":= 16#FE00000000000001;": "")
-                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")
-                +((curSignal->isJ1939==true)?"\n 	//Transmit Data : Data not valid curSignal->isJ1939 error transmission End": "")
-                +((curSignal->isJ1939==true)?"\n 	ELSE": "")+
-                "\n 	//Transmit Data : Data not valid  Start"
-                "\n 		Cont_"+curSignal->name+":= ULINT_TO_LWORD(REAL_TO_ULINT(("+((curSignal->defValue==0) ? "" : (QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)+" + "))+QString::number((-1*curSignal->offset),'g',(curSignal->length>32)? 20:15)+")/"+QString::number(curSignal->resolution,'g',15)+"));"
-                "\n 	//Transmit Data : Data not valid  End"
-                +((curSignal->isJ1939==true)?"\n 	END_IF;": "")+
-                "\n END_IF;");
+
+                stat1 = "ULINT_TO_LWORD(LREAL_TO_ULINT((FrcVar."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + "+QString::number((-1*curSignal->offset),'g',15)))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
+                stat2 = "ULINT_TO_LWORD(LREAL_TO_ULINT((GVL."+this->dutHeader+"."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + "+QString::number((-1*curSignal->offset),'g',15)))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
+                stat3 = "16#FFFFFFFFFFFFFFFF";
+                stat4 = "16#FEFEFEFEFEFEFEFE";
+                stat5 = (((curSignal->offset == 0) && (curSignal->defValue==0))? (" 0 "): ("ULINT_TO_LWORD(LREAL_TO_ULINT(("+((curSignal->defValue==0) ? "" : (QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)))+(((!(curSignal->offset == 0) && !(curSignal->defValue==0))?("+"):(""))+((curSignal->offset ==0 )? (""): (QString::number((-1*curSignal->offset),'g',15))))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))"));
+                flagConversion=true;
             }
+
         }
 
+        if (flagConversion){
+            ST.append("GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
+                      "\n //Transmit Data : Range Control End \n");
+            if ((this->enableFrc) && (curSignal->isJ1939)){
+                ST.append(
+                "Cont_"+curSignal->name+":= SEL ("+"USINT_TO_BYTE(FrcVar."+curSignal->name+".x)"+","+stat1+","+"SEL ("+"(GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd)"+","+stat2+","+"SEL ("+"GVL."+this->dutHeader+"."+curSignal->name+".na"+","+stat3+","+"SEL ("+"GVL."+this->dutHeader+"."+curSignal->name+".e"+","+stat4+","+stat5+")"+")"+")"+");"
+                );
+            }else if((!this->enableFrc) && (curSignal->isJ1939)){
+                ST.append(
+                "Cont_"+curSignal->name+" := SEL ("+"(GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd)"+","+stat2+","+"SEL ("+"GVL."+this->dutHeader+"."+curSignal->name+".na"+","+stat3+","+"SEL ("+"GVL."+this->dutHeader+"."+curSignal->name+".e"+","+stat4+","+stat5+")"+")"+");"
+                );
+            }else if((this->enableFrc) && (!curSignal->isJ1939)){
+                ST.append(
+                "Cont_"+curSignal->name+" := SEL ("+"USINT_TO_BYTE(FrcVar."+curSignal->name+".x)"+","+stat1+","+"SEL ("+"(GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd)"+","+stat2+","+stat5+")"+");"
+                );
+            }else{
+                ST.append(
+                "Cont_"+curSignal->name+" := SEL ("+"(GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd)"+","+stat2+","+stat5+");"
+                );
+            }
+            flagConversion = false;
+        }
 
         if(curSignal->convMethod=="BOOL:BOOL"){
             ST.append("\n"+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+"               :=	GVL."+this->dutHeader+"."+curSignal->name+".x AND GVL."+this->dutHeader+"."+curSignal->name+".v ;");

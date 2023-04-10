@@ -644,6 +644,43 @@ void dataContainer::signalChecker(signal *signalPtr)
                 signalPtr->maxValue =  4294967294 * signalPtr ->resolution + signalPtr ->offset;
             }
         }
+    }else if(signalPtr->length == 64){
+        if(signalPtr ->isJ1939){
+            if( signalPtr ->offset != 0 ){
+                if(signalPtr -> minValue < signalPtr ->offset) {
+                    signalPtr->minValue =  signalPtr ->offset ;
+                    this->setWarning(this->messageID,signalPtr->name+" minimum değerine ofset değeri atandı.");
+                }
+            }else{
+                if(signalPtr -> minValue < 0) {
+                    signalPtr -> offset = -18085187889864844403.0* signalPtr ->resolution/2;
+                    signalPtr -> minValue = -18085187889864844403.0* signalPtr ->resolution/2;
+                    this->setWarning(this->messageID,signalPtr->name+" minimum değer ve ofset değeri atandı.");
+                }
+            }
+            if(signalPtr ->maxValue > 18085187889864844403.0 * signalPtr ->resolution + signalPtr ->offset ){
+                this->setWarning(this->messageID,signalPtr->name+" sinyali J1939 olarak tanımlanmış ancak maksimum değeri ERR ve NA tanım aralığında, maksimum değeri 18085187889864844403 *ölçek olarak atandı.");
+                signalPtr->maxValue =  18085187889864844403.0 * signalPtr ->resolution + signalPtr ->offset;
+            }
+        }else{
+            if( signalPtr ->offset != 0 ){
+                if(signalPtr -> minValue < signalPtr ->offset) {
+                    signalPtr->minValue =  signalPtr ->offset ;
+                    this->setWarning(this->messageID,signalPtr->name+" minimum değerine ofset değeri atandı.");
+                }
+            }else{
+                if(signalPtr -> minValue < 0) {
+                    signalPtr -> offset = -(18446744073709551615.0* signalPtr ->resolution/2);
+                    signalPtr -> minValue = -(18446744073709551615.0* signalPtr ->resolution/2);
+                    this->setWarning(this->messageID,signalPtr->name+" minimum değer ve ofset değeri atandı.");
+                }
+            }
+            if(signalPtr ->maxValue > 18446744073709550000.0 * signalPtr ->resolution + signalPtr ->offset){
+                this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri ölçek ve ofset dışında, 18446744073709551615 *ÖLÇEK-OFSET yapıldı");
+                signalPtr->maxValue =  18446744073709550000.0 * signalPtr ->resolution + signalPtr ->offset;
+                qInfo()<<QString::number(signalPtr->maxValue,'g',24)<<" "<<signalPtr ->resolution<<signalPtr ->offset;
+            }
+        }
     }else{
         if(signalPtr->isJ1939){
             if( signalPtr ->offset != 0 ){
@@ -653,13 +690,13 @@ void dataContainer::signalChecker(signal *signalPtr)
                 }
             }else{
                 if(signalPtr -> minValue < 0) {
-                    signalPtr -> offset = -(((qPow(2,signalPtr->length-1))-1) * 0.9804)* signalPtr ->resolution/2;
-                    signalPtr -> minValue = -(((qPow(2,signalPtr->length-1))-1) * 0.9804)* signalPtr ->resolution/2;
+                    signalPtr -> offset = -(((qPow(2,signalPtr->length))-1) * 0.9804)* signalPtr ->resolution/2;
+                    signalPtr -> minValue = -(((qPow(2,signalPtr->length))-1) * 0.9804)* signalPtr ->resolution/2;
                     this->setWarning(this->messageID,signalPtr->name+" minimum değer ve ofset değeri atandı.");
                 }
             }
-            if(signalPtr->maxValue > (((qPow(2,signalPtr->length-1))-1) * 0.9804)* signalPtr ->resolution + signalPtr ->offset){
-                signalPtr->maxValue = (((qPow(2,signalPtr->length-1))-1) * 0.9804)* signalPtr ->resolution + signalPtr ->offset;
+            if(signalPtr->maxValue > (((qPow(2,signalPtr->length))-1) * 0.9804)* signalPtr ->resolution + signalPtr ->offset){
+                signalPtr->maxValue = (((qPow(2,signalPtr->length))-1) * 0.9804)* signalPtr ->resolution + signalPtr ->offset;
                 this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri olabilecek değerden büyük olduğu için mümkün maksimum değer atandı.");
             }
         }else{
@@ -670,13 +707,13 @@ void dataContainer::signalChecker(signal *signalPtr)
                 }
             }else{
                 if(signalPtr -> minValue < 0) {
-                    signalPtr -> offset = -((qPow(2,signalPtr->length-1))-1)* signalPtr ->resolution/2;
-                    signalPtr -> minValue = -((qPow(2,signalPtr->length-1))-1)* signalPtr ->resolution/2;
+                    signalPtr -> offset = -((qPow(2,signalPtr->length))-1)* signalPtr ->resolution/2;
+                    signalPtr -> minValue = -((qPow(2,signalPtr->length))-1)* signalPtr ->resolution/2;
                     this->setWarning(this->messageID,signalPtr->name+" minimum değer ve ofset değeri atandı.");
                 }
             }
-            if(signalPtr->maxValue > ((qPow(2,signalPtr->length-1))-1) * signalPtr ->resolution + signalPtr ->offset){
-                signalPtr->maxValue = ((qPow(2,signalPtr->length-1))-1) * signalPtr ->resolution + signalPtr ->offset;
+            if(signalPtr->maxValue > ((qPow(2,signalPtr->length))-1) * signalPtr ->resolution + signalPtr ->offset){
+                signalPtr->maxValue = ((qPow(2,signalPtr->length))-1) * signalPtr ->resolution + signalPtr ->offset;
                 this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri olabilecek değerden büyük olduğu için mümkün maksimum değer atandı.");
             }
         }
@@ -701,8 +738,8 @@ void dataContainer::signalChecker(signal *signalPtr)
         setNotSelectable();
     }
 
-    if(signalPtr->minValue > signalPtr->maxValue ){
-        this->setWarning(this->messageID,signalPtr->name+" sinyali minimum değeri maksimum değerden büyük.Mesaj OpenXML formatı dönüştürülemez. ");
+    if(signalPtr->minValue >= signalPtr->maxValue ){
+        this->setWarning(this->messageID,signalPtr->name+" sinyali minimum değeri maksimum değerden büyük veya eşit .Mesaj OpenXML formatı dönüştürülemez. ");
         setNotSelectable();
     }
     for(signal *signal : this->signalList){

@@ -69,6 +69,7 @@ public slots:
     void setIOType(QString setIOType);
     void setCANLine(QString canName);
     void setTestMode(bool checkStat);
+    void setFrcVar(bool checkStat);
     //Tableview format nested vectors
     QList<QList<QString>> messagesList();
     QList<QList<QString>> signalsList();
@@ -117,6 +118,7 @@ private:
     QString pouObjID;
     QString canLine;
     bool  enableTest;
+    bool enableFrc;
     //***********************************
     //Private Variables ends
     //Private methods starts
