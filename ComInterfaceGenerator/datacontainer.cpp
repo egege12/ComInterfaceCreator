@@ -189,13 +189,13 @@ void dataContainer::dataTypeAss(signal *signalPtr)
         signalPtr->comDataType = "BOOL";
         signalPtr->convMethod="BOOL:BOOL";
         this->setBitOperation(true);
-    }else if (signalPtr->length == 2){ 
-        /*if((signalPtr->isJ1939) || signalPtr->name.contains("C_") || signalPtr->name.contains("S_")){*/
+    }else if (signalPtr->length == 2){
+        if((signalPtr->isJ1939) || signalPtr->name.contains("C_") || signalPtr->name.contains("S_")){
             signalPtr->appDataType = "BOOL";
             signalPtr->convMethod="2BOOL:BOOL";
             signalPtr->comDataType = "BOOL";
             signalPtr->enJ1939 = true;
-        /*}else if (signalPtr->name.contains("Z_")){
+        }else if (signalPtr->name.contains("Z_")){
             signalPtr->appDataType = "BYTE";
             signalPtr->convMethod="toBYTE";
             signalPtr->comDataType = "BYTE";
@@ -204,7 +204,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             signalPtr->convMethod="toBYTE";
             signalPtr->comDataType = "BYTE";
             this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde C_ S_ Z_ işareti bulunmuyor");
-        }*/
+        }
         this->setBitOperation(true);
     }else if (signalPtr->length < 8){
         signalPtr->comDataType = "BYTE";
@@ -272,7 +272,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
 
             }
             this->setWarning(this->messageID,signalPtr->name+" sinyali başlangıç biti 8 ve katları değil, düşük performans");
-
+            this->setBitOperation(true);
         }
         signalPtr->enJ1939 = true;
     }else if (signalPtr->length <  16){
@@ -362,10 +362,9 @@ void dataContainer::dataTypeAss(signal *signalPtr)
                 signalPtr->appDataType="WORD";
                 signalPtr->convMethod="toWORD";
                 this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
-
             }
             this->setWarning(this->messageID,signalPtr->name+" sinyali başlangıç biti 16 ve katları değil, düşük performans");
-
+            this->setBitOperation(true);
         }
         signalPtr->enJ1939 = true;
     }else if (signalPtr->length < 32){
@@ -458,7 +457,7 @@ void dataContainer::dataTypeAss(signal *signalPtr)
                 this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor");
 
             }
-
+            this->setBitOperation(true);
             this->setWarning(this->messageID,signalPtr->name+" sinyali başlangıç biti 8 ve katları değil,düşük performans");
         }
         signalPtr->enJ1939 = true;
@@ -571,14 +570,14 @@ void dataContainer::signalChecker(signal *signalPtr)
                 }
             }else{
                 if(signalPtr -> minValue < 0) {
-                    signalPtr -> offset = -254* signalPtr ->resolution/2;
-                    signalPtr -> minValue = -254* signalPtr ->resolution/2;
+                    signalPtr -> offset = -255* signalPtr ->resolution/2;
+                    signalPtr -> minValue = -255* signalPtr ->resolution/2;
                     this->setWarning(this->messageID,signalPtr->name+" minimum değer ve ofset değeri atandı.");
                 }
             }
-            if(signalPtr ->maxValue > 254 * signalPtr ->resolution + signalPtr ->offset){
+            if(signalPtr ->maxValue > 255 * signalPtr ->resolution + signalPtr ->offset){
                 this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri ölçek ve ofset dışında, 254*ÖLÇEK-OFSET yapıldı");
-                signalPtr->maxValue =  254 * signalPtr ->resolution + signalPtr ->offset;
+                signalPtr->maxValue =  255 * signalPtr ->resolution + signalPtr ->offset;
             }
         }
     }else if(signalPtr->length == 16){
@@ -750,6 +749,24 @@ void dataContainer::signalChecker(signal *signalPtr)
         this->setWarning(this->messageID,signalPtr->name+" sinyali minimum değeri maksimum değerden büyük veya eşit .Mesaj OpenXML formatı dönüştürülemez. ");
         setNotSelectable();
     }
+
+    if(qFabs(signalPtr->offset) > ((((qPow(2,signalPtr->length))-1))* signalPtr->resolution)){
+        this->setWarning(this->messageID,signalPtr->name+" sinyali varsayılan değeri değer aralığında değil, Mesaj OpenXML formatına dönüştürülemez. ");
+        setNotSelectable();
+    }
+
+    if(qFabs(signalPtr->minValue) > ((((qPow(2,signalPtr->length))-1))* signalPtr->resolution)){
+        this->setWarning(this->messageID,signalPtr->name+" sinyali minimum değeri değer aralığında değil, Mesaj OpenXML formatına dönüştürülemez. ");
+        setNotSelectable();
+    }
+    if(qFabs(signalPtr->maxValue) > ((((qPow(2,signalPtr->length))-1))* signalPtr->resolution)){
+        this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri değer aralığında değil, Mesaj OpenXML formatına dönüştürülemez. ");
+        setNotSelectable();
+    }
+    if(signalPtr->offset < signalPtr->minValue){
+        this->setWarning(this->messageID,signalPtr->name+" sinyali için offset minimum değerden küçük, konrol ediniz. ");
+    }
+
     for(signal *signal : this->signalList){
         if(signal->name == signalPtr->name){
             this->setWarning(this->messageID,signalPtr->name+" aynı isimde birden fazla sinyal var. Sinyal isimleri eşsiz olmalıdır.");

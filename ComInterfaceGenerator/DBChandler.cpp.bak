@@ -299,7 +299,11 @@ bool DBCHandler::parseMessages(QFile *ascFile)
             debugcounter++;
 
             QStringList messageList = curLine.split(" ");
-
+			if(messageList.at(1).contains("x")){
+				messageID = QString::number(messageList.at(1)..remove("x").toUInt(),16).toUpper();
+                isExtended=true;
+			}
+			else{
             if(messageList.at(1).toUInt()>2047){
                 messageID = QString::number((messageList.at(1).toUInt())-2147483648,16).toUpper();
                 isExtended=true;
@@ -307,7 +311,7 @@ bool DBCHandler::parseMessages(QFile *ascFile)
                 messageID = QString::number(messageList.at(1).toUInt(),16).toUpper();
                 isExtended=false;
             }
-
+			}
 
             messageName= messageList.at(2);
             messageName.remove(QChar(':'),Qt::CaseInsensitive).replace(" ","_");;
@@ -644,7 +648,7 @@ void DBCHandler::checkRepatedSignal()
         for(dataContainer::signal * curSignal1 : *iteInterface1.value()->getSignalList()){
             for(iteInterface2=comInterface.begin();iteInterface2!=comInterface.end();iteInterface2++){
                 for(dataContainer::signal * curSignal2 : *iteInterface2.value()->getSignalList()){
-                    if((curSignal1->name == curSignal2->name) && (iteInterface2.value()->getID() != iteInterface1.value()->getID())){
+                    if((curSignal1->name.contains(curSignal2->name,Qt::CaseInsensitive)) && (iteInterface2.value()->getID() != iteInterface1.value()->getID())){
                         dataContainer::setWarning(iteInterface2.value()->getID(),curSignal2->name+" sinyali "+iteInterface1.value()->getID()+" mesajında da yer aldığı için etiketlendi.");
                         curSignal2->name= curSignal2->name+"_"+iteInterface2.value()->getID();
                     }
