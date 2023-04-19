@@ -206,6 +206,28 @@ void dataContainer::dataTypeAss(signal *signalPtr)
             this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde C_ S_ Z_ işareti bulunmuyor");
         }
         this->setBitOperation(true);
+    }else if (signalPtr->length == 4){
+        signalPtr->comDataType = "BYTE";
+        signalPtr->enJ1939 = true;
+        if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
+            signalPtr->appDataType = "REAL";
+            signalPtr->convMethod="toREAL";
+        }else if((signalPtr->resolution != 1)||(signalPtr->offset != 0)){
+            signalPtr->appDataType = "REAL";
+            signalPtr->convMethod="toREAL";
+            this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ veya W_ işareti bulunmalı");
+        }else if(signalPtr->name.contains("N_")){
+            signalPtr->appDataType = "USINT";
+            signalPtr->convMethod="toUSINT";
+        }else if(signalPtr->name.contains("Z_")){
+            signalPtr->appDataType = "BYTE";
+            signalPtr->convMethod="toBYTE";
+        }else{
+            signalPtr->appDataType="BYTE";
+            signalPtr->convMethod="toBYTE";
+            this->setWarning(this->messageID,signalPtr->name+" sinyali isimlendirmesinde X_ W_ N_ Z_ işareti bulunmuyor, uygulama tipi BYTE atandı");
+        }
+        this->setBitOperation(true);
     }else if (signalPtr->length < 8){
         signalPtr->comDataType = "BYTE";
         if(signalPtr->name.contains("X_") || signalPtr->name.contains("W_")||(signalPtr->resolution != 1)||(signalPtr->offset != 0)){
@@ -750,16 +772,16 @@ void dataContainer::signalChecker(signal *signalPtr)
         setNotSelectable();
     }
 
-    if(qFabs(signalPtr->offset) > ((((qPow(2,signalPtr->length))-1))* signalPtr->resolution)){
+    if(qFabs(signalPtr->defValue) > (((((qPow(2,signalPtr->length))-1))* signalPtr->resolution) + signalPtr ->offset)){
         this->setWarning(this->messageID,signalPtr->name+" sinyali varsayılan değeri değer aralığında değil, Mesaj OpenXML formatına dönüştürülemez. ");
         setNotSelectable();
     }
 
-    if(qFabs(signalPtr->minValue) > ((((qPow(2,signalPtr->length))-1))* signalPtr->resolution)){
+    if(qFabs(signalPtr->minValue) > ((((qPow(2,signalPtr->length)-1)) * signalPtr->resolution) + signalPtr ->offset)){
         this->setWarning(this->messageID,signalPtr->name+" sinyali minimum değeri değer aralığında değil, Mesaj OpenXML formatına dönüştürülemez. ");
         setNotSelectable();
     }
-    if(qFabs(signalPtr->maxValue) > ((((qPow(2,signalPtr->length))-1))* signalPtr->resolution)){
+    if(qFabs(signalPtr->maxValue) > ((((qPow(2,signalPtr->length))-1)* signalPtr->resolution) + signalPtr ->offset)){
         this->setWarning(this->messageID,signalPtr->name+" sinyali maksimum değeri değer aralığında değil, Mesaj OpenXML formatına dönüştürülemez. ");
         setNotSelectable();
     }

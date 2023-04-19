@@ -378,7 +378,7 @@ bool DBCHandler::parseMessages(QFile *ascFile)
                 if (configComment.contains("j1939",Qt::CaseInsensitive)){
                     for( dataContainer::signal * curSignal : *comInterface.value(ID)->getSignalList()){
                         if(!curSignal->enJ1939){
-                            dataContainer::setWarning(ID,curSignal->name+" sinyali sinyal yorumunda J1939 istenilmiş ancak uzunluk 2,8,16,32,64 olmadığı için mümkün değil");
+                            dataContainer::setWarning(ID,curSignal->name+" sinyali sinyal yorumunda J1939 istenilmiş ancak uzunluk 2,4,8,16,32,64 olmadığı için mümkün değil");
                         }else{
                             curSignal->isJ1939 = true;
                         }
@@ -429,7 +429,7 @@ bool DBCHandler::parseMessages(QFile *ascFile)
                             curSignal->isJ1939 = ((configComment.contains(QString("j1939"),Qt::CaseInsensitive)) && curSignal->enJ1939)? true : (curSignal->isJ1939 && curSignal->enJ1939) ;
                             curSignal->defValue= defValue;
                             if((configComment.contains(QString("j1939"),Qt::CaseInsensitive)) && !curSignal->enJ1939){
-                                dataContainer::setWarning(targetID,curSignal->name+" sinyali mesaj yorumunda J1939 istenilmiş ancak uzunluk 2,8,16,32,64 olmadığı için mümkün değil");
+                                dataContainer::setWarning(targetID,curSignal->name+" sinyali mesaj yorumunda J1939 istenilmiş ancak uzunluk 2,4,8,16,32,64 olmadığı için mümkün değil");
                             }
                         }
                     }
@@ -447,12 +447,12 @@ bool DBCHandler::parseMessages(QFile *ascFile)
                 }else{
                     targetID = QString::number(containerLine.at(3).toUInt(),16).toUpper();
                 }
-                double defValue=containerLine.at(5).toDouble();
+                double rawdefValue=containerLine.at(5).toDouble();
 
                 if(comInterface.contains(targetID)){
                     for( dataContainer::signal * curSignal : *comInterface.value(targetID)->getSignalList()){
                         if( curSignal->name.contains(containerLine.at(4))){
-                            curSignal->defValue= defValue;
+                            curSignal->defValue= rawdefValue * curSignal->resolution + curSignal->offset;
                         }
                     }
                 }
@@ -1679,8 +1679,21 @@ QString DBCHandler::convTypeComtoApp(const dataContainer::signal * curSignal, QS
         ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e				    := "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+" AND NOT "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+" ;") : (""));
         ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na				:= "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+" AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+" ;") : (""));
 
-    }
-    else if((curSignal->length<9)){
+    }else if((curSignal->length==4)){
+
+        if((curSignal->convMethod == "toBYTE")|| (curSignal->convMethod == "xtoBYTE")){
+            cont_text.append("Raw_"+curSignal->name);
+        }
+        else if ((curSignal->convMethod == "toUSINT")|| (curSignal->convMethod == "xtoUSINT")){
+            cont_text.append("BYTE_TO_USINT(Raw_"+curSignal->name+")");
+        }
+        else if ((curSignal->convMethod == "toREAL")|| (curSignal->convMethod == "xtoREAL")){
+            cont_text.append("USINT_TO_REAL(BYTE_TO_USINT(Raw_"+curSignal->name+"))"+((curSignal->resolution == 1)? (""):("*"+QString::number(curSignal->resolution,'g',15)))+((curSignal->offset == 0)? (""):("+"+QString::number(curSignal->offset,'g',15))))+")";
+        }
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e              := (Raw_"+curSignal->name+" >= 16#E);") : (""));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na             := (Raw_"+curSignal->name+" = 16#F);") : (""));
+
+    }else if((curSignal->length<9)){
         if((curSignal->convMethod == "toBYTE")|| (curSignal->convMethod == "xtoBYTE")){
             cont_text.append("Raw_"+curSignal->name);
         }
@@ -2014,13 +2027,41 @@ QString DBCHandler::convTypeApptoCom (const dataContainer::signal *curSignal, QS
     QString stat1,stat2,stat3,stat4,stat5 = "";
 
         // TYPE CONVERTION AND E  NA CONTROL STARTS
-        if((curSignal->length<9)){
+        if ((curSignal->length==4)){
             if((curSignal->convMethod == "toBYTE")|| (curSignal->convMethod == "xtoBYTE")){
 
                 stat1 = "FrcVar."+curSignal->name+".x";
                 stat2 = "GVL."+this->dutHeader+"."+curSignal->name+".x";
-                stat3 = "16#FF";
-                stat4 = "16#FE";
+                stat3 = "16#F";
+                stat4 = "16#E";
+                stat5 = QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15);
+                flagConversion=true;
+            }
+            else if ((curSignal->convMethod == "toUSINT")|| (curSignal->convMethod == "xtoUSINT")){
+
+                stat1 = "USINT_TO_BYTE(FrcVar."+curSignal->name+".x)";
+                stat2 = "USINT_TO_BYTE(GVL."+this->dutHeader+"."+curSignal->name+".x )";
+                stat3 = "16#F";
+                stat4 = "16#E";
+                stat5 = QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15);
+                flagConversion=true;
+            }
+            else if ((curSignal->convMethod == "toREAL")|| (curSignal->convMethod == "xtoREAL")){
+
+                stat1 = "USINT_TO_BYTE(REAL_TO_USINT((FrcVar."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + "+QString::number((-1*curSignal->offset),'g',15)))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
+                stat2 = "USINT_TO_BYTE(REAL_TO_USINT((GVL."+this->dutHeader+"."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + "+QString::number((-1*curSignal->offset),'g',15)))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
+                stat3 = "16#F";
+                stat4 = "16#E";
+                stat5 = (((curSignal->offset == 0) && (curSignal->defValue==0))? (" 0 "): ("USINT_TO_BYTE(REAL_TO_USINT(("+((curSignal->defValue==0) ? "" : (QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15)))+(((!(curSignal->offset == 0) && !(curSignal->defValue==0))?("+"):(""))+((curSignal->offset ==0 )? (""): (QString::number((-1*curSignal->offset),'g',15))))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))"));
+                flagConversion=true;
+            }
+        }else if((curSignal->length<9)){
+            if((curSignal->convMethod == "toBYTE")|| (curSignal->convMethod == "xtoBYTE")){
+
+                stat1 = "FrcVar."+curSignal->name+".x";
+                stat2 = "GVL."+this->dutHeader+"."+curSignal->name+".x";
+                stat3 = "16#F";
+                stat4 = "16#E";
                 stat5 = QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15);
                 flagConversion=true;
             }
@@ -2153,7 +2194,7 @@ QString DBCHandler::convTypeApptoCom (const dataContainer::signal *curSignal, QS
             }
         }
 
-        if(curSignal->convMethod=="BOOL:BOOL"){
+                if(curSignal->convMethod=="BOOL:BOOL"){
                     ST.append("\n"+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+"               :=	GVL."+this->dutHeader+"."+curSignal->name+".x AND GVL."+this->dutHeader+"."+curSignal->name+".v ;");
                 }else if(curSignal->convMethod=="2BOOL:BOOL"){
                     ST.append("\n"+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+"               :=	 GVL."+this->dutHeader+"."+curSignal->name+".x ;"
