@@ -136,7 +136,7 @@ void tablemodel::updateTable(QList<QList<QString> > table) /*CID#0007*/
    /*apply changes to table without sorting*/
   for(inRow=table.begin();inRow!=table.end();inRow++){
     for(thisRow=this->table.begin();thisRow!=this->table.end();thisRow++){
-        if(inRow->at(1)==thisRow->at(1)){
+        if(inRow->at(2)==thisRow->at(2)){
             *thisRow=*inRow;
         }
     }
@@ -144,7 +144,7 @@ void tablemodel::updateTable(QList<QList<QString> > table) /*CID#0007*/
   /*apply changes to backup table for search ability*/
   for(inRow=table.begin();inRow!=table.end();inRow++){
     for(thisRow=this->tablebackup.begin();thisRow!=this->tablebackup.end();thisRow++){
-        if(inRow->at(1)==thisRow->at(1)){
+        if(inRow->at(2)==thisRow->at(2)){
             *thisRow=*inRow;
         }
     }

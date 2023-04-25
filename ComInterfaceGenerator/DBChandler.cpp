@@ -94,6 +94,7 @@ QList<QList<QString>> DBCHandler::messagesList()
         data.append({"  ","İsim","ID(HEX)","DLC","Çevrim Pryd.[ms]","Zaman Aşımı[ms]"});
         foreach(dataContainer *const curValue , comInterface){
             data.append({curValue->getIfSelected() ? "X" : "O" ,curValue->getName(),curValue->getID(),QString::number(curValue->getDLC()),curValue->getMsCycleTime(),curValue->getMsTimeOut()});
+                qInfo()<< curValue->getName()+curValue->getID();
         }
         return data;
     }
@@ -125,7 +126,6 @@ void DBCHandler::clearData()
 {
     isAllInserted = false;
     dataContainer::setWarning("INFO",dbcPath+"dosyası kapatıldı");
-    isAllInserted = false;
     for(dataContainer * curValue : comInterface){
         delete curValue;
     }
@@ -142,6 +142,7 @@ void DBCHandler::clearData()
     fbNameandObjId.clear();
     dutObjID="null";
     pouObjID="null";
+    dataContainer::warningMessages.clear();
     DBCHandler::selectedMessageCounter=0;
 
 }
@@ -501,7 +502,7 @@ bool DBCHandler::parseMessages(QFile *ascFile)
     }
 
     this->isAllInserted = true;
-    checkRepatedSignal();
+    checkRepatedSignal(false);
     return true;
 }
 //BO_ <ID> <Message_name>: <DLC> Vector__XXX -> for messages
@@ -635,19 +636,55 @@ void DBCHandler::setTmOutCycleTmWarnings()
 
 }
 
-void DBCHandler::checkRepatedSignal()
+void DBCHandler::checkRepatedSignal(bool doChange)
 {
     interface::Iterator iteInterface1;
     interface::Iterator iteInterface2;
-
-    for(iteInterface1=comInterface.begin();iteInterface1!=comInterface.end();iteInterface1++){
-        for(dataContainer::signal * curSignal1 : *iteInterface1.value()->getSignalList()){
-            for(iteInterface2=comInterface.begin();iteInterface2!=comInterface.end();iteInterface2++){
-                for(dataContainer::signal * curSignal2 : *iteInterface2.value()->getSignalList()){
-                    if((curSignal1->name == curSignal2->name) && (iteInterface2.value()->getID() != iteInterface1.value()->getID())){
-                        dataContainer::setWarning(iteInterface2.value()->getID(),curSignal2->name+" sinyali "+iteInterface1.value()->getID()+" mesajında da yer aldığı için etiketlendi.");
-                        curSignal2->name= curSignal2->name+"_"+iteInterface2.value()->getID();
+    if(doChange){
+        for(iteInterface1=comInterface.begin();iteInterface1!=comInterface.end();iteInterface1++){
+            if(iteInterface1.value()->getIfSelected()){
+                for(dataContainer::signal * curSignal : *iteInterface1.value()->getSignalList()){
+                    bool isDublicated=false;
+                    for(const QString dubID : curSignal->dublicateIDs){
+                        if(comInterface.contains(dubID)){
+                            if(comInterface.value(dubID)->getIfSelected()){
+                                isDublicated=true;
+                            }
+                        }
                     }
+                    if(isDublicated){
+                        curSignal->name = curSignal->name+"_"+iteInterface1.value()->getID();
+                        curSignal->isDublicated=true;
+                    }
+                }
+            }
+        }
+
+    }else{
+        for(iteInterface1=comInterface.begin();iteInterface1!=comInterface.end();iteInterface1++){
+            for(dataContainer::signal * curSignal1 : *iteInterface1.value()->getSignalList()){
+                for(iteInterface2=comInterface.begin();iteInterface2!=comInterface.end();iteInterface2++){
+                    for(dataContainer::signal * curSignal2 : *iteInterface2.value()->getSignalList()){
+                        if((curSignal1->name == curSignal2->name) && (iteInterface2.value()->getID() != iteInterface1.value()->getID())){
+                                dataContainer::setWarning(iteInterface2.value()->getID(),curSignal2->name+" sinyali "+iteInterface1.value()->getID()+" mesajında da yer aldığı için eğer her iki mesajı seçerseniz sonuna ID eklenerek etiketlenecek.");
+                                curSignal1->dublicateIDs.append(iteInterface2.value()->getID());
+                                curSignal2->dublicateIDs.append(iteInterface1.value()->getID());
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+void DBCHandler::cleanRepatedManipulation()
+{
+    interface::Iterator iteInterface1;
+    for(iteInterface1=comInterface.begin();iteInterface1!=comInterface.end();iteInterface1++){
+        if(iteInterface1.value()->getIfSelected()){
+            for(dataContainer::signal * curSignal : *iteInterface1.value()->getSignalList()){
+                if(curSignal->isDublicated){
+                    curSignal->name.remove("_"+iteInterface1.value()->getID());
                 }
             }
         }
@@ -722,6 +759,7 @@ void DBCHandler::startToGenerate()
                     dataContainer::setWarning("INFO",this->dutHeader+" mesajları : "+infoText);
                     dataContainer::setWarning("INFO",this->dutHeader+" oluşturuldu. Oluşturma süresi:"+QString::number((QDateTime::currentMSecsSinceEpoch())-startTimeMs)+"ms");
                     emit infoListChanged();
+                    cleanRepatedManipulation();
                 }
 
             }
@@ -750,6 +788,9 @@ bool DBCHandler::getAllSelected()
 }
 bool DBCHandler::createXml_STG1(QFile *xmlFile)
 {
+//Change repeated signal names
+    checkRepatedSignal(true);
+
     QTextStream out(xmlFile);
     QDomDocument doc;
     QDomText text;

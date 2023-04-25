@@ -224,8 +224,6 @@ Rectangle {
                                     }else{
                                         listModelWarnings.setList(comObj.getWarningList())
                                     }
-
-
                                 }
                             }
                             hoverEnabled: true
@@ -1267,6 +1265,7 @@ Rectangle {
         onButtonClicked: {
             comObj.clearData();
             stack.push("fileDialogPage.qml")
+            tableViewMessages.isAllSelected = false;
         }
     }
     Connections{

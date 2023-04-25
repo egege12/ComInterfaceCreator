@@ -144,7 +144,8 @@ private:
     QString parseComment(QString splitedPart);
     QString getBetween(QString first, QString second,QString fullText);
     void setTmOutCycleTmWarnings();
-    void checkRepatedSignal();
+    void checkRepatedSignal(bool doChange);
+    void cleanRepatedManipulation();
     //***********************************
     // Reading Process from dbc file end
     //Generate XML file start
