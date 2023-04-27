@@ -759,6 +759,11 @@ Rectangle {
                                                     if (listViewInfos.width < (impwidth*(textInfos.font.pointSize*0.6) +5)){ToolTip.show(listdata)}}
                                         onExited:{ delegateRectangleInfo.color= "transparent" ; textInfos.color = generationinfo? "#000000":"#838383";
                                                     ToolTip.hide()}
+                                        onDoubleClicked: {
+                                            if(clickable === true){
+                                                comObj.setPastCreatedMessages(listdata);
+                                            }
+                                        }
                                     }
 
 
@@ -1124,6 +1129,45 @@ Rectangle {
                     }
 
                 }
+                Switch {
+                                    id: switchMultiEnable
+                                    text: qsTr("Çoklu CAN aktif")
+                                    anchors.left:textFieldPreview.right
+                                    anchors.leftMargin:15
+                                    anchors.top: switchFrc.bottom
+                                    anchors.topMargin : 5
+                                    indicator: Rectangle {
+                                        implicitWidth: 48
+                                        implicitHeight: 26
+                                        x: switchMultiEnable.leftPadding
+                                        y: parent.height / 2 - height / 2
+                                        radius: 13
+                                        color: switchMultiEnable.checked ? "#17a81a" : "#ffffff"
+                                        border.color: switchMultiEnable.checked ? "#17a81a" : "#cccccc"
+
+                                        Rectangle {
+                                            x: switchMultiEnable.checked ? parent.width - width : 0
+                                            width: 26
+                                            height: 26
+                                            radius: 13
+                                            color: switchMultiEnable.down ? "#cccccc" : "#ffffff"
+                                            border.color: switchMultiEnable.checked ? (switchMultiEnable.down ? "#17a81a" : "#21be2b") : "#999999"
+                                        }
+                                    }
+
+                                    contentItem: Text {
+                                        text: switchMultiEnable.text
+                                        font: switchMultiEnable.font
+                                        opacity: enabled ? 1.0 : 0.3
+                                        color: switchMultiEnable.down ? "#17a81a" : "#21be2b"
+                                        verticalAlignment: Text.AlignVCenter
+                                        leftPadding: switchMultiEnable.indicator.width + switchMultiEnable.spacing
+                                    }
+                                    onCheckedChanged: {
+                                            comObj.setMultiEnableMode(switchMultiEnable.checked);
+                                    }
+
+                                }
 
             }
             Item{

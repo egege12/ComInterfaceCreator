@@ -10,6 +10,7 @@ class listmodel : public QAbstractListModel
         ListDataRole = Qt::UserRole+1,
         Selected,
         GenerationInfos,
+        Clickable,
         ImpWidth
     };
 public:

@@ -4,8 +4,8 @@ import QtQuick.Controls 2.0
 
 Window {
     id: root
-    width: 1200
-    height: 615
+    width: 1336
+    height: 860
     visible: true
     property bool fullscreen
     property bool iconSize
@@ -65,7 +65,7 @@ Window {
             }
             Text{
                 id : textVersion
-                text: qsTr("v1.1.026")
+                text: qsTr("v1.1.034")
                 width :80
                 height:20
                 anchors.bottom: parent.bottom

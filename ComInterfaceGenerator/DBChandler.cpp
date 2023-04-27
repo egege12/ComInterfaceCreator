@@ -277,6 +277,11 @@ void DBCHandler::setFrcVar(bool checkStat)
     this->enableFrc = checkStat;
 }
 
+void DBCHandler::setMultiEnableMode(bool checkStat)
+{
+    this->enableMultiEnable =checkStat;
+}
+
 bool DBCHandler::parseMessages(QFile *ascFile)
 {
     QTextStream  *lines = new QTextStream(ascFile);
@@ -751,13 +756,16 @@ void DBCHandler::startToGenerate()
                         xmlFile->close();
                     setProgress(100);
                     QString infoText;
+                    infoText.append("| ");
                     for(dataContainer *const curValue : comInterface){
                         if(curValue->getIfSelected()){
-                            infoText.append(curValue->getID()+"|");
+                            infoText.append(curValue->getID()+" | ");
                         }
                     }
-                    dataContainer::setWarning("INFO",this->dutHeader+" mesajları : "+infoText);
+                    dataContainer::setWarning("INFO","**"+this->dutHeader+" mesajları : "+infoText);
+                    dataContainer::setWarning("INFO",this->dutHeader+",oluşturma konfigurasyonu, [çoklu enable modu]: "+((this->enableMultiEnable)?("aktif"):("pasif"))+", [force değişkenleri]: "+((this->enableFrc)?("aktif"):("pasif"))+", [test modu]: "+((this->enableTest)?("aktif"):("pasif")));
                     dataContainer::setWarning("INFO",this->dutHeader+" oluşturuldu. Oluşturma süresi:"+QString::number((QDateTime::currentMSecsSinceEpoch())-startTimeMs)+"ms");
+
                     emit infoListChanged();
                     cleanRepatedManipulation();
                 }
@@ -785,6 +793,36 @@ QList<QString> DBCHandler::getInfoList()
 bool DBCHandler::getAllSelected()
 {
     return DBCHandler::allSelected;
+}
+
+void DBCHandler::setPastCreatedMessages(QString textLine)
+{
+    QStringList temp = textLine.split("mesajları");
+    QStringList messages = temp.at(1).trimmed().split("|");
+
+    unsigned long counterFind = 0;
+    for(dataContainer *const curValue : comInterface){
+        if(curValue->getIfSelected()){
+            curValue->setSelected();
+        }
+    }
+    emit selectedStatChanged();
+    for(QString messageID : messages){
+        messageID = messageID.remove(":").trimmed();
+           qInfo()<<messageID;
+        if(comInterface.contains(messageID)){
+            comInterface.value(messageID)->setSelected();
+            counterFind++;
+        }
+    }
+
+    if(counterFind != 0){
+        setErrCode(QString::number(counterFind)+" adet mesaj seçildi.");
+        emit selectedStatChanged();
+    }else{
+        setErrCode("Eşleşen hiçbir mesaj bulunamadı");
+    }
+
 }
 bool DBCHandler::createXml_STG1(QFile *xmlFile)
 {
@@ -1154,7 +1192,7 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
         bool flagBlankSpace=true;
         foreach(dataContainer *const curValue , comInterface){
             if(curValue->getIfSelected()){
-
+                {
                 QDomElement variable = doc.createElement("variable");
                 attr = doc.createAttribute("name");
                 attr.setValue("S_TmOut_"+curValue->getName()+"_0X"+curValue->getID());
@@ -1186,7 +1224,45 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
                     documentation.appendChild(xhtml);
                     variable.appendChild(documentation);
                 }
+
                 strucT->appendChild(variable);
+                }
+                if(this->enableMultiEnable){
+                QDomElement variable = doc.createElement("variable");
+                attr = doc.createAttribute("name");
+                attr.setValue("C_En_"+curValue->getName()+"_0X"+curValue->getID());
+                variable.setAttributeNode(attr);
+                { //type and derived element with name attribute
+                    QDomElement type = doc.createElement("type");
+                    QDomElement BOOL = doc.createElement("BOOL");
+                    type.appendChild(BOOL);
+                    variable.appendChild(type);
+                }
+                {//Documentation
+
+                    QDomElement documentation=doc.createElement("documentation");
+                    QDomElement xhtml = doc.createElement("xhtml");
+                    attr=doc.createAttribute("xmlns");
+                    attr.setValue("http://www.w3.org/1999/xhtml");
+                    xhtml.setAttributeNode(attr);
+                    {
+                        QString comment;
+                        if(flagBlankSpace){
+                            comment.append("\n\nMESSAGE ENABLE BITS\n");
+                            flagBlankSpace=false;
+                        }
+
+                        comment.append("Message enable bit for message ID 16#"+curValue->getID());
+                        text =doc.createTextNode(comment);
+                        xhtml.appendChild(text);
+                    }
+                    documentation.appendChild(xhtml);
+                    variable.appendChild(documentation);
+                }
+
+                strucT->appendChild(variable);
+                }
+
             }
         }
         {
@@ -1252,7 +1328,7 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
         bool flagBlankSpace=true;
         foreach(dataContainer *const curValue , comInterface){
             if(curValue->getIfSelected()){
-
+                {
                 QDomElement variable = doc.createElement("variable");
                 attr = doc.createAttribute("name");
                 attr.setValue("S_SentOk_"+curValue->getName()+"_0X"+curValue->getID());
@@ -1285,11 +1361,47 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
                     variable.appendChild(documentation);
                 }
                 strucT->appendChild(variable);
+                }
+                if(this->enableMultiEnable){
+                QDomElement variable = doc.createElement("variable");
+                attr = doc.createAttribute("name");
+                attr.setValue("C_En_"+curValue->getName()+"_0X"+curValue->getID());
+                variable.setAttributeNode(attr);
+                { //type and derived element with name attribute
+                    QDomElement type = doc.createElement("type");
+                    QDomElement BOOL = doc.createElement("BOOL");
+                    type.appendChild(BOOL);
+                    variable.appendChild(type);
+                }
+                {//Documentation
+
+                    QDomElement documentation=doc.createElement("documentation");
+                    QDomElement xhtml = doc.createElement("xhtml");
+                    attr=doc.createAttribute("xmlns");
+                    attr.setValue("http://www.w3.org/1999/xhtml");
+                    xhtml.setAttributeNode(attr);
+                    {
+                        QString comment;
+                        if(flagBlankSpace){
+                            comment.append("\n\nMESSAGE ENABLE BITS\n");
+                            flagBlankSpace=false;
+                        }
+
+                        comment.append("Message enable bit for message ID 16#"+curValue->getID());
+                        text =doc.createTextNode(comment);
+                        xhtml.appendChild(text);
+                    }
+                    documentation.appendChild(xhtml);
+                    variable.appendChild(documentation);
+                }
+
+                strucT->appendChild(variable);
+                }
             }
         }
     }
     // CAN_Init register for DUT
-    {
+    if(!this->enableMultiEnable){
         QDomElement variable = doc.createElement("variable");
         attr = doc.createAttribute("name");
         attr.setValue("S_CAN_Init");
@@ -1538,7 +1650,7 @@ void DBCHandler::generateIIST(QString *const ST)
                "**********************************************************************\n"
                "Name					: P_"+dutName+"\n"
                "POU Type				: Program\n"
-               "Created by              : COMMUNICATION INTERFACE GENERATOR("+QHostInfo::localHostName()+") , BZK.\n"
+               "Created by              : COMMUNICATION INTERFACE GENERATOR "+Version+"("+QHostInfo::localHostName()+") , BZK.\n"
                "Creation Date 			: "+creationDate.toString(Qt::DateFormat::ISODate)+"\n"
                "Modifications			: see version description below\n"
                "\n"
@@ -1555,15 +1667,15 @@ void DBCHandler::generateIIST(QString *const ST)
                "*)");
     foreach (dataContainer * curMessage , comInterface){
         if(curMessage->getIfSelected()){
-            ST->append("\n{region \""+curMessage->getName()+"- ID:"+curMessage->getID()+"\"}\n");
+            ST->append("\n{region \" MESSAGE AREA :"+curMessage->getName()+"- ID:"+curMessage->getID()+"\"}\n");
             QString nameFb = (curMessage->getIfBitOperation())? ("_FB_CanRx_Message_Unpack_"+curMessage->getID()) : ("_FB_CanRx_Message_"+curMessage->getID());
             ST->append( "\n"+nameFb+"(\n"
-                        "   C_Enable:= GVL."+dutHeader+".S_CAN_Init,\n"
-                        "   Obj_CAN:= ADR("+this->canLine+"),\n"
-                        "   X_MsgID:= 16#"+curMessage->getID()+",\n"
-                        "   Tm_MsgTmOut:= TIME#"+curMessage->getMsTimeOut()+"ms,\n"
-                        "   S_Extended:= "+QString::number(curMessage->getIfExtended()).toUpper()+",\n"
-                        "   S_ER_TmOut=> GVL."+dutHeader+".S_TmOut_"+curMessage->getName()+"_0X"+curMessage->getID()+");\n");
+                        "     C_Enable:= "+((this->enableMultiEnable)?("GVL."+dutHeader+".C_En_"+curMessage->getName()+"_0X"+curMessage->getID()):("GVL."+dutHeader+".S_CAN_Init"))+",\n"
+                        "     Obj_CAN:= ADR("+this->canLine+"),\n"
+                        "     X_MsgID:= 16#"+curMessage->getID()+",\n"
+                        "     Tm_MsgTmOut:= TIME#"+curMessage->getMsTimeOut()+"ms,\n"
+                        "     S_Extended:= "+QString::number(curMessage->getIfExtended()).toUpper()+",\n"
+                        "     S_ER_TmOut=> GVL."+dutHeader+".S_TmOut_"+curMessage->getName()+"_0X"+curMessage->getID()+");\n");
 
             for( const dataContainer::signal * curSignal : *curMessage->getSignalList()){
                 ST->append(convTypeComtoApp(curSignal,curMessage->getID(),curMessage->getName(),nameFb));
@@ -1595,41 +1707,41 @@ void DBCHandler::generateIIST(QString *const ST)
 }
 QString DBCHandler::convTypeComtoApp(const dataContainer::signal * curSignal, QString idMessage, QString nameMessage, QString nameFb)
 {
-    QString ST="\n{region \""+curSignal->name+"\"}";
+    QString ST="\n{region \" SIGNAL AREA : NAME->"+curSignal->name+" LENGTH->"+QString::number(curSignal->length)+" STARTBIT :"+QString::number(curSignal->startBit)+"\"}";
     if(curSignal->convMethod=="BOOL:BOOL"){
         if(this->enableFrc){
-        ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".v               := NOT GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" OR FrcVar."+curSignal->name+".v ;"
+        ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".v\t\t:= NOT GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" OR FrcVar."+curSignal->name+".v ;"
                   "\nIF NOT FrcVar."+curSignal->name+".v THEN;"
-                  "\nGVL."+this->dutHeader+"."+curSignal->name+".x               := GVL."+this->dutHeader+"."+curSignal->name+".v AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+";"
+                  "\nGVL."+this->dutHeader+"."+curSignal->name+".x\t\t:= GVL."+this->dutHeader+"."+curSignal->name+".v AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+";"
                   "\nELSE "
-                  "\nGVL."+this->dutHeader+"."+curSignal->name+".x               := FrcVar."+curSignal->name+".x ;"
+                  "\nGVL."+this->dutHeader+"."+curSignal->name+".x\t\t:= FrcVar."+curSignal->name+".x ;"
                   "\nEND_IF;");
         }else{
-            ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".v               := NOT GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+";"
-                      "\nGVL."+this->dutHeader+"."+curSignal->name+".x               := GVL."+this->dutHeader+"."+curSignal->name+".v AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+";");
+            ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".v\t\t:= NOT GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+";"
+                      "\nGVL."+this->dutHeader+"."+curSignal->name+".x\t\t:= GVL."+this->dutHeader+"."+curSignal->name+".v AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+";");
         }
     }else if(curSignal->convMethod=="2BOOL:BOOL"){
         if(this->enableFrc){
-        ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".v               := (NOT GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" AND NOT "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+") OR FrcVar."+curSignal->name+".v ;"
+        ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".v\t\t:= (NOT GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" AND NOT "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+") OR FrcVar."+curSignal->name+".v ;"
                    "\nIF NOT FrcVar."+curSignal->name+".v THEN;"
-                   "\nGVL."+this->dutHeader+"."+curSignal->name+".x              := GVL."+this->dutHeader+"."+curSignal->name+".v AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+";"
+                   "\nGVL."+this->dutHeader+"."+curSignal->name+".x\t\t:= GVL."+this->dutHeader+"."+curSignal->name+".v AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+";"
                    "\nELSE "
-                   "\nGVL."+this->dutHeader+"."+curSignal->name+".x              := FrcVar."+curSignal->name+".x ;"
+                   "\nGVL."+this->dutHeader+"."+curSignal->name+".x\t\t:= FrcVar."+curSignal->name+".x ;"
                    "\nEND_IF;");
         }else{
-            ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".v               := NOT GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" AND NOT "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+";"
-                       "\nGVL."+this->dutHeader+"."+curSignal->name+".x              := GVL."+this->dutHeader+"."+curSignal->name+".v AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+";");
+            ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".v\t\t:= NOT GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" AND NOT "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+";"
+                       "\nGVL."+this->dutHeader+"."+curSignal->name+".x\t\t:= GVL."+this->dutHeader+"."+curSignal->name+".v AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+";");
         }
     }else if((curSignal->convMethod=="xtoBYTE")||(curSignal->convMethod=="xtoUSINT")||((curSignal->convMethod=="xtoREAL") && (curSignal->length==8))){
-        ST.append("\nRaw_"+curSignal->name+"             := "+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+";");
+        ST.append("\nRaw_"+curSignal->name+"\t\t:= "+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+";");
     }else if((curSignal->convMethod=="xtoWORD")||(curSignal->convMethod=="xtoUINT")||((curSignal->convMethod=="xtoREAL") && (curSignal->length==16))){
-        ST.append("\n_FB_PACK_BYTE_TO_WORD_"+QString::number(counterfbBYTETOWORD)+"(X_BYTE_0:= "+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+", X_BYTE_1:=  "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+1)+", X_WORD_0 => Raw_"+curSignal->name+");");
+        ST.append("\n_FB_PACK_BYTE_TO_WORD_"+QString::number(counterfbBYTETOWORD)+"(\n\t\tX_BYTE_0:= "+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+", \n\t\tX_BYTE_1:=  "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+1)+", \n\t\tX_WORD_0 => Raw_"+curSignal->name+");");
         counterfbBYTETOWORD++;
     }else if((curSignal->convMethod=="xtoDWORD")||(curSignal->convMethod=="xtoUDINT")||((curSignal->convMethod=="xtoREAL") && (curSignal->length==32))){
-        ST.append("\n_FB_PACK_BYTE_TO_DWORD_"+QString::number(counterfbBYTETODWORD)+"(X_BYTE_0:= "+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+", X_BYTE_1:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+1)+", X_BYTE_2:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+2)+", X_BYTE_3:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+3)+" , X_DWORD_0 => Raw_"+curSignal->name+");");
+        ST.append("\n_FB_PACK_BYTE_TO_DWORD_"+QString::number(counterfbBYTETODWORD)+"(\n\t\tX_BYTE_0:= "+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+", \n\t\tX_BYTE_1:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+1)+", \n\t\tX_BYTE_2:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+2)+", \n\t\tX_BYTE_3:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+3)+" , \n\t\tX_DWORD_0 => Raw_"+curSignal->name+");");
         counterfbBYTETODWORD++;
     }else if((curSignal->convMethod=="xtoLWORD")||(curSignal->convMethod=="xtoULINT")||(curSignal->convMethod=="xtoLREAL") ){
-        ST.append("\n_FB_PACK_BYTE_TO_LWORD_"+QString::number(counterfbBYTETOLWORD)+"(X_BYTE_0:= "+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+", X_BYTE_1:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+1)+", X_BYTE_2:="+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+2)+" , X_BYTE_3:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+3)+", X_BYTE_4:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+4)+", X_BYTE_5:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+5)+", X_BYTE_6:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+6)+", X_BYTE_7:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+7)+" , X_LWORD_0 => Raw_"+curSignal->name+");");
+        ST.append("\n_FB_PACK_BYTE_TO_LWORD_"+QString::number(counterfbBYTETOLWORD)+"(\n\t\tX_BYTE_0:= "+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+", \n\t\tX_BYTE_1:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+1)+", \n\t\tX_BYTE_2:="+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+2)+" , \n\t\tX_BYTE_3:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+3)+", \n\t\tX_BYTE_4:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+4)+", \n\t\tX_BYTE_5:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+5)+", \n\t\tX_BYTE_6:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+6)+", \n\t\tX_BYTE_7:= "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+7)+" , \n\t\tX_LWORD_0 => Raw_"+curSignal->name+");");
         counterfbBYTETOLWORD++;
     }else{
         bool flagPack = false;
@@ -1668,14 +1780,14 @@ QString DBCHandler::convTypeComtoApp(const dataContainer::signal * curSignal, QS
                 flagPack=true;
             }
             if(flagPack){
-                    ST.append("S_BIT_"+QString::number(i%8)+":= "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+i)+"");
+                    ST.append("\n\t\tS_BIT_"+QString::number(i%8)+":= "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+i)+"");
                     if(((i%8 != 7) &&(i%(curSignal->length-1) != 0)) || (i==0)) {
                         ST.append(",");
                     }
             }
             if(flagPack){
                 if(((i%8 == 7)||(i%(curSignal->length-1) == 0) )&& (i>0)){
-                    ST.append(" ,X_BYTE_0=>");
+                    ST.append(" ,\n\t\tX_BYTE_0=>");
                     if(curSignal->length<9){
                     ST.append("Raw_"+curSignal->name);
                     ST.append(");");
@@ -1702,7 +1814,7 @@ QString DBCHandler::convTypeComtoApp(const dataContainer::signal * curSignal, QS
                 ST.append("\nRaw_"+curSignal->name+"            :=_FB_PACK_BYTE_TO_DWORD_"+QString::number(counterfbBYTETODWORD)+".X_DWORD_0;");
                 counterfbBYTETODWORD++;
             }else {
-                ST.append("\n_FB_PACK_DWORD_TO_LWORD_"+QString::number(counterfbDWORDTOLWORD)+"(X_DWORD_0:=_FB_PACK_BYTE_TO_DWORD_"+QString::number(counterfbBYTETODWORD)+".X_DWORD_0,X_DWORD_1:=_FB_PACK_BYTE_TO_DWORD_"+QString::number(counterfbBYTETODWORD+1)+".X_DWORD_0,X_LWORD_0=> Raw_"+curSignal->name+");");
+                ST.append("\n_FB_PACK_DWORD_TO_LWORD_"+QString::number(counterfbDWORDTOLWORD)+"(\n\t\t\tX_DWORD_0:=_FB_PACK_BYTE_TO_DWORD_"+QString::number(counterfbBYTETODWORD)+".X_DWORD_0,\n\t\tX_DWORD_1:=_FB_PACK_BYTE_TO_DWORD_"+QString::number(counterfbBYTETODWORD+1)+".X_DWORD_0,\n\t\tX_LWORD_0=> Raw_"+curSignal->name+");");
             counterfbDWORDTOLWORD++;
             counterfbBYTETODWORD++;
             counterfbBYTETODWORD++;
@@ -1717,8 +1829,8 @@ QString DBCHandler::convTypeComtoApp(const dataContainer::signal * curSignal, QS
     }
     else if((curSignal->length==2) && (curSignal->convMethod == "2BOOL:BOOL")){
 
-        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e				    := "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+" AND NOT "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+" ;") : (""));
-        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na				:= "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+" AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+" ;") : (""));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e\t\t\t:= "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+" AND NOT "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+" ;") : (""));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na\t\t\t:= "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+" AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+" ;") : (""));
 
     }else if((curSignal->length==4)){
 
@@ -1729,10 +1841,10 @@ QString DBCHandler::convTypeComtoApp(const dataContainer::signal * curSignal, QS
             cont_text.append("BYTE_TO_USINT(Raw_"+curSignal->name+")");
         }
         else if ((curSignal->convMethod == "toREAL")|| (curSignal->convMethod == "xtoREAL")){
-            cont_text.append("USINT_TO_REAL(BYTE_TO_USINT(Raw_"+curSignal->name+"))"+((curSignal->resolution == 1)? (""):("*"+QString::number(curSignal->resolution,'g',15)))+((curSignal->offset == 0)? (""):("+"+QString::number(curSignal->offset,'g',15))))+")";
+            cont_text.append("USINT_TO_REAL(BYTE_TO_USINT(Raw_"+curSignal->name+"))"+((curSignal->resolution == 1)? (""):("*"+QString::number(curSignal->resolution,'g',15)))+((curSignal->offset == 0)? (""):("+("+QString::number(curSignal->offset,'g',15)+")")))+")";
         }
-        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e              := (Raw_"+curSignal->name+" >= 16#E);") : (""));
-        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na             := (Raw_"+curSignal->name+" = 16#F);") : (""));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e\t\t\t:= (Raw_"+curSignal->name+" = 16#E);") : (""));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na\t\t\t:= (Raw_"+curSignal->name+" = 16#F);") : (""));
 
     }else if((curSignal->length<9)){
         if((curSignal->convMethod == "toBYTE")|| (curSignal->convMethod == "xtoBYTE")){
@@ -1742,10 +1854,10 @@ QString DBCHandler::convTypeComtoApp(const dataContainer::signal * curSignal, QS
             cont_text.append("BYTE_TO_USINT(Raw_"+curSignal->name+")");
         }
         else if ((curSignal->convMethod == "toREAL")|| (curSignal->convMethod == "xtoREAL")){
-            cont_text.append("USINT_TO_REAL(BYTE_TO_USINT(Raw_"+curSignal->name+"))"+((curSignal->resolution == 1)? (""):("*"+QString::number(curSignal->resolution,'g',15)))+((curSignal->offset == 0)? (""):("+"+QString::number(curSignal->offset,'g',15))))+")";
+            cont_text.append("USINT_TO_REAL(BYTE_TO_USINT(Raw_"+curSignal->name+"))"+((curSignal->resolution == 1)? (""):("*"+QString::number(curSignal->resolution,'g',15)))+((curSignal->offset == 0)? (""):("+("+QString::number(curSignal->offset,'g',15)+")")))+")";
         }
-        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e              := (Raw_"+curSignal->name+" > 16#FD);") : (""));
-        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na             := (Raw_"+curSignal->name+" = 16#FF);") : (""));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e\t\t\t:= (Raw_"+curSignal->name+" > 16#FD) AND (Raw_"+curSignal->name+" < 16#FF);") : (""));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na\t\t\t:= (Raw_"+curSignal->name+" = 16#FF);") : (""));
 
     }else if((curSignal->length<17)){
         if((curSignal->convMethod == "toWORD")|| (curSignal->convMethod == "xtoWORD")){
@@ -1755,10 +1867,10 @@ QString DBCHandler::convTypeComtoApp(const dataContainer::signal * curSignal, QS
             cont_text.append("WORD_TO_UINT(Raw_"+curSignal->name+")");
         }
         else if ((curSignal->convMethod == "toREAL")|| (curSignal->convMethod == "xtoREAL")){
-            cont_text.append("UINT_TO_REAL(WORD_TO_UINT(Raw_"+curSignal->name+"))"+((curSignal->resolution == 1)? (""):("*"+QString::number(curSignal->resolution,'g',15)))+((curSignal->offset == 0)? (""):("+"+QString::number(curSignal->offset,'g',15))))+")";
+            cont_text.append("UINT_TO_REAL(WORD_TO_UINT(Raw_"+curSignal->name+"))"+((curSignal->resolution == 1)? (""):("*"+QString::number(curSignal->resolution,'g',15)))+((curSignal->offset == 0)? (""):("+("+QString::number(curSignal->offset,'g',15)+")")))+")";
         }
-        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e              := (Raw_"+curSignal->name+" > 16#FDFF);") : (""));
-        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na             := (Raw_"+curSignal->name+" > 16#FEFF);") : (""));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e\t\t\t:= (Raw_"+curSignal->name+" > 16#FDFF) AND (Raw_"+curSignal->name+" <= 16#FEFF);") : (""));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na\t\t\t:= (Raw_"+curSignal->name+" > 16#FEFF);") : (""));
     }else if((curSignal->length<33)){
         if((curSignal->convMethod == "toDWORD")|| (curSignal->convMethod == "xtoDWORD")){
             cont_text.append("Raw_"+curSignal->name);
@@ -1767,10 +1879,10 @@ QString DBCHandler::convTypeComtoApp(const dataContainer::signal * curSignal, QS
             cont_text.append("DWORD_TO_UDINT(Raw_"+curSignal->name+")");
         }
         else if ((curSignal->convMethod == "toREAL")|| (curSignal->convMethod == "xtoREAL")){
-            cont_text.append("UDINT_TO_REAL(DWORD_TO_UDINT(Raw_"+curSignal->name+"))"+((curSignal->resolution == 1)? (""):("*"+QString::number(curSignal->resolution,'g',15)))+((curSignal->offset == 0)? (""):("+"+QString::number(curSignal->offset,'g',15))))+")";
+            cont_text.append("UDINT_TO_REAL(DWORD_TO_UDINT(Raw_"+curSignal->name+"))"+((curSignal->resolution == 1)? (""):("*"+QString::number(curSignal->resolution,'g',15)))+((curSignal->offset == 0)? (""):("+("+QString::number(curSignal->offset,'g',15)+")")))+")";
         }
-        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e              := (Raw_"+curSignal->name+" > 16#FDFFFFFF);") : (""));
-        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na             := (Raw_"+curSignal->name+" > 16#FEFFFFFF);") : (""));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e\t\t\t:= (Raw_"+curSignal->name+" > 16#FDFFFFFF) AND (Raw_"+curSignal->name+" <= 16#FEFFFFFF);") : (""));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na\t\t\t:= (Raw_"+curSignal->name+" > 16#FEFFFFFF);") : (""));
 
     }else if((curSignal->length<65)){
         if((curSignal->convMethod == "toLWORD")|| (curSignal->convMethod == "xtoLWORD")){
@@ -1780,23 +1892,22 @@ QString DBCHandler::convTypeComtoApp(const dataContainer::signal * curSignal, QS
             cont_text.append("LWORD_TO_ULINT(Raw_"+curSignal->name+")");
         }
         else if ((curSignal->convMethod == "toLREAL")|| (curSignal->convMethod == "xtoLREAL")){
-            cont_text.append("ULINT_TO_LREAL(LWORD_TO_ULINT(Raw_"+curSignal->name+"))"+((curSignal->resolution == 1)? (""):("*"+QString::number(curSignal->resolution,'g',15)))+((curSignal->offset == 0)? (""):("+"+QString::number(curSignal->offset,'g',15))))+")";
+            cont_text.append("ULINT_TO_LREAL(LWORD_TO_ULINT(Raw_"+curSignal->name+"))"+((curSignal->resolution == 1)? (""):("*"+QString::number(curSignal->resolution,'g',15)))+((curSignal->offset == 0)? (""):("+("+QString::number(curSignal->offset,'g',15)+")")))+")";
         }
-        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e              := (Raw_"+curSignal->name+" > 16#FDFFFFFFFFFFFFFF);") : (""));
-        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na             := (Raw_"+curSignal->name+" > 16#FEFFFFFFFFFFFFFF);") : (""));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".e\t\t\t:= (Raw_"+curSignal->name+" > 16#FDFFFFFFFFFFFFFF) AND (Raw_"+curSignal->name+" <= 16#FEFFFFFFFFFFFFFF);") : (""));
+        ST.append((curSignal->isJ1939==true)? ("\nGVL."+this->dutHeader+"."+curSignal->name+".na\t\t\t:= (Raw_"+curSignal->name+" > 16#FEFFFFFFFFFFFFFF);") : (""));
 
     }// TYPE CONVERTION AND E  NA CONTROL ENDS
 
     if((curSignal->convMethod != "BOOL:BOOL") && (curSignal->convMethod!="2BOOL:BOOL")){
-            ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".RangeExcd 		:= NOT (("+cont_text+" >= "+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+") AND ("+cont_text+" <= "+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+"));"
-            +((!this->enableFrc)?("\nGVL."+this->dutHeader+"."+curSignal->name+".v				:= NOT( GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" OR GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd "+((curSignal->isJ1939 ==true)?("OR GVL."+this->dutHeader+"."+curSignal->name+".e OR GVL."+this->dutHeader+"."+curSignal->name+".na) "):(") "))+";"):("\nGVL."+this->dutHeader+"."+curSignal->name+".v				:= NOT( GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" OR GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd "+((curSignal->isJ1939 ==true)?("OR GVL."+this->dutHeader+"."+curSignal->name+".e OR GVL."+this->dutHeader+"."+curSignal->name+".na) OR "):(") OR "))+"FrcVar."+curSignal->name+".v ;"))+
+            ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".RangeExcd\t:= NOT (("+cont_text+" >= "+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+") AND ("+cont_text+" <= "+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+"));"
+            +((!this->enableFrc)?("\nGVL."+this->dutHeader+"."+curSignal->name+".v\t\t\t:= NOT( GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" OR GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd "+((curSignal->isJ1939 ==true)?("OR GVL."+this->dutHeader+"."+curSignal->name+".e OR GVL."+this->dutHeader+"."+curSignal->name+".na) "):(") "))+";"):("\nGVL."+this->dutHeader+"."+curSignal->name+".v				:= NOT( GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" OR GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd "+((curSignal->isJ1939 ==true)?("OR GVL."+this->dutHeader+"."+curSignal->name+".e OR GVL."+this->dutHeader+"."+curSignal->name+".na) OR "):(") OR "))+"FrcVar."+curSignal->name+".v ;"))+
             "\n");
             if(this->enableFrc){
-                ST.append("GVL."+this->dutHeader+"."+curSignal->name+".x 		   	:= SEL("+"FrcVar."+curSignal->name+".v"+","+"SEL("+"GVL."+this->dutHeader+"."+curSignal->name+".v"+","+""+cont_text+","+QString::number(curSignal->defValue,'g',15)+"),FrcVar."+curSignal->name+".x);");
+                ST.append("GVL."+this->dutHeader+"."+curSignal->name+".x\t\t\t:= \n(*SELECT 1 : Is force active?*)\t\t\t\t\t\tSEL("+"FrcVar."+curSignal->name+".v"+","+"\n(*SELECT 2 : Is data valid ?*)\t\t\t\t\tSEL("+"GVL."+this->dutHeader+"."+curSignal->name+".v"+",(*DEFAULT value assignment*)\t\t\t\t\t\t"+QString::number(curSignal->defValue,'g',15)+",(*Transmission is VALID*)\t\t\t\t\t\t"+cont_text+"),(*Force is active*)\t\t\t\t\t\tFrcVar."+curSignal->name+".x);");
             }else{
-                ST.append("GVL."+this->dutHeader+"."+curSignal->name+".x 		   	:= SEL("+"GVL."+this->dutHeader+"."+curSignal->name+".v"+","+QString::number(curSignal->defValue,'g',15)+","+cont_text+");");
+                ST.append("GVL."+this->dutHeader+"."+curSignal->name+".x\t\t\t:= \n(*SELECT 1 : Is data valid ?*)\t\t\t\t\tSEL("+"GVL."+this->dutHeader+"."+curSignal->name+".v"+",\n(*DEFAULT value assigment*)\t\t\t\t\t\t"+QString::number(curSignal->defValue,'g',15)+",\n(*Transmission is VALID*)\t\t\t\t\t\t"+cont_text+");");
             }
-
     }
 
 
@@ -2011,7 +2122,7 @@ void DBCHandler::generateIOST(QString *const ST)
                    "**********************************************************************\n"
                    "Name					: P_"+dutHeader+"\n"
                    "POU Type				: Program\n"
-                   "Created by              : COMMUNICATION INTERFACE GENERATOR("+QHostInfo::localHostName()+"), BZK.\n"
+                   "Created by              : COMMUNICATION INTERFACE GENERATOR "+Version+"("+QHostInfo::localHostName()+"), BZK.\n"
                    "Creation Date 			: "+creationDate.toString(Qt::DateFormat::ISODate)+"\n"
                    "Modifications			: see version description below\n"
                    "\n"
@@ -2028,42 +2139,55 @@ void DBCHandler::generateIOST(QString *const ST)
                    "*)");
         foreach (dataContainer * curMessage , comInterface){
             if(curMessage->getIfSelected()){
+                 ST->append("\n//-----------------------------------------------------------------------------------------------------------------------------");
+                 ST->append("\n//MESSAGE------");
                  ST->append("\n{region \" User Area : "+curMessage->getName()+"- ID:"+curMessage->getID()+"\"}\n");
                 for( const dataContainer::signal * curSignal : *curMessage->getSignalList()){
-                 ST->append("\nGVL."+this->dutHeader+"."+curSignal->name+".v := "+((this->enableTest==true)?("FrcTest."+curSignal->name+".v;"):("ASSIGN HERE VALIDITY VARIABLE !!;")));
-                 ST->append("\nGVL."+this->dutHeader+"."+curSignal->name+".x := "+((this->enableTest==true)?("FrcTest."+curSignal->name+".x;"):("ASSIGN HERE VALIDITY VARIABLE !!;")));
+                        ST->append("\n//-------SIGNAL -> "+curSignal->name+" Max: "+QString::number(curSignal->maxValue)+" Min: "+QString::number(curSignal->minValue)+" Def: "+QString::number(curSignal->defValue)+" Resolution: "+QString::number(curSignal->resolution)+" Offset: "+QString::number(curSignal->offset));
+                 ST->append("\nGVL."+this->dutHeader+"."+curSignal->name+".v\t\t\t\t\t:= "+((this->enableTest==true)?("FrcTest."+curSignal->name+".v;"):("ASSIGN HERE VALIDITY VARIABLE !!;")));
+                 ST->append("\nGVL."+this->dutHeader+"."+curSignal->name+".x\t\t\t\t\t:= "+((this->enableTest==true)?("FrcTest."+curSignal->name+".x;"):("ASSIGN HERE VALIDITY VARIABLE !!;")));
                  if(curSignal->isJ1939){
-                    ST->append("\nGVL."+this->dutHeader+"."+curSignal->name+".e := "+((this->enableTest==true)?("FrcTest."+curSignal->name+".e;"):("ASSIGN HERE ERROR FLAG VARIABLE !!;")));
-                    ST->append("\nGVL."+this->dutHeader+"."+curSignal->name+".na := "+((this->enableTest==true)?("FrcTest."+curSignal->name+".na;"):("ASSIGN HERE NOT AVAILABLE FLAG VARIABLE !!;")));
+                    ST->append("\nGVL."+this->dutHeader+"."+curSignal->name+".e\t\t\t\t\t:= "+((this->enableTest==true)?("FrcTest."+curSignal->name+".e;"):("ASSIGN HERE ERROR FLAG VARIABLE !!;")));
+                    ST->append("\nGVL."+this->dutHeader+"."+curSignal->name+".na\t\t\t\t\t:= "+((this->enableTest==true)?("FrcTest."+curSignal->name+".na;"):("ASSIGN HERE NOT AVAILABLE FLAG VARIABLE !!;")));
                  }
-                }
+                 if(curSignal->length > 3){
+                    ST->append("\nGVL."+this->dutHeader+"."+curSignal->name+".RangeExcd\t\t\t:=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);");
+                    }
+
+                 }
                 ST->append("\n{endregion}");
+                ST->append("\n//-----------------------------------------------------------------------------------------------------------------------------");
             }
         }
     foreach (dataContainer * curMessage , comInterface){
         if(curMessage->getIfSelected()){
-            ST->append("\n{region \""+curMessage->getName()+"- ID:"+curMessage->getID()+"\"}\n");
+            ST->append("\n//-----------------------------------------------------------------------------------------------------------------------------");
+            ST->append("\n{region \" MESSAGE AREA :"+curMessage->getName()+"- ID:"+curMessage->getID()+"\"}\n");
             QString nameFb = (curMessage->getIfBitOperation())? ("_FB_CanTx_Message_Unpack_"+curMessage->getID()) : ("_FB_CanTx_Message_"+curMessage->getID());
-            ST->append("\n"+nameFb+"("
-                       "\n   C_Enable:= GVL."+dutHeader+".S_CAN_Init,"
-                       "\n   Obj_CAN:= ADR("+this->canLine+"),"
-                       "\n   X_MsgID:= 16#"+curMessage->getID()+","
-                       "\n   Tm_CycleTime:= TIME#"+curMessage->getMsCycleTime()+"ms,"
-                       "\n   N_Msg_Dlc:="+QString::number(curMessage->getDLC())+","
-                       "\n   S_Extended:= "+QString::number(curMessage->getIfExtended()).toUpper()+","
-                       "\n   S_Sent_Ok   => GVL."+dutHeader+".S_SentOk_"+curMessage->getName()+"_0X"+curMessage->getID()+");");
+
+            ST->append("\n"+nameFb+"();");
 
             for( const dataContainer::signal * curSignal : *curMessage->getSignalList()){
                 ST->append(convTypeApptoCom(curSignal,curMessage->getID(),curMessage->getName(),nameFb));
             }
+            ST->append("\n"+nameFb+"("
+                                     "\n     C_Enable:= "+((this->enableMultiEnable)?("GVL."+dutHeader+".C_En_"+curMessage->getName()+"_0X"+curMessage->getID()):("GVL."+dutHeader+".S_CAN_Init"))+","
+                                     "\n     Obj_CAN:= ADR("+this->canLine+"),"
+                                     "\n     X_MsgID:= 16#"+curMessage->getID()+","
+                                     "\n     Tm_CycleTime:= TIME#"+curMessage->getMsCycleTime()+"ms,"
+                                     "\n     N_Msg_Dlc:="+QString::number(curMessage->getDLC())+","
+                                     "\n     S_Extended:= "+QString::number(curMessage->getIfExtended()).toUpper()+","
+                                     "\n     S_Sent_Ok   => GVL."+dutHeader+".S_SentOk_"+curMessage->getName()+"_0X"+curMessage->getID()+");");
+
             ST->append("\n{endregion}");
+            ST->append("\n//-----------------------------------------------------------------------------------------------------------------------------");
         }
     }
 
 }
 QString DBCHandler::convTypeApptoCom (const dataContainer::signal *curSignal, QString idMessage, QString nameMessage,  QString nameFb)
 {
-    QString ST="\n{region \""+curSignal->name+"\"}";
+    QString ST="\n{region \" SIGNAL AREA : NAME->"+curSignal->name+" LENGTH->"+QString::number(curSignal->length)+" STARTBIT :"+QString::number(curSignal->startBit)+"\"}";
     bool flagConversion =false;
     QString stat1,stat2,stat3,stat4,stat5 = "";
 
@@ -2089,7 +2213,7 @@ QString DBCHandler::convTypeApptoCom (const dataContainer::signal *curSignal, QS
             }
             else if ((curSignal->convMethod == "toREAL")|| (curSignal->convMethod == "xtoREAL")){
 
-                stat1 = "USINT_TO_BYTE(REAL_TO_USINT((FrcVar."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + "+QString::number((-1*curSignal->offset),'g',15)))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
+                stat1 = "USINT_TO_BYTE(REAL_TO_USINT((FrcVar."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + ("+QString::number((-1*curSignal->offset),'g',15)+")"))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
                 stat2 = "USINT_TO_BYTE(REAL_TO_USINT((GVL."+this->dutHeader+"."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + "+QString::number((-1*curSignal->offset),'g',15)))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
                 stat3 = "16#F";
                 stat4 = "16#E";
@@ -2117,7 +2241,7 @@ QString DBCHandler::convTypeApptoCom (const dataContainer::signal *curSignal, QS
             }
             else if ((curSignal->convMethod == "toREAL")|| (curSignal->convMethod == "xtoREAL")){
 
-                stat1 = "USINT_TO_BYTE(REAL_TO_USINT((FrcVar."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + "+QString::number((-1*curSignal->offset),'g',15)))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
+                stat1 = "USINT_TO_BYTE(REAL_TO_USINT((FrcVar."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + ("+QString::number((-1*curSignal->offset),'g',15)+")"))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
                 stat2 = "USINT_TO_BYTE(REAL_TO_USINT((GVL."+this->dutHeader+"."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + "+QString::number((-1*curSignal->offset),'g',15)))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
                 stat3 = "16#FF";
                 stat4 = "16#FE";
@@ -2144,7 +2268,7 @@ QString DBCHandler::convTypeApptoCom (const dataContainer::signal *curSignal, QS
             }
             else if ((curSignal->convMethod == "toREAL")|| (curSignal->convMethod == "xtoREAL")){
 
-                stat1 = "UINT_TO_WORD(REAL_TO_UINT((FrcVar."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + "+QString::number((-1*curSignal->offset),'g',15)))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
+                stat1 = "UINT_TO_WORD(REAL_TO_UINT((FrcVar."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + ("+QString::number((-1*curSignal->offset),'g',15)+")"))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
                 stat2 = "UINT_TO_WORD(REAL_TO_UINT((GVL."+this->dutHeader+"."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + "+QString::number((-1*curSignal->offset),'g',15)))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
                 stat3 = "16#FFFF";
                 stat4 = "16#FEFE";
@@ -2174,7 +2298,7 @@ QString DBCHandler::convTypeApptoCom (const dataContainer::signal *curSignal, QS
             }
             else if ((curSignal->convMethod == "toREAL")|| (curSignal->convMethod == "xtoREAL")){
 
-                stat1 = "UDINT_TO_DWORD(REAL_TO_UDINT((FrcVar."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + "+QString::number((-1*curSignal->offset),'g',15)))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
+                stat1 = "UDINT_TO_DWORD(REAL_TO_UDINT((FrcVar."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + ("+QString::number((-1*curSignal->offset),'g',15)+")"))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
                 stat2 = "UDINT_TO_DWORD(REAL_TO_UDINT((GVL."+this->dutHeader+"."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + "+QString::number((-1*curSignal->offset),'g',15)))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
                 stat3 = "16#FFFFFFFF";
                 stat4 = "16#FEFEFEFE";
@@ -2203,7 +2327,7 @@ QString DBCHandler::convTypeApptoCom (const dataContainer::signal *curSignal, QS
             }
             else if ((curSignal->convMethod == "toLREAL")|| (curSignal->convMethod == "xtoLREAL")){
 
-                stat1 = "ULINT_TO_LWORD(LREAL_TO_ULINT((FrcVar."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + "+QString::number((-1*curSignal->offset),'g',15)))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
+                stat1 = "ULINT_TO_LWORD(LREAL_TO_ULINT((FrcVar."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + ("+QString::number((-1*curSignal->offset),'g',15)+")"))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
                 stat2 = "ULINT_TO_LWORD(LREAL_TO_ULINT((GVL."+this->dutHeader+"."+curSignal->name+".x"+((curSignal->offset ==0 )? (""): (" + "+QString::number((-1*curSignal->offset),'g',15)))+")"+((curSignal->resolution == 1)?(""):("/"+QString::number(curSignal->resolution,'g',15)))+"))";
                 stat3 = "16#FFFFFFFFFFFFFFFF";
                 stat4 = "16#FEFEFEFEFEFEFEFE";
@@ -2214,55 +2338,54 @@ QString DBCHandler::convTypeApptoCom (const dataContainer::signal *curSignal, QS
         }
         QString cont_text="";
         if (flagConversion){
-            ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".RangeExcd :=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);"
-                      "\n //Transmit Data : Range Control End \n");
+
             if ((this->enableFrc) && (curSignal->isJ1939)){
                 cont_text.append(
-                "SEL (FrcVar."+curSignal->name+".v,SEL((GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd),SEL(GVL."+this->dutHeader+"."+curSignal->name+".na,SEL(GVL."+this->dutHeader+"."+curSignal->name+".e,"+stat5+","+stat4+"),"+stat3+"),"+stat2+"),"+stat1+")"
+                "\n(*SELECT 1 : Is force active?*)\t\t\t\t\t\t\tSEL(FrcVar."+curSignal->name+".v,\n(*SELECT 2 : Is data valid and range is not exceed?*)\t\t\t\t\t\tSEL((GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd),\n(*SELECT 3 : Is NOT AVAILABLE ?*)\t\t\t\t\t\tSEL(GVL."+this->dutHeader+"."+curSignal->name+".na,\n(*SELECT 4 : Is ERROR active ?*)\t\t\t\t\t\tSEL(GVL."+this->dutHeader+"."+curSignal->name+".e,\n(*DEFAULT VALUE assignment*)\t\t\t\t\t\t\t\t"+stat5+",\n(*ERROR is active*)\t\t\t\t\t\t\t\t\t\t"+stat4+"),\n(*NOT AVAILABLE is active*)\t\t\t\t\t\t\t\t"+stat3+"),\n(*Transmission is VALID*)\t\t\t\t\t\t\t\t"+stat2+"),\n(*FORCE is active*)\t\t\t\t\t\t\t\t\t\t"+stat1+")"
                 );
             }else if((!this->enableFrc) && (curSignal->isJ1939)){
                 cont_text.append(
-                "SEL((GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd),SEL(GVL."+this->dutHeader+"."+curSignal->name+".na,SEL(GVL."+this->dutHeader+"."+curSignal->name+".e,"+stat5+","+stat4+"),"+stat3+"),"+stat2+")"
+                "\n(*SELECT 1 : Is data valid and range is not exceed?*)\tSEL((GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd),\n(*SELECT 2 : Is NOT AVAILABLE ?*)\t\t\t\t\t\tSEL(GVL."+this->dutHeader+"."+curSignal->name+".na,\n(*SELECT 3 : Is ERROR active ?*)\t\t\t\t\t\tSEL(GVL."+this->dutHeader+"."+curSignal->name+".e,\n(*DEFAULT VALUE assignment*)\t\t\t\t\t\t\t"+stat5+",\n(*ERROR is active*)\t\t\t\t\t\t\t\t\t\t"+stat4+"),\n(*NOT AVAILABLE is active*)\t\t\t\t\t\t\t\t"+stat3+"),\n(*Transmission is VALID*)\t\t\t\t\t\t\t\t"+stat2+")"
                 );
             }else if((this->enableFrc) && (!curSignal->isJ1939)){
                 cont_text.append(
-                "SEL (FrcVar."+curSignal->name+".v,SEL((GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd),"+stat5+","+stat2+"),"+stat1+")"
+                "\n(*SELECT 1 : Is force active?*)\t\t\t\t\t\t\tSEL(FrcVar."+curSignal->name+".v,\n(*SELECT 1 : Is data valid and range is not exceed?*)\tSEL((GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd),\n(*DEFAULT VALUE assignment*)\t\t\t\t\t\t\t"+stat5+",\n(*Transmission is VALID*)\t\t\t\t\t\t\t\t"+stat2+"),\n(*FORCE is active*)\t\t\t\t\t\t\t\t\t\t"+stat1+")"
                 );
             }else{
                 cont_text.append(
-                "SEL((GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd),"+stat5+","+stat2+")"
+                "\n(*SELECT 1 : Is force active?*)\t\t\t\t\t\t\tSEL((GVL."+this->dutHeader+"."+curSignal->name+".v AND NOT GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd),\n(*DEFAULT VALUE assignment*)\t\t\t\t\t\t\t"+stat5+",\n(*FORCE is active*)\t\t\t\t\t\t\t\t\t\t"+stat2+")"
                 );
             }
         }
 
                 if(curSignal->convMethod=="BOOL:BOOL"){
-                    ST.append("\n"+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+"               :=	GVL."+this->dutHeader+"."+curSignal->name+".x AND GVL."+this->dutHeader+"."+curSignal->name+".v ;");
+                    ST.append("\n"+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+"\t\t:=	GVL."+this->dutHeader+"."+curSignal->name+".x AND GVL."+this->dutHeader+"."+curSignal->name+".v ;");
                 }else if(curSignal->convMethod=="2BOOL:BOOL"){
-                    ST.append("\n"+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+"               :=	 GVL."+this->dutHeader+"."+curSignal->name+".x ;"
-                              "\n"+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+"             :=	 NOT GVL."+this->dutHeader+"."+curSignal->name+".v ; ");
+                    ST.append("\n"+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+"\t\t:=	 (GVL."+this->dutHeader+"."+curSignal->name+".x OR GVL."+this->dutHeader+"."+curSignal->name+".na) AND NOT GVL."+this->dutHeader+"."+curSignal->name+".e; "
+                              "\n"+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+"\t\t:=	 NOT GVL."+this->dutHeader+"."+curSignal->name+".v OR GVL."+this->dutHeader+"."+curSignal->name+".na OR GVL."+this->dutHeader+"."+curSignal->name+".e; ");
                 }else if((curSignal->convMethod=="xtoBYTE")||(curSignal->convMethod=="xtoUSINT")||((curSignal->convMethod=="xtoREAL") && (curSignal->length==8))){
-                    ST.append("\n"+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+"            :="+cont_text+";");
+                    ST.append("\n"+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+"\t\t:="+cont_text+";");
                 }else if((curSignal->convMethod=="xtoWORD")||(curSignal->convMethod=="xtoUINT")||((curSignal->convMethod=="xtoREAL") && (curSignal->length==16))){
-                    ST.append("\n_FB_UNPACK_WORD_TO_BYTE_"+QString::number(counterfbWORDTOBYTE)+"(X_WORD_0:= "+cont_text+", X_BYTE_0=> "+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+", X_BYTE_1=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+1)+");");
+                    ST.append("\n_FB_UNPACK_WORD_TO_BYTE_"+QString::number(counterfbWORDTOBYTE)+"(\n\t\tX_WORD_0:= "+cont_text+",\n\t\tX_BYTE_0=> "+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+",\n\t\tX_BYTE_1=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+1)+");");
                     counterfbWORDTOBYTE++;
                 }else if((curSignal->convMethod=="xtoDWORD")||(curSignal->convMethod=="xtoUDINT")||((curSignal->convMethod=="xtoREAL") && (curSignal->length==32))){
-                    ST.append("\n_FB_UNPACK_DWORD_TO_BYTE_"+QString::number(counterfbDWORDTOBYTE)+"(X_DWORD_0:= "+cont_text+", X_BYTE_0=> "+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+", X_BYTE_1=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+1)+", X_BYTE_2=>"+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+2)+", X_BYTE_3=>"+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+3)+");");
+                    ST.append("\n_FB_UNPACK_DWORD_TO_BYTE_"+QString::number(counterfbDWORDTOBYTE)+"(\n\t\tX_DWORD_0:= "+cont_text+",\n\t\tX_BYTE_0=> "+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+",\n\t\tX_BYTE_1=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+1)+",\n\t\tX_BYTE_2=>"+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+2)+",\n\t\tX_BYTE_3=>"+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+3)+");");
                     counterfbDWORDTOBYTE++;
                 }else if((curSignal->convMethod=="xtoLWORD")||(curSignal->convMethod=="xtoULINT")||(curSignal->convMethod=="xtoLREAL") ){
-                    ST.append("\n_FB_UNPACK_LWORD_TO_BYTE_"+QString::number(counterfbLWORDTOBYTE)+"(X_LWORD_0:= "+cont_text+", X_BYTE_0=> "+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+", X_BYTE_1=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+1)+", X_BYTE_2=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+2)+", X_BYTE_3=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+3)+", X_BYTE_4=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+4)+", X_BYTE_5=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+5)+", X_BYTE_6=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+6)+", X_BYTE_7=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+7)+");");
+                    ST.append("\n_FB_UNPACK_LWORD_TO_BYTE_"+QString::number(counterfbLWORDTOBYTE)+"(\n\t\tX_LWORD_0:= "+cont_text+",\n\t\tX_BYTE_0=> "+nameFb+".X_Byte_"+QString::number(curSignal->startBit/8)+",\n\t\tX_BYTE_1=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+1)+",\n\t\tX_BYTE_2=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+2)+",\n\t\tX_BYTE_3=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+3)+",\n\t\tX_BYTE_4=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+4)+",\n\t\tX_BYTE_5=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+5)+",\n\t\tX_BYTE_6=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+6)+",\n\t\tX_BYTE_7=> "+nameFb+".X_Byte_"+QString::number((curSignal->startBit/8)+7)+");");
                     counterfbLWORDTOBYTE++;
 
                 }else{
                     bool flagPack = false;
                     if((curSignal->length>8)){
                         if(curSignal->length<17){
-                        ST.append("\n_FB_UNPACK_WORD_TO_BYTE_"+QString::number(counterfbWORDTOBYTE)+"(X_WORD_0:="+cont_text+");");
+                        ST.append("\n_FB_UNPACK_WORD_TO_BYTE_"+QString::number(counterfbWORDTOBYTE)+"(\n\t\tX_WORD_0:="+cont_text+");");
                         counterfbWORDTOBYTE++;
                         }else if(curSignal->length <33){
-                         ST.append("_FB_UNPACK_DWORD_TO_BYTE_"+QString::number(counterfbDWORDTOBYTE)+"(X_DWORD_0:="+cont_text+");");
+                         ST.append("_FB_UNPACK_DWORD_TO_BYTE_"+QString::number(counterfbDWORDTOBYTE)+"(\n\t\tX_DWORD_0:="+cont_text+");");
                          counterfbDWORDTOBYTE++;
                         }else {
-                          ST.append("\n_FB_UNPACK_LWORD_TO_BYTE_"+QString::number(counterfbLWORDTOBYTE)+"(X_LWORD_0:="+cont_text+");");
+                          ST.append("\n_FB_UNPACK_LWORD_TO_BYTE_"+QString::number(counterfbLWORDTOBYTE)+"(\n\t\tX_LWORD_0:="+cont_text+");");
                           counterfbLWORDTOBYTE++;
 
                        }
@@ -2279,14 +2402,14 @@ QString DBCHandler::convTypeApptoCom (const dataContainer::signal *curSignal, QS
                             flagPack=true;
                         }
                         if(flagPack){
-                                ST.append("S_Bit_"+QString::number(i%8)+"=> "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+i)+"");
+                                ST.append("\n\t\tS_Bit_"+QString::number(i%8)+"=> "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+i)+"");
                                 if(((i%8 != 7) &&(i%(curSignal->length-1) != 0)) || (i==0)) {
                                     ST.append(",");
                                 }
                         }
                         if(flagPack){
                             if(((i%8 == 7)||(i%(curSignal->length-1) == 0) )&& (i>0)){
-                                ST.append(" ,X_BYTE_0:=");
+                                ST.append(" ,\n\t\tX_BYTE_0:=");
                                 if(curSignal->length<9){
                                 ST.append(""+cont_text);
                                 ST.append(");");
@@ -2312,7 +2435,7 @@ QString DBCHandler::convTypeApptoCom (const dataContainer::signal *curSignal, QS
                     counterfbBYTETO8BIT = counterfbBYTETO8BIT+ counterBITBYTE;
                 }
 
-        ST.append("\n{endregion}");
+        ST.append("\n\n{endregion}\n");
         return ST;
 
 }

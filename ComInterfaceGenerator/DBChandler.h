@@ -21,7 +21,7 @@ typedef QList<QList<QString>> fbType;
 class DBCHandler : public QObject
 {
     Q_OBJECT
-
+    const QString Version ="V1.1.034";
 
 public:
 
@@ -70,6 +70,7 @@ public slots:
     void setCANLine(QString canName);
     void setTestMode(bool checkStat);
     void setFrcVar(bool checkStat);
+    void setMultiEnableMode(bool checkStat);
     //Tableview format nested vectors
     QList<QList<QString>> messagesList();
     QList<QList<QString>> signalsList();
@@ -78,6 +79,7 @@ public slots:
     QList<QString> getMsgWarningList();
     QList<QString> getInfoList();
     static bool getAllSelected();
+    void setPastCreatedMessages(QString textLine);
     //Worker thread functions
 
 
@@ -119,6 +121,7 @@ private:
     QString canLine;
     bool  enableTest;
     bool enableFrc;
+    bool enableMultiEnable;
     //***********************************
     //Private Variables ends
     //Private methods starts

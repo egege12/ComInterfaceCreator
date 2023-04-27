@@ -21,6 +21,8 @@ QVariant listmodel::data(const QModelIndex &index, int role) const
         return list.at(index.row()).contains("oluşturuldu");
     case ImpWidth:
         return list.at(index.row()).length();
+    case Clickable:
+        return ((list.at(index.row()).contains("**")) || (list.at(index.row()).contains("mesajları")));
      default:
         break;
     }
@@ -33,6 +35,7 @@ QHash<int, QByteArray> listmodel::roleNames() const
     roles[ListDataRole] = "listdata";
     roles[Selected] = "selected";
     roles[GenerationInfos] = "generationinfo";
+    roles[Clickable] = "clickable";
     roles[ImpWidth]="impwidth";
 
     return roles;
