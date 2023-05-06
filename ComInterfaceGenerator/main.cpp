@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
    qmlRegisterType<listmodel>("ListModel1",0,1,"ListModelWarnings");
    qmlRegisterType<listmodel>("ListModel2",0,1,"ListModelInfos");
     //class definitions
-   DBCHandler interface ;
+    DBCHandler interface ;
     //QScopedPointer<DBCHandler> interface(new DBCHandler())
     tablemodel table1,table2;
     QQmlApplicationEngine engine;
@@ -28,7 +28,6 @@ int main(int argc, char *argv[])
         if (!obj && url == objUrl)
             QCoreApplication::exit(-1);
     }, Qt::QueuedConnection);
-
 
     QQmlContext * Context1 = engine.rootContext();
 
