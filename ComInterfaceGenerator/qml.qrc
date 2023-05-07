@@ -7,6 +7,7 @@
         <file>DesignTestPAth.qml</file>
         <file>PopupWindow.qml</file>
         <file>ButtonBar.qml</file>
+        <file>typeMenu.qml</file>
     </qresource>
     <qresource prefix="/img">
         <file>img/iconSearchFile.png</file>
@@ -22,5 +23,7 @@
         <file>img/sortNotEnable.png</file>
         <file>img/sortUpEnabled.png</file>
         <file>img/progressSucces.png</file>
+        <file>img/typeCAN.png</file>
+        <file>img/typeETH.png</file>
     </qresource>
 </RCC>

@@ -25,8 +25,8 @@ DBCHandler::DBCHandler(QObject *parent)
     this->isAllInserted = false;
 
 
-    if(QFile::exists("log.txt")){
-        QFile logFile("log.txt");
+    if(QFile::exists(((m_ComType=="CAN")?("log.txt"):("logETH.txt")))){
+        QFile logFile(((m_ComType=="CAN")?("log.txt"):("logETH.txt")));
         if (!logFile.open(QIODevice::ReadOnly| QIODevice::Text )){
             dataContainer::setWarning("INFO","Kayıt defteri açılamadı");
         }else{
@@ -52,7 +52,7 @@ DBCHandler::DBCHandler(QObject *parent)
 DBCHandler::~DBCHandler()
 {
         dataContainer::setWarning("INFO",dbcPath+"dosyası kapatıldı");
-        QFile logFile("log.txt");
+        QFile logFile(((m_ComType=="CAN")?("log.txt"):("logETH.txt")));
         if (!logFile.open(QIODevice::WriteOnly| QIODevice::Truncate )){
             setErrCode("Yapılan değişiklikler kayıt defterine işlenemedi");
         }else{
@@ -94,7 +94,6 @@ QList<QList<QString>> DBCHandler::messagesList()
         data.append({"  ","İsim","ID(HEX)","DLC","Çevrim Pryd.[ms]","Zaman Aşımı[ms]"});
         foreach(dataContainer *const curValue , comInterface){
             data.append({curValue->getIfSelected() ? "X" : "O" ,curValue->getName(),curValue->getID(),QString::number(curValue->getDLC()),curValue->getMsCycleTime(),curValue->getMsTimeOut()});
-                qInfo()<< curValue->getName()+curValue->getID();
         }
         return data;
     }
@@ -281,6 +280,7 @@ void DBCHandler::setMultiEnableMode(bool checkStat)
 {
     this->enableMultiEnable =checkStat;
 }
+
 
 bool DBCHandler::parseMessages(QFile *ascFile)
 {
@@ -794,7 +794,17 @@ bool DBCHandler::getAllSelected()
 {
     return DBCHandler::allSelected;
 }
-
+QString DBCHandler::ComType() const
+{
+    return m_ComType;
+}
+void DBCHandler::setComType(const QString &newComType)
+{
+    if (m_ComType == newComType)
+        return;
+    m_ComType = newComType;
+    emit comTypeChanged();
+}
 void DBCHandler::setPastCreatedMessages(QString textLine)
 {
     QStringList temp = textLine.split("mesajları");
@@ -809,7 +819,6 @@ void DBCHandler::setPastCreatedMessages(QString textLine)
     emit selectedStatChanged();
     for(QString messageID : messages){
         messageID = messageID.remove(":").trimmed();
-           qInfo()<<messageID;
         if(comInterface.contains(messageID)){
             comInterface.value(messageID)->setSelected();
             counterFind++;
@@ -861,7 +870,7 @@ bool DBCHandler::createXml_STG1(QFile *xmlFile)
         attr.setValue("CODESYS");
         fileHeader.setAttributeNode(attr);
         attr =doc.createAttribute("productVersion");
-        attr.setValue("CODESYS V3.5 SP17");
+        attr.setValue("CODESYS V3.5 SP16");
         fileHeader.setAttributeNode(attr);
         attr =doc.createAttribute("creationDateTime");
         attr.setValue(creationDate.toString(Qt::DateFormat::ISODate));
@@ -942,6 +951,7 @@ bool DBCHandler::createXml_STG1(QFile *xmlFile)
         //START OF "types"
         QDomElement types = doc.createElement("types");
         QDomElement pous = doc.createElement("pous");
+        {
         QDomElement dataTypes = doc.createElement("dataTypes");
         QDomElement dataType = doc.createElement("dataType");
         QDomElement baseType = doc.createElement("baseType");
@@ -968,16 +978,31 @@ bool DBCHandler::createXml_STG1(QFile *xmlFile)
         dataType.appendChild(addData);
         dataTypes.appendChild(dataType);
         types.appendChild(dataTypes);
-        setProgress(30);
-        if((this->IOType == "II")){
-            setProgress(40);
-            this->generateIIPous(&pous,doc);
-            setProgress(50);
         }
-        else{
-            setProgress(40);
-            this->generateIOPous(&pous,doc);
-            setProgress(50);
+
+        setProgress(30);
+        if(m_ComType == "CAN"){
+            if((this->IOType == "II")){
+                setProgress(40);
+                this->generateIIPous(&pous,doc);
+                setProgress(50);
+            }
+            else{
+                setProgress(40);
+                this->generateIOPous(&pous,doc);
+                setProgress(50);
+            }
+        }else if(m_ComType == "ETH"){
+            if((this->IOType == "II")){
+                setProgress(40);
+                this->generateIIETH(&pous,doc);
+                setProgress(50);
+            }
+            else{
+                setProgress(40);
+                this->generateIOETH(&pous,doc);
+                setProgress(50);
+            }
         }
         types.appendChild(pous);
         elemProject.appendChild(types);
@@ -1188,7 +1213,7 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
 
         }
     }
-    if(dutName.contains("II")||dutName.contains("ii")){
+    if((dutName.contains("II")||dutName.contains("ii")) && m_ComType == "CAN"){
         bool flagBlankSpace=true;
         foreach(dataContainer *const curValue , comInterface){
             if(curValue->getIfSelected()){
@@ -1324,7 +1349,7 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
             strucT->appendChild(variable);
         }
 
-    }else if (dutName.contains("IO")||dutName.contains("io")){
+    }else if ((dutName.contains("IO")||dutName.contains("io")) && m_ComType == "CAN"){
         bool flagBlankSpace=true;
         foreach(dataContainer *const curValue , comInterface){
             if(curValue->getIfSelected()){
@@ -1399,6 +1424,65 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
                 }
             }
         }
+    }else if ((dutName.contains("II")||dutName.contains("ii")) && m_ComType == "ETH"){
+        {
+            QDomElement variable = doc.createElement("variable");
+            attr = doc.createAttribute("name");
+            attr.setValue("S_Com_Flt");
+            variable.setAttributeNode(attr);
+            { //type and derived element with name attribute
+                QDomElement type = doc.createElement("type");
+                QDomElement BOOL = doc.createElement("BOOL");
+                type.appendChild(BOOL);
+                variable.appendChild(type);
+            }
+            {//Documentation
+
+                QDomElement documentation=doc.createElement("documentation");
+                QDomElement xhtml = doc.createElement("xhtml");
+                attr=doc.createAttribute("xmlns");
+                attr.setValue("http://www.w3.org/1999/xhtml");
+                xhtml.setAttributeNode(attr);
+                {
+                QString comment;
+                comment.append("All of the timeout states are TRUE, no communication with unit");
+                text =doc.createTextNode(comment);
+                xhtml.appendChild(text);
+                }
+                documentation.appendChild(xhtml);
+                variable.appendChild(documentation);
+            }
+            strucT->appendChild(variable);
+        }
+        {
+            QDomElement variable = doc.createElement("variable");
+            attr = doc.createAttribute("name");
+            attr.setValue("S_Com_Distrb");
+            variable.setAttributeNode(attr);
+            { //type and derived element with name attribute
+                QDomElement type = doc.createElement("type");
+                QDomElement BOOL = doc.createElement("BOOL");
+                type.appendChild(BOOL);
+                variable.appendChild(type);
+            }
+            {//Documentation
+
+                QDomElement documentation=doc.createElement("documentation");
+                QDomElement xhtml = doc.createElement("xhtml");
+                attr=doc.createAttribute("xmlns");
+                attr.setValue("http://www.w3.org/1999/xhtml");
+                xhtml.setAttributeNode(attr);
+                {
+                QString comment;
+                comment.append("One of the messages is not receiving from that unit, communication disturbed with unit");
+                text =doc.createTextNode(comment);
+                xhtml.appendChild(text);
+                }
+                documentation.appendChild(xhtml);
+                variable.appendChild(documentation);
+            }
+            strucT->appendChild(variable);
+        }
     }
     // CAN_Init register for DUT
     if(!this->enableMultiEnable){
@@ -1430,6 +1514,328 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
         }
         strucT->appendChild(variable);
     }
+}
+
+void DBCHandler::generateETHDUT(QDomElement *strucT, QDomDocument &doc)
+{
+    QDomAttr attr;
+    QDomText text;
+    bool flagNewMessage=false;
+
+
+        bool flagBlankSpace=true;
+
+
+        for(unsigned short i = 0 ; i<8;i++  ){
+                QDomElement variable = doc.createElement("variable");
+                attr = doc.createAttribute("name");
+                attr.setValue("X_Byte;_"+QString::number(i));
+                variable.setAttributeNode(attr);
+                { //type and derived element with name attribute
+                    QDomElement type = doc.createElement("type");
+                    QDomElement BOOL = doc.createElement("BOOL");
+                    type.appendChild(BOOL);
+                    variable.appendChild(type);
+                }
+                {//Documentation
+
+                    QDomElement documentation=doc.createElement("documentation");
+                    QDomElement xhtml = doc.createElement("xhtml");
+                    attr=doc.createAttribute("xmlns");
+                    attr.setValue("http://www.w3.org/1999/xhtml");
+                    xhtml.setAttributeNode(attr);
+                    {
+                        QString comment;
+                        if(flagBlankSpace){
+                            comment.append("\n\n Message BYTE "+QString::number(i)+"\n");
+                            flagBlankSpace=false;
+                        }
+
+                        comment.append("Message sent status provided by LIB500 ");
+                        text =doc.createTextNode(comment);
+                        xhtml.appendChild(text);
+                    }
+                    documentation.appendChild(xhtml);
+                    variable.appendChild(documentation);
+                }
+                strucT->appendChild(variable);
+                }
+
+
+
+
+    // CAN_Init register for DUT
+
+}
+
+/// ///******************************************************************************
+/// ETH II GENERATION
+///******************************************************************************
+void DBCHandler::generateIIETH(QDomElement *pous, QDomDocument &doc)
+{
+                QDomAttr attr;
+                QDomText text;
+
+                QString namePou = "P_"+this->dutHeader;
+                    //For AND and OR gate to manipulate timeout and disturbance flags
+
+                /*generate block struct type new block*/
+
+                structFbdBlock* newBlock = new structFbdBlock;
+                QDomElement pou = doc.createElement("pou");
+                /*set pou name*/
+                attr=doc.createAttribute("name");
+                attr.setValue(namePou);
+                pou.setAttributeNode(attr);
+                /*set pouType*/
+                attr=doc.createAttribute("pouType");
+                attr.setValue("program");
+                pou.setAttributeNode(attr);
+
+                /*Interface*/
+                QDomElement interface = doc.createElement("interface");
+
+                /*Generate Local Variables - localVars*/
+                QString STcode;
+                this->generateIIETHST(&STcode);
+                //Generate local vars
+                {
+                QDomElement localVars= doc.createElement("localVars");
+                /*Function block declaration*/
+                foreach (dataContainer * curMessage , comInterface){
+                    if(curMessage->getIfSelected()){
+                        QDomElement variable=doc.createElement("variable");
+                        attr=doc.createAttribute("name");
+                        attr.setValue("MSG_ETH_"+curMessage->getID());
+                        variable.setAttributeNode(attr);
+                        QDomElement type = doc.createElement("type");
+                        QDomElement derived = doc.createElement("derived");
+                        attr=doc.createAttribute("name");
+                        attr.setValue(curMessage->getIfBitOperation()?("_FB_ETHRx_Message_Unpack"):("MSG_ETH_T"));
+                        derived.setAttributeNode(attr);
+                        type.appendChild(derived);
+                        variable.appendChild(type);
+                        localVars.appendChild(variable);
+                    }
+                }
+
+                foreach (dataContainer * curMessage , comInterface){
+                    if(curMessage->getIfSelected()){
+                        for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
+                            QDomElement variable=doc.createElement("variable");
+                            attr=doc.createAttribute("name");
+                            attr.setValue("Raw_"+curSignal->name);
+                            variable.setAttributeNode(attr);
+                            QDomElement type = doc.createElement("type");
+                            QDomElement dataType = doc.createElement(curSignal->comDataType);
+                            type.appendChild(dataType);
+                            variable.appendChild(type);
+                            localVars.appendChild(variable);
+                        }
+                    }
+                }
+                for(unsigned z=0;z<4;z++){
+                    QDomElement variable=doc.createElement("variable");
+                    attr=doc.createAttribute("name");
+                    attr.setValue("_FB_PACK_BYTE_TO_WORD_ID"+QString::number(z));
+                    variable.setAttributeNode(attr);
+                    QDomElement type = doc.createElement("type");
+                    QDomElement derived = doc.createElement("derived");
+                    attr = doc.createAttribute("name");
+                    attr.setValue("_FB_PACK_BYTE_TO_WORD");
+                    derived.setAttributeNode(attr);
+                    type.appendChild(derived);
+                    variable.appendChild(type);
+                    localVars.appendChild(variable);
+                }
+                if(this->enableFrc){
+                    QDomElement variable=doc.createElement("variable");
+                    attr=doc.createAttribute("name");
+                    attr.setValue("FrcVar");
+                    variable.setAttributeNode(attr);
+                    QDomElement type = doc.createElement("type");
+                    QDomElement derived = doc.createElement("derived");
+                    attr=doc.createAttribute("name");
+                    attr.setValue(this->dutName);
+                    derived.setAttributeNode(attr);
+                    type.appendChild(derived);
+                    variable.appendChild(type);
+                    localVars.appendChild(variable);
+                }
+
+                for (unsigned i =0; i<counterfbBYTETOWORD; i++){
+                    QDomElement variable=doc.createElement("variable");
+                    attr=doc.createAttribute("name");
+                    attr.setValue("_FB_PACK_BYTE_TO_WORD_"+QString::number(i));
+                    variable.setAttributeNode(attr);
+                    QDomElement type = doc.createElement("type");
+                    QDomElement derived = doc.createElement("derived");
+                    attr = doc.createAttribute("name");
+                    attr.setValue("_FB_PACK_BYTE_TO_WORD");
+                    derived.setAttributeNode(attr);
+                    type.appendChild(derived);
+                    variable.appendChild(type);
+                    localVars.appendChild(variable);
+                }
+
+                for (unsigned i =0; i<counterfbBYTETODWORD; i++){
+                    QDomElement variable=doc.createElement("variable");
+                    attr=doc.createAttribute("name");
+                    attr.setValue("_FB_PACK_BYTE_TO_DWORD_"+QString::number(i));
+                    variable.setAttributeNode(attr);
+                    QDomElement type = doc.createElement("type");
+                    QDomElement derived = doc.createElement("derived");
+                    attr = doc.createAttribute("name");
+                    attr.setValue("_FB_PACK_BYTE_TO_DWORD");
+                    derived.setAttributeNode(attr);
+                    type.appendChild(derived);
+                    variable.appendChild(type);
+                    localVars.appendChild(variable);
+
+                }
+                for (unsigned i =0; i<counterfbBYTETOLWORD; i++){
+                    QDomElement variable=doc.createElement("variable");
+                    attr=doc.createAttribute("name");
+                    attr.setValue("_FB_PACK_BYTE_TO_LWORD_"+QString::number(i));
+                    variable.setAttributeNode(attr);
+                    QDomElement type = doc.createElement("type");
+                    QDomElement derived = doc.createElement("derived");
+                    attr = doc.createAttribute("name");
+                    attr.setValue("_FB_PACK_BYTE_TO_LWORD");
+                    derived.setAttributeNode(attr);
+                    type.appendChild(derived);
+                    variable.appendChild(type);
+                    localVars.appendChild(variable);
+                }
+                for (unsigned i =0; i<counterfb8BITTOBYTE; i++){
+                    QDomElement variable=doc.createElement("variable");
+                    attr=doc.createAttribute("name");
+                    attr.setValue("_FB_PACK_8BITS_TO_BYTE_"+QString::number(i));
+                    variable.setAttributeNode(attr);
+                    QDomElement type = doc.createElement("type");
+                    QDomElement derived = doc.createElement("derived");
+                    attr = doc.createAttribute("name");
+                    attr.setValue("_FB_PACK_8BITS_TO_BYTE");
+                    derived.setAttributeNode(attr);
+                    type.appendChild(derived);
+                    variable.appendChild(type);
+                    localVars.appendChild(variable);
+                }
+                for (unsigned i =0; i<counterfbDWORDTOLWORD; i++){
+                    QDomElement variable=doc.createElement("variable");
+                    attr=doc.createAttribute("name");
+                    attr.setValue("_FB_PACK_DWORD_TO_LWORD_"+QString::number(i));
+                    variable.setAttributeNode(attr);
+                    QDomElement type = doc.createElement("type");
+                    QDomElement derived = doc.createElement("derived");
+                    attr = doc.createAttribute("name");
+                    attr.setValue("_FB_PACK_DWORD_TO_LWORD");
+                    derived.setAttributeNode(attr);
+                    type.appendChild(derived);
+                    variable.appendChild(type);
+                    localVars.appendChild(variable);
+                }
+
+                /*Function Block declaratoins*/
+                DBCHandler::counterfbBYTETOWORD=0;
+                DBCHandler::counterfbBYTETODWORD=0;
+                DBCHandler::counterfbBYTETOLWORD=0;
+                DBCHandler::counterfb8BITTOBYTE=0;
+                DBCHandler::counterfbDWORDTOLWORD=0;
+
+
+                interface.appendChild(localVars);
+                }
+                pou.appendChild(interface);
+
+                /*Create Body*/
+                QDomElement body = doc.createElement("body");
+                QDomElement ST = doc.createElement("ST");
+                QDomElement xhtml = doc.createElement("xhtml");
+                attr=doc.createAttribute("xmlns");
+                attr.setValue("http://www.w3.org/1999/xhtml");
+                xhtml.setAttributeNode(attr);
+                text=doc.createTextNode(STcode);
+                xhtml.appendChild(text);
+                ST.appendChild(xhtml);
+                body.appendChild(ST);
+                pou.appendChild(body);
+
+                /*Create addData*/
+                QDomElement addData = doc.createElement("addData");
+                QDomElement data = doc.createElement("data");
+                attr=doc.createAttribute("name");
+                attr.setValue("http://www.3s-software.com/plcopenxml/objectid");
+                data.setAttributeNode(attr);
+                attr=doc.createAttribute("handleUnknown");
+                attr.setValue("discard");
+                data.setAttributeNode(attr);
+                QDomElement ObjectId = doc.createElement("ObjectId");
+                text=doc.createTextNode(this->pouObjID);
+                ObjectId.appendChild(text);
+                data.appendChild(ObjectId);
+                addData.appendChild(data);
+                pou.appendChild(addData);
+                pous->appendChild(pou);
+
+
+                fbdBlocks.append(newBlock);
+
+
+
+}
+void DBCHandler::generateIIETHST(QString * const ST)
+{
+                ST->append("(*\n"
+                           "**********************************************************************\n"
+                           "Bozankaya A.Ş.\n"
+                           "**********************************************************************\n"
+                           "Name					: P_"+dutName+"\n"
+                           "POU Type				: Program\n"
+                           "Created by              : COMMUNICATION INTERFACE GENERATOR "+Version+"("+QHostInfo::localHostName()+") , BZK.\n"
+                           "Creation Date 			: "+creationDate.toString(Qt::DateFormat::ISODate)+"\n"
+                           "Modifications			: see version description below\n"
+                           "\n"
+                           "\n"
+                           "Program Description:"
+                           "This program which is created by automatically by communication interface generator \n handles the RX (INPUT) ethernet messages as 40 byte custom UDP datagram\n"
+                           "*********************************************************************\n"
+                           "\n"
+                           "Version 1	\n"
+                           "*********************************************************************\n"
+                           "Version Description:\n"
+                           "- initial version\n"
+                           "*********************************************************************\n"
+                           "*)");
+                foreach (dataContainer * curMessage , comInterface){
+                    if(curMessage->getIfSelected()){
+                        QString nameFb = "MSG_ETH_"+curMessage->getID();
+                        if(curMessage->getIfBitOperation()){
+                            ST->append( "\n"+nameFb+"();\n");
+                        }
+                    }
+                }
+
+                ST->append("\n//-----------------------------------------------------------------------------------------------------------------------------");
+                ST->append("\n{region \"Selection Area\"}\n");
+                ST->append(this->generateIIETHDatagramST());
+                ST->append("\n{endregion}");
+                ST->append("\n//-----------------------------------------------------------------------------------------------------------------------------");
+
+                foreach (dataContainer * curMessage , comInterface){
+                if(curMessage->getIfSelected()){
+                    ST->append("\n{region \" MESSAGE AREA :"+curMessage->getName()+"- ID:"+curMessage->getID()+"\"}\n");
+                    QString nameFb = "MSG_ETH_"+curMessage->getID();
+
+                    for( const dataContainer::signal * curSignal : *curMessage->getSignalList()){
+                        ST->append(convTypeComtoApp(curSignal,curMessage->getID(),curMessage->getName(),nameFb));
+                    }
+                    ST->append("\n{endregion}");
+
+
+                }
+                }
+
 }
 ///******************************************************************************
 /// RECEIVE MESSAGES FUNCTION BLOCK ST GENERATOR
@@ -1665,6 +2071,7 @@ void DBCHandler::generateIIST(QString *const ST)
                "- initial version\n"
                "*********************************************************************\n"
                "*)");
+
     foreach (dataContainer * curMessage , comInterface){
         if(curMessage->getIfSelected()){
             ST->append("\n{region \" MESSAGE AREA :"+curMessage->getName()+"- ID:"+curMessage->getID()+"\"}\n");
@@ -1705,19 +2112,45 @@ void DBCHandler::generateIIST(QString *const ST)
     }
     ST->append(" FALSE;");
 }
+
+QString DBCHandler::generateIIETHDatagramST()
+{
+    QString ST;
+
+    for(unsigned i= 0;i<4;i++){
+        QString datagramID = "ID"+ QString::number(i);
+        ST.append("_FB_PACK_BYTE_TO_WORD_"+datagramID+"(X_BYTE_0:= GVL.Datagram_"+dutHeader+"."+datagramID+"_LS, X_BYTE_1:= GVL.Datagram_"+dutHeader+"."+datagramID+"_HS);\n");
+        ST.append("CASE _FB_PACK_BYTE_TO_WORD_"+datagramID+".X_WORD_0 OF\n");
+        foreach (dataContainer * curMessage , comInterface){
+            if(curMessage->getIfSelected()){
+                ST.append("16#"+curMessage->getID()+":\n");
+                for(unsigned k=0 ;k<8;k++){
+                            ST.append("MSG_ETH_"+curMessage->getID()+"."+((curMessage->getIfBitOperation())?("I"):("X"))+"_Byte_"+QString::number(k)+" := GVL.Datagram_"+dutHeader+"."+datagramID+"_Byte_"+QString::number(k)+";\n");
+                }
+            }
+        }
+        ST.append("\n");
+        ST.append("ELSE\n"
+                  "(*DO NOTHING*)\n"
+                  "END_CASE;\n");
+
+    }
+
+    return ST;
+}
 QString DBCHandler::convTypeComtoApp(const dataContainer::signal * curSignal, QString idMessage, QString nameMessage, QString nameFb)
 {
     QString ST="\n{region \" SIGNAL AREA : NAME->"+curSignal->name+" LENGTH->"+QString::number(curSignal->length)+" STARTBIT :"+QString::number(curSignal->startBit)+"\"}";
     if(curSignal->convMethod=="BOOL:BOOL"){
         if(this->enableFrc){
-        ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".v\t\t:= NOT GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" OR FrcVar."+curSignal->name+".v ;"
+        ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".v\t\t:= NOT GVL."+dutHeader+((this->m_ComType=="ETH")?(".S_Com_Flt"):(".S_TmOut_"+nameMessage+"_0X"+idMessage))+" OR FrcVar."+curSignal->name+".v ;"
                   "\nIF NOT FrcVar."+curSignal->name+".v THEN;"
                   "\nGVL."+this->dutHeader+"."+curSignal->name+".x\t\t:= GVL."+this->dutHeader+"."+curSignal->name+".v AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+";"
                   "\nELSE "
                   "\nGVL."+this->dutHeader+"."+curSignal->name+".x\t\t:= FrcVar."+curSignal->name+".x ;"
                   "\nEND_IF;");
         }else{
-            ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".v\t\t:= NOT GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+";"
+            ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".v\t\t:= NOT GVL."+dutHeader+((this->m_ComType=="ETH")?(".S_Com_Flt"):(".S_TmOut_"+nameMessage+"_0X"+idMessage))+";"
                       "\nGVL."+this->dutHeader+"."+curSignal->name+".x\t\t:= GVL."+this->dutHeader+"."+curSignal->name+".v AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+";");
         }
     }else if(curSignal->convMethod=="2BOOL:BOOL"){
@@ -1901,7 +2334,7 @@ QString DBCHandler::convTypeComtoApp(const dataContainer::signal * curSignal, QS
 
     if((curSignal->convMethod != "BOOL:BOOL") && (curSignal->convMethod!="2BOOL:BOOL")){
             ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".RangeExcd\t:= NOT (("+cont_text+" >= "+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+") AND ("+cont_text+" <= "+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+"));"
-            +((!this->enableFrc)?("\nGVL."+this->dutHeader+"."+curSignal->name+".v\t\t\t:= NOT( GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" OR GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd "+((curSignal->isJ1939 ==true)?("OR GVL."+this->dutHeader+"."+curSignal->name+".e OR GVL."+this->dutHeader+"."+curSignal->name+".na) "):(") "))+";"):("\nGVL."+this->dutHeader+"."+curSignal->name+".v				:= NOT( GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" OR GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd "+((curSignal->isJ1939 ==true)?("OR GVL."+this->dutHeader+"."+curSignal->name+".e OR GVL."+this->dutHeader+"."+curSignal->name+".na) OR "):(") OR "))+"FrcVar."+curSignal->name+".v ;"))+
+                  +((!this->enableFrc)?("\nGVL."+this->dutHeader+"."+curSignal->name+".v\t\t\t:= NOT( GVL."+dutHeader+((this->m_ComType=="ETH")?(".S_Com_Flt"):(".S_TmOut_"+nameMessage+"_0X"+idMessage))+" OR GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd "+((curSignal->isJ1939 ==true)?("OR GVL."+this->dutHeader+"."+curSignal->name+".e OR GVL."+this->dutHeader+"."+curSignal->name+".na) "):(") "))+";"):("\nGVL."+this->dutHeader+"."+curSignal->name+".v				:= NOT( GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" OR GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd "+((curSignal->isJ1939 ==true)?("OR GVL."+this->dutHeader+"."+curSignal->name+".e OR GVL."+this->dutHeader+"."+curSignal->name+".na) OR "):(") OR "))+"FrcVar."+curSignal->name+".v ;"))+
             "\n");
             if(this->enableFrc){
                 ST.append("GVL."+this->dutHeader+"."+curSignal->name+".x\t\t\t:= \n(*SELECT 1 : Is force active?*)\t\t\t\t\t\tSEL("+"FrcVar."+curSignal->name+".v"+","+"\n(*SELECT 2 : Is data valid ?*)\t\t\t\t\tSEL("+"GVL."+this->dutHeader+"."+curSignal->name+".v"+",(*DEFAULT value assignment*)\t\t\t\t\t\t"+QString::number(curSignal->defValue,'g',15)+",(*Transmission is VALID*)\t\t\t\t\t\t"+cont_text+"),(*Force is active*)\t\t\t\t\t\tFrcVar."+curSignal->name+".x);");
@@ -1916,6 +2349,382 @@ QString DBCHandler::convTypeComtoApp(const dataContainer::signal * curSignal, QS
 
 
 }
+
+
+
+///******************************************************************************
+/// ETH IO GENERATION
+///******************************************************************************
+void DBCHandler::generateIOETH(QDomElement *pous, QDomDocument &doc)
+{
+    QDomAttr attr;
+    QDomText text;
+
+    QString namePou = "P_"+this->dutHeader;
+        //For AND and OR gate to manipulate timeout and disturbance flags
+
+    /*generate block struct type new block*/
+
+    structFbdBlock* newBlock = new structFbdBlock;
+    QDomElement pou = doc.createElement("pou");
+    /*set pou name*/
+    attr=doc.createAttribute("name");
+    attr.setValue(namePou);
+    pou.setAttributeNode(attr);
+    /*set pouType*/
+    attr=doc.createAttribute("pouType");
+    attr.setValue("program");
+    pou.setAttributeNode(attr);
+
+    /*Interface*/
+    QDomElement interface = doc.createElement("interface");
+
+    /*Generate Local Variables - localVars*/
+    QString STcode;
+    this->generateIOETHST(&STcode);
+    //Generate local vars
+    {
+            QDomElement localVars= doc.createElement("localVars");
+            /*Function block declaration*/
+            foreach (dataContainer * curMessage , comInterface){
+                if(curMessage->getIfSelected()){
+            QDomElement variable=doc.createElement("variable");
+            attr=doc.createAttribute("name");
+            attr.setValue("MSG_ETH_"+curMessage->getID());
+            variable.setAttributeNode(attr);
+            QDomElement type = doc.createElement("type");
+            QDomElement derived = doc.createElement("derived");
+            attr=doc.createAttribute("name");
+            attr.setValue(curMessage->getIfBitOperation()?("_FB_ETHTx_Message_Unpack"):("MSG_ETH_T"));
+            derived.setAttributeNode(attr);
+            type.appendChild(derived);
+            variable.appendChild(type);
+            localVars.appendChild(variable);
+                }
+            }
+
+            //foreach (dataContainer * curMessage , comInterface){
+            //    if(curMessage->getIfSelected()){
+            //        for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
+            //            QDomElement variable=doc.createElement("variable");
+            //            attr=doc.createAttribute("name");
+            //            attr.setValue("Cont_"+curSignal->name);
+            //            variable.setAttributeNode(attr);
+            //            QDomElement type = doc.createElement("type");
+            //            QDomElement dataType = doc.createElement(curSignal->comDataType);
+            //            type.appendChild(dataType);
+            //            variable.appendChild(type);
+            //            localVars.appendChild(variable);
+            //        }
+            //    }
+            //}
+            if(this->enableFrc){
+                QDomElement variable=doc.createElement("variable");
+                attr=doc.createAttribute("name");
+                attr.setValue("FrcVar");
+                variable.setAttributeNode(attr);
+                QDomElement type = doc.createElement("type");
+                QDomElement derived = doc.createElement("derived");
+                attr=doc.createAttribute("name");
+                attr.setValue(this->dutName);
+                derived.setAttributeNode(attr);
+                type.appendChild(derived);
+                variable.appendChild(type);
+                localVars.appendChild(variable);
+            }
+            {
+                QDomElement variable=doc.createElement("variable");
+                attr=doc.createAttribute("name");
+                attr.setValue("MessageCounter");
+                variable.setAttributeNode(attr);
+                QDomElement type = doc.createElement("type");
+                QDomElement dataType = doc.createElement("UDINT");
+                type.appendChild(dataType);
+                variable.appendChild(type);
+                localVars.appendChild(variable);
+            }
+            for(unsigned z=0;z<4;z++){
+                QDomElement variable=doc.createElement("variable");
+                attr=doc.createAttribute("name");
+                attr.setValue("_FB_UNPACK_WORD_TO_BYTE_ID"+QString::number(z));
+                variable.setAttributeNode(attr);
+                QDomElement type = doc.createElement("type");
+                QDomElement derived = doc.createElement("derived");
+                attr = doc.createAttribute("name");
+                attr.setValue("_FB_UNPACK_WORD_TO_BYTE");
+                derived.setAttributeNode(attr);
+                type.appendChild(derived);
+                variable.appendChild(type);
+                localVars.appendChild(variable);
+            }
+            if(this->enableTest){
+                QDomElement variable=doc.createElement("variable");
+                attr=doc.createAttribute("name");
+                attr.setValue("FrcTest");
+                variable.setAttributeNode(attr);
+                QDomElement type = doc.createElement("type");
+                QDomElement derived = doc.createElement("derived");
+                attr=doc.createAttribute("name");
+                attr.setValue(this->dutName);
+                derived.setAttributeNode(attr);
+                type.appendChild(derived);
+                variable.appendChild(type);
+                localVars.appendChild(variable);
+            }
+            for (unsigned i =0; i<counterfbLWORDTOBYTE; i++){
+                QDomElement variable=doc.createElement("variable");
+                attr=doc.createAttribute("name");
+                attr.setValue("_FB_UNPACK_LWORD_TO_BYTE_"+QString::number(i));
+                variable.setAttributeNode(attr);
+                QDomElement type = doc.createElement("type");
+                QDomElement derived = doc.createElement("derived");
+                attr = doc.createAttribute("name");
+                attr.setValue("_FB_UNPACK_LWORD_TO_BYTE");
+                derived.setAttributeNode(attr);
+                type.appendChild(derived);
+                variable.appendChild(type);
+                localVars.appendChild(variable);
+
+            }
+            for (unsigned i =0; i<counterfbDWORDTOBYTE; i++){
+                QDomElement variable=doc.createElement("variable");
+                attr=doc.createAttribute("name");
+                attr.setValue("_FB_UNPACK_DWORD_TO_BYTE_"+QString::number(i));
+                variable.setAttributeNode(attr);
+                QDomElement type = doc.createElement("type");
+                QDomElement derived = doc.createElement("derived");
+                attr = doc.createAttribute("name");
+                attr.setValue("_FB_UNPACK_DWORD_TO_BYTE");
+                derived.setAttributeNode(attr);
+                type.appendChild(derived);
+                variable.appendChild(type);
+                localVars.appendChild(variable);
+            }
+            for (unsigned i =0; i<counterfbWORDTOBYTE; i++){
+                QDomElement variable=doc.createElement("variable");
+                attr=doc.createAttribute("name");
+                attr.setValue("_FB_UNPACK_WORD_TO_BYTE_"+QString::number(i));
+                variable.setAttributeNode(attr);
+                QDomElement type = doc.createElement("type");
+                QDomElement derived = doc.createElement("derived");
+                attr = doc.createAttribute("name");
+                attr.setValue("_FB_UNPACK_WORD_TO_BYTE");
+                derived.setAttributeNode(attr);
+                type.appendChild(derived);
+                variable.appendChild(type);
+                localVars.appendChild(variable);
+            }
+            for (unsigned i =0; i<counterfbBYTETO8BIT; i++){
+                QDomElement variable=doc.createElement("variable");
+                attr=doc.createAttribute("name");
+                attr.setValue("_FB_UNPACK_BYTE_TO_8BITS_"+QString::number(i));
+                variable.setAttributeNode(attr);
+                QDomElement type = doc.createElement("type");
+                QDomElement derived = doc.createElement("derived");
+                attr = doc.createAttribute("name");
+                attr.setValue("_FB_UNPACK_BYTE_TO_8BITS");
+                derived.setAttributeNode(attr);
+                type.appendChild(derived);
+                variable.appendChild(type);
+                localVars.appendChild(variable);
+            }
+
+            counterfbLWORDTOBYTE = 0;
+            counterfbDWORDTOBYTE = 0;
+            counterfbWORDTOBYTE = 0;
+            counterfbBYTETO8BIT = 0;
+
+
+            interface.appendChild(localVars);
+    }
+    pou.appendChild(interface);
+
+    /*Create Body*/
+    QDomElement body = doc.createElement("body");
+    QDomElement ST = doc.createElement("ST");
+    QDomElement xhtml = doc.createElement("xhtml");
+    attr=doc.createAttribute("xmlns");
+    attr.setValue("http://www.w3.org/1999/xhtml");
+    xhtml.setAttributeNode(attr);
+    text=doc.createTextNode(STcode);
+    xhtml.appendChild(text);
+    ST.appendChild(xhtml);
+    body.appendChild(ST);
+    pou.appendChild(body);
+
+    /*Create addData*/
+    QDomElement addData = doc.createElement("addData");
+    QDomElement data = doc.createElement("data");
+    attr=doc.createAttribute("name");
+    attr.setValue("http://www.3s-software.com/plcopenxml/objectid");
+    data.setAttributeNode(attr);
+    attr=doc.createAttribute("handleUnknown");
+    attr.setValue("discard");
+    data.setAttributeNode(attr);
+    QDomElement ObjectId = doc.createElement("ObjectId");
+    text=doc.createTextNode(this->pouObjID);
+    ObjectId.appendChild(text);
+    data.appendChild(ObjectId);
+    addData.appendChild(data);
+    pou.appendChild(addData);
+    pous->appendChild(pou);
+
+
+    fbdBlocks.append(newBlock);
+    // append input variables to AND gate to check disturbance -> EXP format : GVL.IIXC.S_TmOut_Motor_Messages_3_0X512
+
+
+}
+void DBCHandler::generateIOETHST(QString * const ST)
+{       ST->append("(*\n"
+               "**********************************************************************\n"
+               "Bozankaya A.Ş.\n"
+               "**********************************************************************\n"
+               "Name					: P_"+dutHeader+"\n"
+               "POU Type				: Program\n"
+               "Created by              : COMMUNICATION INTERFACE GENERATOR "+Version+"("+QHostInfo::localHostName()+"), BZK.\n"
+               "Creation Date 			: "+creationDate.toString(Qt::DateFormat::ISODate)+"\n"
+               "Modifications			: see version description below\n"
+               "\n"
+               "\n"
+               "Program Description:"
+               "This program which is created by automatically by communication interface generator \n handles the TX (OUTPUT) ethernet messages as custom UDP 40 byte datagram packs \n"
+               "*********************************************************************\n"
+               "\n"
+               "Version 1	\n"
+               "*********************************************************************\n"
+               "Version Description:\n"
+               "- initial version\n"
+               "*********************************************************************\n"
+               "*)");
+
+    foreach (dataContainer * curMessage , comInterface){
+            if(curMessage->getIfSelected()){
+                ST->append("\n//-----------------------------------------------------------------------------------------------------------------------------");
+                ST->append("\n//MESSAGE------");
+                ST->append("\n{region \" User Area : "+curMessage->getName()+"- ID:"+curMessage->getID()+"\"}\n");
+                for( const dataContainer::signal * curSignal : *curMessage->getSignalList()){
+            ST->append("\n//-------SIGNAL -> "+curSignal->name+" Max: "+QString::number(curSignal->maxValue)+" Min: "+QString::number(curSignal->minValue)+" Def: "+QString::number(curSignal->defValue)+" Resolution: "+QString::number(curSignal->resolution)+" Offset: "+QString::number(curSignal->offset));
+            ST->append("\nGVL."+this->dutHeader+"."+curSignal->name+".v\t\t\t\t\t:= "+((this->enableTest==true)?("FrcTest."+curSignal->name+".v;"):("ASSIGN HERE VALIDITY VARIABLE !!;")));
+            ST->append("\nGVL."+this->dutHeader+"."+curSignal->name+".x\t\t\t\t\t:= "+((this->enableTest==true)?("FrcTest."+curSignal->name+".x;"):("ASSIGN HERE VALIDITY VARIABLE !!;")));
+            if(curSignal->isJ1939){
+                    ST->append("\nGVL."+this->dutHeader+"."+curSignal->name+".e\t\t\t\t\t:= "+((this->enableTest==true)?("FrcTest."+curSignal->name+".e;"):("ASSIGN HERE ERROR FLAG VARIABLE !!;")));
+                    ST->append("\nGVL."+this->dutHeader+"."+curSignal->name+".na\t\t\t\t\t:= "+((this->enableTest==true)?("FrcTest."+curSignal->name+".na;"):("ASSIGN HERE NOT AVAILABLE FLAG VARIABLE !!;")));
+            }
+            if(curSignal->length > 3){
+                    ST->append("\nGVL."+this->dutHeader+"."+curSignal->name+".RangeExcd\t\t\t:=  ("+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+" < GVL."+this->dutHeader+"."+curSignal->name+".x )OR ("+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+" > GVL."+this->dutHeader+"."+curSignal->name+".x);");
+            }
+
+                }
+                ST->append("\n{endregion}");
+                ST->append("\n//-----------------------------------------------------------------------------------------------------------------------------");
+            }
+    }
+    foreach (dataContainer * curMessage , comInterface){
+            if(curMessage->getIfSelected()){
+                QString nameFb = "MSG_ETH_"+curMessage->getID();
+                if(curMessage->getIfBitOperation()){
+                    ST->append( "\n"+nameFb+"();\n");
+                }
+            }
+    }
+
+    foreach (dataContainer * curMessage , comInterface){
+            if(curMessage->getIfSelected()){
+                ST->append("\n//-----------------------------------------------------------------------------------------------------------------------------");
+                ST->append("\n{region \" MESSAGE AREA :"+curMessage->getName()+"- ID:"+curMessage->getID()+"\"}\n");
+                QString nameFb = "MSG_ETH_"+curMessage->getID();
+
+                for( const dataContainer::signal * curSignal : *curMessage->getSignalList()){
+                    ST->append(convTypeApptoCom(curSignal,curMessage->getID(),curMessage->getName(),nameFb));
+                }
+
+
+                ST->append("\n{endregion}");
+                ST->append("\n//-----------------------------------------------------------------------------------------------------------------------------");
+            }
+    }
+    ST->append("\n//-----------------------------------------------------------------------------------------------------------------------------");
+    ST->append("\n{region \"Selection Area\"}\n");
+    ST->append(this->generateIOETHDatagramST());
+    ST->append("\n{endregion}");
+    ST->append("\n//-----------------------------------------------------------------------------------------------------------------------------");
+}
+
+QString DBCHandler::generateIOETHDatagramST()
+{
+    QString ST;
+    long counter=0;
+    long quartercounter=0;
+    QList<QString> IDlist;
+    IDlist.clear();
+    for(unsigned i= 0 ;i<4;i++){
+        QString datagramID ="ID"+QString::number(i);
+        ST.append("_FB_UNPACK_WORD_TO_BYTE_"+datagramID+"();\n");
+    }
+
+    ST.append("CASE MessageCounter OF\n");
+    foreach (dataContainer * curMessage , comInterface){
+            if(curMessage->getIfSelected()){
+                quartercounter++;
+
+                IDlist.append(curMessage->getID());
+                if(quartercounter==4){
+                    counter++;
+                    ST.append(QString::number(counter)+":\n");
+                    unsigned datagID = 0;
+                    for(QString ID : IDlist){
+                    QString datagramID ="ID"+QString::number(datagID);
+                    ST.append("_FB_UNPACK_WORD_TO_BYTE_"+datagramID+".X_Word_0 := 16#"+ID+";\n");
+                        for(unsigned k=0 ;k<8;k++){
+
+                    ST.append("GVL.Datagram_"+dutHeader+"."+datagramID+"_Byte_"+QString::number(k)+" := "+"MSG_ETH_"+ID+"."+((comInterface[ID]->getIfBitOperation())?("O"):("X"))+"_Byte_"+QString::number(k)+";\n");
+                        }
+                        datagID++;
+                    }
+                    quartercounter=0;
+                    IDlist.clear();
+                }
+            }
+    }
+    if(quartercounter !=0){
+            unsigned needCounter = quartercounter;
+            unsigned completer = 4 - needCounter;
+            unsigned datagID = 0;
+            counter++;
+            ST.append(QString::number(counter)+":\n");
+            for(QString ID : IDlist){
+                QString datagramID ="ID"+QString::number(datagID);
+                ST.append("_FB_UNPACK_WORD_TO_BYTE_"+datagramID+".X_Word_0 := 16#"+ID+";\n");
+                for(unsigned k=0 ;k<8;k++){
+
+                    ST.append("GVL.Datagram_"+dutHeader+"."+datagramID+"_Byte_"+QString::number(k)+" := "+"MSG_ETH_"+ID+"."+((comInterface[ID]->getIfBitOperation())?("O"):("X"))+"_Byte_"+QString::number(k)+";\n");
+                }
+                datagID++;
+            }
+            for(unsigned i = completer; i>0;i--){
+                QString datagramID ="ID"+QString::number(datagID);
+                ST.append("_FB_UNPACK_WORD_TO_BYTE_"+datagramID+".X_Word_0 := 0;\n");
+                for(unsigned k=0 ;k<8;k++){
+                ST.append("GVL.Datagram_"+dutHeader+"."+datagramID+"_Byte_"+QString::number(k)+" := 0;\n");
+                }
+                datagID++;
+            }
+            IDlist.clear();
+    }
+    ST.append("END_CASE;\n");
+    for(unsigned i= 0 ;i<4;i++){
+            QString datagramID ="ID"+QString::number(i);
+            ST.append("GVL.Datagram_"+dutHeader+"."+datagramID+"_LS :=_FB_UNPACK_WORD_TO_BYTE_"+datagramID+"."+"X_Byte_0;\n");
+            ST.append("GVL.Datagram_"+dutHeader+"."+datagramID+"_HS :=_FB_UNPACK_WORD_TO_BYTE_"+datagramID+"."+"X_Byte_1;\n");
+    }
+    ST.append("IF MessageCounter ="+QString::number(counter)+"THEN\n");
+    ST.append("\t MessageCounter:=0 ; \n");
+    ST.append("ELSE\n");
+    ST.append("\t MessageCounter:=MessageCounter+1 ; \n");
+    ST.append("END_IF;\n");
+    return ST;
+}
 ///******************************************************************************
 /// TRANSMIT MESSAGES FUNCTION BLOCK ST GENERATOR
 ///******************************************************************************
@@ -1925,196 +2734,197 @@ void DBCHandler::generateIOPous(QDomElement * pous, QDomDocument &doc)
     QDomText text;
 
     QString namePou = "P_"+this->dutHeader;
-     //For AND and OR gate to manipulate timeout and disturbance flags
+        //For AND and OR gate to manipulate timeout and disturbance flags
 
-            /*generate block struct type new block*/
+    /*generate block struct type new block*/
 
-            structFbdBlock* newBlock = new structFbdBlock;
-            QDomElement pou = doc.createElement("pou");
-            /*set pou name*/
+    structFbdBlock* newBlock = new structFbdBlock;
+    QDomElement pou = doc.createElement("pou");
+    /*set pou name*/
+    attr=doc.createAttribute("name");
+    attr.setValue(namePou);
+    pou.setAttributeNode(attr);
+    /*set pouType*/
+    attr=doc.createAttribute("pouType");
+    attr.setValue("program");
+    pou.setAttributeNode(attr);
+
+    /*Interface*/
+    QDomElement interface = doc.createElement("interface");
+
+    /*Generate Local Variables - localVars*/
+    QString STcode;
+    this->generateIOST(&STcode);
+    //Generate local vars
+    {
+            QDomElement localVars= doc.createElement("localVars");
+            /*Function block declaration*/
+            foreach (dataContainer * curMessage , comInterface){
+                if(curMessage->getIfSelected()){
+            QDomElement variable=doc.createElement("variable");
             attr=doc.createAttribute("name");
-            attr.setValue(namePou);
-            pou.setAttributeNode(attr);
-            /*set pouType*/
-            attr=doc.createAttribute("pouType");
-            attr.setValue("program");
-            pou.setAttributeNode(attr);
-
-            /*Interface*/
-            QDomElement interface = doc.createElement("interface");
-
-            /*Generate Local Variables - localVars*/
-            QString STcode;
-            this->generateIOST(&STcode);
-//Generate local vars
-            {
-                QDomElement localVars= doc.createElement("localVars");
-                /*Function block declaration*/
-                foreach (dataContainer * curMessage , comInterface){
-                    if(curMessage->getIfSelected()){
-                        QDomElement variable=doc.createElement("variable");
-                        attr=doc.createAttribute("name");
-                        attr.setValue(curMessage->getIfBitOperation()?("_FB_CanTx_Message_Unpack_"+curMessage->getID()):("_FB_CanTx_Message_"+curMessage->getID()));
-                        variable.setAttributeNode(attr);
-                        QDomElement type = doc.createElement("type");
-                        QDomElement derived = doc.createElement("derived");
-                        attr=doc.createAttribute("name");
-                        attr.setValue(curMessage->getIfBitOperation()?("_FB_CanTx_Message_Unpack"):("_FB_CanTx_Message"));
-                        derived.setAttributeNode(attr);
-                        type.appendChild(derived);
-                        variable.appendChild(type);
-                        localVars.appendChild(variable);
-                    }
+            attr.setValue(curMessage->getIfBitOperation()?("_FB_CanTx_Message_Unpack_"+curMessage->getID()):("_FB_CanTx_Message_"+curMessage->getID()));
+            variable.setAttributeNode(attr);
+            QDomElement type = doc.createElement("type");
+            QDomElement derived = doc.createElement("derived");
+            attr=doc.createAttribute("name");
+            attr.setValue(curMessage->getIfBitOperation()?("_FB_CanTx_Message_Unpack"):("_FB_CanTx_Message"));
+            derived.setAttributeNode(attr);
+            type.appendChild(derived);
+            variable.appendChild(type);
+            localVars.appendChild(variable);
                 }
-
-                //foreach (dataContainer * curMessage , comInterface){
-                //    if(curMessage->getIfSelected()){
-                //        for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
-                //            QDomElement variable=doc.createElement("variable");
-                //            attr=doc.createAttribute("name");
-                //            attr.setValue("Cont_"+curSignal->name);
-                //            variable.setAttributeNode(attr);
-                //            QDomElement type = doc.createElement("type");
-                //            QDomElement dataType = doc.createElement(curSignal->comDataType);
-                //            type.appendChild(dataType);
-                //            variable.appendChild(type);
-                //            localVars.appendChild(variable);
-                //        }
-                //    }
-                //}
-                if(this->enableFrc){
-                    QDomElement variable=doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("FrcVar");
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement derived = doc.createElement("derived");
-                    attr=doc.createAttribute("name");
-                    attr.setValue(this->dutName);
-                    derived.setAttributeNode(attr);
-                    type.appendChild(derived);
-                    variable.appendChild(type);
-                    localVars.appendChild(variable);
-                }
-
-                if(this->enableTest){
-                    QDomElement variable=doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("FrcTest");
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement derived = doc.createElement("derived");
-                    attr=doc.createAttribute("name");
-                    attr.setValue(this->dutName);
-                    derived.setAttributeNode(attr);
-                    type.appendChild(derived);
-                    variable.appendChild(type);
-                    localVars.appendChild(variable);
-                }
-                for (unsigned i =0; i<counterfbLWORDTOBYTE; i++){
-                    QDomElement variable=doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("_FB_UNPACK_LWORD_TO_BYTE_"+QString::number(i));
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement derived = doc.createElement("derived");
-                    attr = doc.createAttribute("name");
-                    attr.setValue("_FB_UNPACK_LWORD_TO_BYTE");
-                    derived.setAttributeNode(attr);
-                    type.appendChild(derived);
-                    variable.appendChild(type);
-                    localVars.appendChild(variable);
-
-                }
-                for (unsigned i =0; i<counterfbDWORDTOBYTE; i++){
-                    QDomElement variable=doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("_FB_UNPACK_DWORD_TO_BYTE_"+QString::number(i));
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement derived = doc.createElement("derived");
-                    attr = doc.createAttribute("name");
-                    attr.setValue("_FB_UNPACK_DWORD_TO_BYTE");
-                    derived.setAttributeNode(attr);
-                    type.appendChild(derived);
-                    variable.appendChild(type);
-                    localVars.appendChild(variable);
-                }
-                for (unsigned i =0; i<counterfbWORDTOBYTE; i++){
-                    QDomElement variable=doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("_FB_UNPACK_WORD_TO_BYTE_"+QString::number(i));
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement derived = doc.createElement("derived");
-                    attr = doc.createAttribute("name");
-                    attr.setValue("_FB_UNPACK_WORD_TO_BYTE");
-                    derived.setAttributeNode(attr);
-                    type.appendChild(derived);
-                    variable.appendChild(type);
-                    localVars.appendChild(variable);
-                }
-                for (unsigned i =0; i<counterfbBYTETO8BIT; i++){
-                    QDomElement variable=doc.createElement("variable");
-                    attr=doc.createAttribute("name");
-                    attr.setValue("_FB_UNPACK_BYTE_TO_8BITS_"+QString::number(i));
-                    variable.setAttributeNode(attr);
-                    QDomElement type = doc.createElement("type");
-                    QDomElement derived = doc.createElement("derived");
-                    attr = doc.createAttribute("name");
-                    attr.setValue("_FB_UNPACK_BYTE_TO_8BITS");
-                    derived.setAttributeNode(attr);
-                    type.appendChild(derived);
-                    variable.appendChild(type);
-                    localVars.appendChild(variable);
-                }
-
-                counterfbLWORDTOBYTE = 0;
-                counterfbDWORDTOBYTE = 0;
-                counterfbWORDTOBYTE = 0;
-                counterfbBYTETO8BIT = 0;
-
-
-                interface.appendChild(localVars);
             }
-            pou.appendChild(interface);
 
-            /*Create Body*/
-            QDomElement body = doc.createElement("body");
-            QDomElement ST = doc.createElement("ST");
-            QDomElement xhtml = doc.createElement("xhtml");
-            attr=doc.createAttribute("xmlns");
-            attr.setValue("http://www.w3.org/1999/xhtml");
-            xhtml.setAttributeNode(attr);
-            text=doc.createTextNode(STcode);
-            xhtml.appendChild(text);
-            ST.appendChild(xhtml);
-            body.appendChild(ST);
-            pou.appendChild(body);
+            //foreach (dataContainer * curMessage , comInterface){
+            //    if(curMessage->getIfSelected()){
+            //        for(const dataContainer::signal * curSignal : *curMessage->getSignalList()){
+            //            QDomElement variable=doc.createElement("variable");
+            //            attr=doc.createAttribute("name");
+            //            attr.setValue("Cont_"+curSignal->name);
+            //            variable.setAttributeNode(attr);
+            //            QDomElement type = doc.createElement("type");
+            //            QDomElement dataType = doc.createElement(curSignal->comDataType);
+            //            type.appendChild(dataType);
+            //            variable.appendChild(type);
+            //            localVars.appendChild(variable);
+            //        }
+            //    }
+            //}
+            if(this->enableFrc){
+                QDomElement variable=doc.createElement("variable");
+                attr=doc.createAttribute("name");
+                attr.setValue("FrcVar");
+                variable.setAttributeNode(attr);
+                QDomElement type = doc.createElement("type");
+                QDomElement derived = doc.createElement("derived");
+                attr=doc.createAttribute("name");
+                attr.setValue(this->dutName);
+                derived.setAttributeNode(attr);
+                type.appendChild(derived);
+                variable.appendChild(type);
+                localVars.appendChild(variable);
+            }
 
-            /*Create addData*/
-            QDomElement addData = doc.createElement("addData");
-            QDomElement data = doc.createElement("data");
-            attr=doc.createAttribute("name");
-            attr.setValue("http://www.3s-software.com/plcopenxml/objectid");
-            data.setAttributeNode(attr);
-            attr=doc.createAttribute("handleUnknown");
-            attr.setValue("discard");
-            data.setAttributeNode(attr);
-            QDomElement ObjectId = doc.createElement("ObjectId");
-            text=doc.createTextNode(this->pouObjID);
-            ObjectId.appendChild(text);
-            data.appendChild(ObjectId);
-            addData.appendChild(data);
-            pou.appendChild(addData);
-            pous->appendChild(pou);
+            if(this->enableTest){
+                QDomElement variable=doc.createElement("variable");
+                attr=doc.createAttribute("name");
+                attr.setValue("FrcTest");
+                variable.setAttributeNode(attr);
+                QDomElement type = doc.createElement("type");
+                QDomElement derived = doc.createElement("derived");
+                attr=doc.createAttribute("name");
+                attr.setValue(this->dutName);
+                derived.setAttributeNode(attr);
+                type.appendChild(derived);
+                variable.appendChild(type);
+                localVars.appendChild(variable);
+            }
+            for (unsigned i =0; i<counterfbLWORDTOBYTE; i++){
+                QDomElement variable=doc.createElement("variable");
+                attr=doc.createAttribute("name");
+                attr.setValue("_FB_UNPACK_LWORD_TO_BYTE_"+QString::number(i));
+                variable.setAttributeNode(attr);
+                QDomElement type = doc.createElement("type");
+                QDomElement derived = doc.createElement("derived");
+                attr = doc.createAttribute("name");
+                attr.setValue("_FB_UNPACK_LWORD_TO_BYTE");
+                derived.setAttributeNode(attr);
+                type.appendChild(derived);
+                variable.appendChild(type);
+                localVars.appendChild(variable);
+
+            }
+            for (unsigned i =0; i<counterfbDWORDTOBYTE; i++){
+                QDomElement variable=doc.createElement("variable");
+                attr=doc.createAttribute("name");
+                attr.setValue("_FB_UNPACK_DWORD_TO_BYTE_"+QString::number(i));
+                variable.setAttributeNode(attr);
+                QDomElement type = doc.createElement("type");
+                QDomElement derived = doc.createElement("derived");
+                attr = doc.createAttribute("name");
+                attr.setValue("_FB_UNPACK_DWORD_TO_BYTE");
+                derived.setAttributeNode(attr);
+                type.appendChild(derived);
+                variable.appendChild(type);
+                localVars.appendChild(variable);
+            }
+            for (unsigned i =0; i<counterfbWORDTOBYTE; i++){
+                QDomElement variable=doc.createElement("variable");
+                attr=doc.createAttribute("name");
+                attr.setValue("_FB_UNPACK_WORD_TO_BYTE_"+QString::number(i));
+                variable.setAttributeNode(attr);
+                QDomElement type = doc.createElement("type");
+                QDomElement derived = doc.createElement("derived");
+                attr = doc.createAttribute("name");
+                attr.setValue("_FB_UNPACK_WORD_TO_BYTE");
+                derived.setAttributeNode(attr);
+                type.appendChild(derived);
+                variable.appendChild(type);
+                localVars.appendChild(variable);
+            }
+            for (unsigned i =0; i<counterfbBYTETO8BIT; i++){
+                QDomElement variable=doc.createElement("variable");
+                attr=doc.createAttribute("name");
+                attr.setValue("_FB_UNPACK_BYTE_TO_8BITS_"+QString::number(i));
+                variable.setAttributeNode(attr);
+                QDomElement type = doc.createElement("type");
+                QDomElement derived = doc.createElement("derived");
+                attr = doc.createAttribute("name");
+                attr.setValue("_FB_UNPACK_BYTE_TO_8BITS");
+                derived.setAttributeNode(attr);
+                type.appendChild(derived);
+                variable.appendChild(type);
+                localVars.appendChild(variable);
+            }
+
+            counterfbLWORDTOBYTE = 0;
+            counterfbDWORDTOBYTE = 0;
+            counterfbWORDTOBYTE = 0;
+            counterfbBYTETO8BIT = 0;
 
 
-           fbdBlocks.append(newBlock);
-           // append input variables to AND gate to check disturbance -> EXP format : GVL.IIXC.S_TmOut_Motor_Messages_3_0X512
+            interface.appendChild(localVars);
+    }
+    pou.appendChild(interface);
+
+    /*Create Body*/
+    QDomElement body = doc.createElement("body");
+    QDomElement ST = doc.createElement("ST");
+    QDomElement xhtml = doc.createElement("xhtml");
+    attr=doc.createAttribute("xmlns");
+    attr.setValue("http://www.w3.org/1999/xhtml");
+    xhtml.setAttributeNode(attr);
+    text=doc.createTextNode(STcode);
+    xhtml.appendChild(text);
+    ST.appendChild(xhtml);
+    body.appendChild(ST);
+    pou.appendChild(body);
+
+    /*Create addData*/
+    QDomElement addData = doc.createElement("addData");
+    QDomElement data = doc.createElement("data");
+    attr=doc.createAttribute("name");
+    attr.setValue("http://www.3s-software.com/plcopenxml/objectid");
+    data.setAttributeNode(attr);
+    attr=doc.createAttribute("handleUnknown");
+    attr.setValue("discard");
+    data.setAttributeNode(attr);
+    QDomElement ObjectId = doc.createElement("ObjectId");
+    text=doc.createTextNode(this->pouObjID);
+    ObjectId.appendChild(text);
+    data.appendChild(ObjectId);
+    addData.appendChild(data);
+    pou.appendChild(addData);
+    pous->appendChild(pou);
+
+
+    fbdBlocks.append(newBlock);
+    // append input variables to AND gate to check disturbance -> EXP format : GVL.IIXC.S_TmOut_Motor_Messages_3_0X512
 
 
 }
+
 void DBCHandler::generateIOST(QString *const ST)
 {       ST->append("(*\n"
                    "**********************************************************************\n"
@@ -2439,3 +3249,4 @@ QString DBCHandler::convTypeApptoCom (const dataContainer::signal *curSignal, QS
         return ST;
 
 }
+

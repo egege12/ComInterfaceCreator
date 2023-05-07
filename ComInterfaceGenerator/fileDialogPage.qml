@@ -3,6 +3,13 @@ import QtQuick.Controls 2.15
 import QtQuick.Dialogs
 Item {
     id:mainItem
+    Component.onCompleted: {
+        root.width= 1336;
+        root.height= 860;
+        root.x= Screen.width / 2 - root.width / 2
+        root.y= Screen.height / 2 - root.height / 2
+    }
+
     height: parent.height
     width : parent.width
 
@@ -149,7 +156,30 @@ Item {
                 anchors.bottomMargin: 35
                 disableButtonClick: (mainItem.isFileSelected==false) | (mainItem.isFolderselected==false)
             }//buttonToPage1
+            MenuButton{
+                id:buttonTurnToComType
+                width: 84
+                height: 46
+                Text{
+                    anchors.centerIn: parent
+                    text: qsTr("Geri")
+                    color:"white"
+                    font.hintingPreference: Font.PreferNoHinting
+                    style: Text.Normal
+                    focus: false
+                    font.weight: Font.Medium
+                    font.family: "Verdana"
+                }
 
+                clip: false
+                opacity: 1
+                visible: true
+                radius: 1
+                anchors.right: buttonToPage1.left
+                anchors.rightMargin : (fileNameTextField.width + buttonSearch.width + 5) - (buttonToPage1.width + buttonTurnToComType.width)
+                anchors.top :buttonToPage1.top
+                disableButtonClick: false
+            }
 
             Text {
                 id: text1
@@ -225,6 +255,12 @@ Item {
     Connections{
         target: comObj
         onFileandLockOk:stack.push("MessageSelectPage.qml")
+    }
+    Connections{
+        target: buttonTurnToComType
+        onButtonClicked:{stack.clear();
+                        stack.push("typeMenu.qml");
+                        comObj.setComType("");}
     }
 }
 

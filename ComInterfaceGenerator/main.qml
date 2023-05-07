@@ -11,7 +11,7 @@ Window {
     property bool iconSize
     flags: Qt.FramelessWindowHint | Qt.Window | Qt.MaximizeUsingFullscreenGeometryHint  // to hide windows window and still show minimized icon
     title: qsTr("Interface Creator")
-
+    property string varTextComType : ""
     Frame{
         anchors.fill:parent
         anchors.margins: 1
@@ -19,7 +19,7 @@ Window {
         StackView {
             id: stack
             anchors.fill:parent
-            initialItem: "fileDialogPage.qml"
+            initialItem: "typeMenu.qml"
             Item{
                 anchors.top:parent.top
                 width:parent.width
@@ -60,12 +60,29 @@ Window {
                     anchors.leftMargin:5
                     mipmap:true
                 }
+                Text{
+                    id : textComType
+                    text: qsTr(varTextComType)
+                    width :80
+                    height:35
 
+                    anchors.verticalCenter:  parent.verticalCenter
+                    anchors.horizontalCenter :  parent.horizontalCenter
+                    font.pixelSize: 13
+                    antialiasing: true
+                    font.hintingPreference: Font.PreferNoHinting
+                    style: Text.Normal
+                    focus: false
+                    font.weight: Font.Medium
+                    font.family: "Verdana"
+                    color: "gray"
+                    z:2
+                }
 
             }
             Text{
                 id : textVersion
-                text: qsTr("v1.1.034")
+                text: qsTr("v1.2.000")
                 width :80
                 height:20
                 anchors.bottom: parent.bottom
@@ -81,6 +98,8 @@ Window {
                 color: "gray"
                 z:2
             }
+
+
         }
 
         Popup{
@@ -98,14 +117,7 @@ Window {
             }
 
         }
-        Connections{
-            target:comObj
-            onErrCodeChanged: {
-                popupWindow.open();
-                windowElement.textMessage = comObj.errCode
-            }
 
-        }
     }
     DragHandler {
         onActiveChanged: if(active) startSystemMove();
@@ -143,5 +155,20 @@ Window {
                 startSystemResize(edges);
             }
         }
+    }
+    Connections{
+        target:comObj
+        onErrCodeChanged: {
+            popupWindow.open();
+            windowElement.textMessage = comObj.errCode
+        }
+
+    }
+    Connections{
+        target:comObj
+        onComTypeChanged: {
+            varTextComType = (comObj.ComType ==="")? (" "):("Bağlantı : " + comObj.ComType);
+        }
+
     }
 }

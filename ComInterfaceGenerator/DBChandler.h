@@ -44,6 +44,7 @@ public:
 /*PROPERTIES STARTS*/
     Q_PROPERTY(QString errCode READ errCode WRITE setErrCode NOTIFY errCodeChanged)
     Q_PROPERTY(int progress READ progress WRITE setProgress NOTIFY progressChanged)
+    Q_PROPERTY(QString ComType READ ComType WRITE setComType NOTIFY comTypeChanged)
 /*PROPERTIES ENDS*/
 /*ERROR CODE- It stored as texts but will be converted into database for language*/
     QString errCode() const;
@@ -56,6 +57,9 @@ public:
     void setProgress(qreal newProgress);
     qreal m_progress;
     QString displayReqSignalID;
+    QString ComType() const;
+
+
 public slots:
 
     void update();
@@ -71,6 +75,7 @@ public slots:
     void setTestMode(bool checkStat);
     void setFrcVar(bool checkStat);
     void setMultiEnableMode(bool checkStat);
+    void setComType(const QString &newComType);
     //Tableview format nested vectors
     QList<QList<QString>> messagesList();
     QList<QList<QString>> signalsList();
@@ -97,8 +102,7 @@ signals:
     void progressCompleted();
     void progressStarted();
     void infoListChanged();
-
-
+    void comTypeChanged();
 
 private:
 
@@ -109,7 +113,6 @@ private:
     QList<structFbdBlock*> fbdBlocks;
     QString folderLoc;
     QString dbcPath;
-
     QString dutName;
     QString dutHeader;
     QString IOType;
@@ -156,20 +159,28 @@ private:
     void extracted();
     bool createXml_STG1(QFile *xmlFile);
     void generateVariables(QDomElement*strucT,QDomDocument &doc);
+    void generateETHDUT(QDomElement*strucT,QDomDocument &doc);
     void generateIIPous(QDomElement*pous,QDomDocument &doc);
+    void generateIIETH(QDomElement*pous,QDomDocument &doc);
     void extracted(QDomDocument &doc, QDomText &text,
                    dataContainer *&curMessage);
     void generateIOPous(QDomElement *pous, QDomDocument &doc);
+    void generateIOETH(QDomElement*pous,QDomDocument &doc);
     //***********************************
     //Generate XML file end
     //***********************************
     //Conversion Methods
     void generateIIST(QString *const ST);
+    QString generateIIETHDatagramST();
+    void generateIIETHST(QString *const ST);
     void generateIOST(QString *const ST);
+    void generateIOETHST(QString *const ST);
+    QString generateIOETHDatagramST();
     QString convTypeComtoApp(const dataContainer::signal * curSignal, QString idMessage, QString nameMessage,QString nameFb);
     QString convTypeApptoCom(const dataContainer::signal * curSignal, QString idMessage, QString nameMessage,QString nameFb);
 
 
+    QString m_ComType;
 };
 struct DBCHandler::structFbdBlock{
     //Datas can be impoerted from DBC file

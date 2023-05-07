@@ -13,14 +13,15 @@ Rectangle {
     property color pressedColor : "#575757"
     property color releasedColor : "#707070"
     property color hoveredColor : "#4A4A4A"
+    property real imageRatio : 0.6
     height: width
     radius: width/8
     opacity : buttonRectangle.buttonOpacity
     onDisableButtonClickChanged: disableButtonClick ? disabledColor : releasedColor
     color :disableButtonClick ? disabledColor : releasedColor
     Image{
-        width: parent.width*.6
-        height: parent.height*.6
+        width: parent.width*imageRatio
+        height: parent.height*imageRatio
         anchors.centerIn: parent
         antialiasing: true
         source: parent.buttonImageSource
