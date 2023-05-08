@@ -520,6 +520,10 @@ bool DBCHandler::generateNewMessage(QString messageID, QString messageName , uns
     newMessage->setmessageID(messageID);
     newMessage->setDLC(messageDLC);
     newMessage->setExtended(isExtended);
+    if((isExtended) && m_ComType=="ETH"){
+        newMessage->setNotSelectable();
+        dataContainer::setWarning(messageID,"ethernet arayüzü için extended ID tipi seçilemez.");
+    }
     comInterface.insert(messageID,newMessage);
     return true;
 }
@@ -528,6 +532,7 @@ bool DBCHandler::createObjIds()
 {
     this->dutObjID = this->getRandomID();
     this->pouObjID = this->getRandomID();
+    this->ethernetSocketID= this->getRandomID();
 
     return true;
 }
@@ -754,6 +759,10 @@ void DBCHandler::startToGenerate()
                         throw QString("XML oluşturulurken bir şeyler yanlış gitti!");
                     }else
                         xmlFile->close();
+                    if(m_ComType == "ETH"){
+                        createGVLINFO();
+                        this->setErrCode("GVL içeriğine kopyalayacağınız kod masaüstüne oluşturuldu.");
+                    }
                     setProgress(100);
                     QString infoText;
                     infoText.append("| ");
@@ -996,11 +1005,13 @@ bool DBCHandler::createXml_STG1(QFile *xmlFile)
             if((this->IOType == "II")){
                 setProgress(40);
                 this->generateIIETH(&pous,doc);
+                this->generateETHPou(&pous,doc);
                 setProgress(50);
             }
             else{
                 setProgress(40);
                 this->generateIOETH(&pous,doc);
+                this->generateETHPou(&pous,doc);
                 setProgress(50);
             }
         }
@@ -1516,55 +1527,315 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
     }
 }
 
-void DBCHandler::generateETHDUT(QDomElement *strucT, QDomDocument &doc)
+void DBCHandler::generateETHPou(QDomElement *pous, QDomDocument &doc)
 {
     QDomAttr attr;
     QDomText text;
-    bool flagNewMessage=false;
+
+    QString namePou = "P_IC_EthSocket";
+        //For AND and OR gate to manipulate timeout and disturbance flags
+
+    /*generate block struct type new block*/
+
+    structFbdBlock* newBlock = new structFbdBlock;
+    QDomElement pou = doc.createElement("pou");
+    /*set pou name*/
+    attr=doc.createAttribute("name");
+    attr.setValue(namePou);
+    pou.setAttributeNode(attr);
+    /*set pouType*/
+    attr=doc.createAttribute("pouType");
+    attr.setValue("program");
+    pou.setAttributeNode(attr);
+
+    /*Interface*/
+    QDomElement interface = doc.createElement("interface");
+
+    /*Generate Local Variables - localVars*/
+    //Generate local vars
+    {
+        QDomElement localVars= doc.createElement("localVars");
+        /*Constant declaration*/
+
+        {
+            QDomElement variable=doc.createElement("variable");
+            attr=doc.createAttribute("name");
+            attr.setValue("init");
+            variable.setAttributeNode(attr);
+            QDomElement type = doc.createElement("type");
+            QDomElement BOOL = doc.createElement("BOOL");
+            type.appendChild(BOOL);
+            variable.appendChild(type);
+            QDomElement initialValue = doc.createElement("initialValue");
+            QDomElement simpleValue = doc.createElement("simpleValue");
+            attr=doc.createAttribute("value");
+            attr.setValue("TRUE");
+            simpleValue.setAttributeNode(attr);
+            initialValue.appendChild(simpleValue);
+            variable.appendChild(initialValue);
+            localVars.appendChild(variable);
+
+        }
+        {
+            QDomElement variable=doc.createElement("variable");
+            attr=doc.createAttribute("name");
+            attr.setValue("sock");
+            variable.setAttributeNode(attr);
+            QDomElement type = doc.createElement("type");
+            QDomElement derived = doc.createElement("derived");
+            attr=doc.createAttribute("name");
+            attr.setValue("UdpSocket");
+            derived.setAttributeNode(attr);
+            type.appendChild(derived);
+            variable.appendChild(type);
+            localVars.appendChild(variable);
+        }
+        {
+            QDomElement variable=doc.createElement("variable");
+            attr=doc.createAttribute("name");
+            attr.setValue("recSize");
+            variable.setAttributeNode(attr);
+            QDomElement type = doc.createElement("type");
+            QDomElement derived = doc.createElement("derived");
+            attr=doc.createAttribute("name");
+            attr.setValue("__XINT");
+            derived.setAttributeNode(attr);
+            type.appendChild(derived);
+            variable.appendChild(type);
+            QDomElement initialValue = doc.createElement("initialValue");
+            QDomElement simpleValue = doc.createElement("simpleValue");
+            attr=doc.createAttribute("value");
+            attr.setValue("0");
+            simpleValue.setAttributeNode(attr);
+            initialValue.appendChild(simpleValue);
+            variable.appendChild(initialValue);
+            localVars.appendChild(variable);
+        }
+        {
+            QDomElement variable=doc.createElement("variable");
+            attr=doc.createAttribute("name");
+            attr.setValue("sendSize");
+            variable.setAttributeNode(attr);
+            QDomElement type = doc.createElement("type");
+            QDomElement derived = doc.createElement("derived");
+            attr=doc.createAttribute("name");
+            attr.setValue("__XINT");
+            derived.setAttributeNode(attr);
+            type.appendChild(derived);
+            variable.appendChild(type);
+            QDomElement initialValue = doc.createElement("initialValue");
+            QDomElement simpleValue = doc.createElement("simpleValue");
+            attr=doc.createAttribute("value");
+            attr.setValue("0");
+            simpleValue.setAttributeNode(attr);
+            initialValue.appendChild(simpleValue);
+            variable.appendChild(initialValue);
+            localVars.appendChild(variable);
+        }
+        {
+            QDomElement variable=doc.createElement("variable");
+            attr=doc.createAttribute("name");
+            attr.setValue("createResult");
+            variable.setAttributeNode(attr);
+            QDomElement type = doc.createElement("type");
+            QDomElement derived = doc.createElement("derived");
+            attr=doc.createAttribute("name");
+            attr.setValue("IoStandard.RTS_IEC_RESULT");
+            derived.setAttributeNode(attr);
+            type.appendChild(derived);
+            variable.appendChild(type);
+            QDomElement initialValue = doc.createElement("initialValue");
+            QDomElement simpleValue = doc.createElement("simpleValue");
+            attr=doc.createAttribute("value");
+            attr.setValue("0");
+            simpleValue.setAttributeNode(attr);
+            initialValue.appendChild(simpleValue);
+            variable.appendChild(initialValue);
+            localVars.appendChild(variable);
+        }
+        {
+            QDomElement variable=doc.createElement("variable");
+            attr=doc.createAttribute("name");
+            attr.setValue("bindResult");
+            variable.setAttributeNode(attr);
+            QDomElement type = doc.createElement("type");
+            QDomElement derived = doc.createElement("derived");
+            attr=doc.createAttribute("name");
+            attr.setValue("IoStandard.RTS_IEC_RESULT");
+            derived.setAttributeNode(attr);
+            type.appendChild(derived);
+            variable.appendChild(type);
+            QDomElement initialValue = doc.createElement("initialValue");
+            QDomElement simpleValue = doc.createElement("simpleValue");
+            attr=doc.createAttribute("value");
+            attr.setValue("0");
+            simpleValue.setAttributeNode(attr);
+            initialValue.appendChild(simpleValue);
+            variable.appendChild(initialValue);
+            localVars.appendChild(variable);
+        }
+        {
+            QDomElement variable=doc.createElement("variable");
+            attr=doc.createAttribute("name");
+            attr.setValue("recResult");
+            variable.setAttributeNode(attr);
+            QDomElement type = doc.createElement("type");
+            QDomElement derived = doc.createElement("derived");
+            attr=doc.createAttribute("name");
+            attr.setValue("IoStandard.RTS_IEC_RESULT");
+            derived.setAttributeNode(attr);
+            type.appendChild(derived);
+            variable.appendChild(type);
+            QDomElement initialValue = doc.createElement("initialValue");
+            QDomElement simpleValue = doc.createElement("simpleValue");
+            attr=doc.createAttribute("value");
+            attr.setValue("0");
+            simpleValue.setAttributeNode(attr);
+            initialValue.appendChild(simpleValue);
+            variable.appendChild(initialValue);
+            localVars.appendChild(variable);
+        }
+        {
+            QDomElement variable=doc.createElement("variable");
+            attr=doc.createAttribute("name");
+            attr.setValue("sendResult");
+            variable.setAttributeNode(attr);
+            QDomElement type = doc.createElement("type");
+            QDomElement derived = doc.createElement("derived");
+            attr=doc.createAttribute("name");
+            attr.setValue("IoStandard.RTS_IEC_RESULT");
+            derived.setAttributeNode(attr);
+            type.appendChild(derived);
+            variable.appendChild(type);
+            QDomElement initialValue = doc.createElement("initialValue");
+            QDomElement simpleValue = doc.createElement("simpleValue");
+            attr=doc.createAttribute("value");
+            attr.setValue("0");
+            simpleValue.setAttributeNode(attr);
+            initialValue.appendChild(simpleValue);
+            variable.appendChild(initialValue);
+            localVars.appendChild(variable);
+        }
+        {
+            QDomElement variable=doc.createElement("variable");
+            attr=doc.createAttribute("name");
+            attr.setValue("sockAddress");
+            variable.setAttributeNode(attr);
+            QDomElement type = doc.createElement("type");
+            QDomElement derived = doc.createElement("derived");
+            attr=doc.createAttribute("name");
+            attr.setValue("SysSocket.SOCKADDRESS");
+            derived.setAttributeNode(attr);
+            type.appendChild(derived);
+            variable.appendChild(type);
+            localVars.appendChild(variable);
+        }
+
+        interface.appendChild(localVars);
+    }
+    pou.appendChild(interface);
+
+    /*Create Body*/
+    QDomElement body = doc.createElement("body");
+    QDomElement ST = doc.createElement("ST");
+    QDomElement xhtml = doc.createElement("xhtml");
+    attr=doc.createAttribute("xmlns");
+    attr.setValue("http://www.w3.org/1999/xhtml");
+    xhtml.setAttributeNode(attr);
+    QString STcode;
+    QString container = this->dutHeader;
+    QString receiveADR= container.replace("IO","II");
+    QString sendADR= container.replace("II","IO");
+    STcode.append("// ----------------------------------------------------------------------------"
+              "// This socket binds port 5500 and IP: 10.100.30.200\n"
+              "// This is a bi-directional UDP datagram protocol. ECU sends data when data received.\n"
+              "// Each datagram has 40 bytes.  \n"
+              "// GVL."+this->dutHeader+" first data pointer connected to "+((this-dutHeader.contains("II"))?(" receive "):(" send "))+"data port, you should connect the other data point if it is not correct\n"
+              "// DATAGRAM order : (byte type must be used in every posibility)\n"
+              "// 2 byte ID0 - 8 byte data- 2 byte ID1 - 8byte data- 2byte ID2- 8byte data- 2byte ID3- 8byte data\n"
+              "// ----------------------------------------------------------------------------\n"
+              "// check, if in init phase\n"
+              "IF (init = TRUE) THEN\n"
+              "	// configure socket type\n"
+              "	sockAddress.sin_family := SysSocket.SOCKET_AF_INET;\n"
+              "\n"
+              "	// configure socket port\n"
+              "	sockAddress.sin_port:= 5500;\n"
+              "\n"
+              "	// open a UDP socket\n"
+              "	sock.Create(iAddressFamily:= SysSocket.SOCKET_AF_INET,\n"
+              "		diType:= SysSocket.SOCKET_DGRAM,\n"
+              "		diProtocol:= SysSocket.SOCKET_IPPROTO_UDP,\n"
+              "		pResult:= ADR(createResult));\n"
+              "\n"
+              "	// check, if the socket could be created\n"
+              "	IF (createResult = Errors.ERR_OK) THEN\n"
+              "		// bind socket, to be able to receive\n"
+              "		bindResult := sock.Bind(\n"
+              "			pSockAddr:= ADR(sockAddress), \n"
+              "			diSockAddrSize:= SIZEOF(SysSocket.SOCKADDRESS));\n"
+              "			\n"
+              "		// check, if the socket bind worked\n"
+              "		IF (createResult = Errors.ERR_OK) THEN\n"
+              "			// clear init flag\n"
+              "			init := FALSE;\n"
+              "		END_IF\n"
+              "	END_IF\n"
+              "END_IF\n"
+              "\n"
+              "IF (init = FALSE) THEN\n"
+              "	// try to receive a packet\n"
+              "	recSize := sock.RecvFrom(\n"
+              "			pbyBuffer:= ADR(GVL."+receiveADR+"),\n"
+              "			diBufferSize:= SIZEOF(GVL."+receiveADR+"),\n"
+              "			diFlags:= 0,\n"
+              "			pSockAddr:=ADR(sockAddress) ,\n"
+              "			diSockAddrSize:= SIZEOF(SysSocket.SOCKADDRESS),\n"
+              "			pResult:= ADR(recResult));\n"
+              "	\n"
+              "	// check, if a packet has been received\n"
+              "	IF (recResult = Errors.ERR_OK) THEN\n"
+              "		// copy the packet's content to the send data buffer\n"
+              "	\n"
+              "		// try to send the packet back\n"
+              "		sendSize := sock.SendTo(\n"
+              "			pbyBuffer := ADR(GVL."+sendADR+"),\n"
+              "			diBufferSize := SIZEOF(GVL."+sendADR+"),\n"
+              "			diFlags := 0,\n"
+              "			pSockAddr := ADR(sockAddress),\n"
+              "			diSockAddrSize := SIZEOF(SysSocket.SOCKADDRESS),\n"
+              "			pResult := ADR(sendResult));\n"
+              "	END_IF\n"
+              "END_IF\n" );
+
+    STcode.append("");
+    text=doc.createTextNode(STcode);
+    xhtml.appendChild(text);
+    ST.appendChild(xhtml);
+    body.appendChild(ST);
+    pou.appendChild(body);
+
+    /*Create addData*/
+    QDomElement addData = doc.createElement("addData");
+    QDomElement data = doc.createElement("data");
+    attr=doc.createAttribute("name");
+    attr.setValue("http://www.3s-software.com/plcopenxml/objectid");
+    data.setAttributeNode(attr);
+    attr=doc.createAttribute("handleUnknown");
+    attr.setValue("discard");
+    data.setAttributeNode(attr);
+    QDomElement ObjectId = doc.createElement("ObjectId");
+    text=doc.createTextNode(this->ethernetSocketID);
+    ObjectId.appendChild(text);
+    data.appendChild(ObjectId);
+    addData.appendChild(data);
+    pou.appendChild(addData);
+    pous->appendChild(pou);
 
 
-        bool flagBlankSpace=true;
+    fbdBlocks.append(newBlock);
+    // append input variables to AND gate to check disturbance -> EXP format : GVL.IIXC.S_TmOut_Motor_Messages_3_0X512
 
-
-        for(unsigned short i = 0 ; i<8;i++  ){
-                QDomElement variable = doc.createElement("variable");
-                attr = doc.createAttribute("name");
-                attr.setValue("X_Byte;_"+QString::number(i));
-                variable.setAttributeNode(attr);
-                { //type and derived element with name attribute
-                    QDomElement type = doc.createElement("type");
-                    QDomElement BOOL = doc.createElement("BOOL");
-                    type.appendChild(BOOL);
-                    variable.appendChild(type);
-                }
-                {//Documentation
-
-                    QDomElement documentation=doc.createElement("documentation");
-                    QDomElement xhtml = doc.createElement("xhtml");
-                    attr=doc.createAttribute("xmlns");
-                    attr.setValue("http://www.w3.org/1999/xhtml");
-                    xhtml.setAttributeNode(attr);
-                    {
-                        QString comment;
-                        if(flagBlankSpace){
-                            comment.append("\n\n Message BYTE "+QString::number(i)+"\n");
-                            flagBlankSpace=false;
-                        }
-
-                        comment.append("Message sent status provided by LIB500 ");
-                        text =doc.createTextNode(comment);
-                        xhtml.appendChild(text);
-                    }
-                    documentation.appendChild(xhtml);
-                    variable.appendChild(documentation);
-                }
-                strucT->appendChild(variable);
-                }
-
-
-
-
-    // CAN_Init register for DUT
 
 }
 
@@ -2155,7 +2426,7 @@ QString DBCHandler::convTypeComtoApp(const dataContainer::signal * curSignal, QS
         }
     }else if(curSignal->convMethod=="2BOOL:BOOL"){
         if(this->enableFrc){
-        ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".v\t\t:= (NOT GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" AND NOT "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+") OR FrcVar."+curSignal->name+".v ;"
+        ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".v\t\t:= (NOT GVL."+dutHeader+((this->m_ComType=="ETH")?(".S_Com_Flt"):(".S_TmOut_"+nameMessage+"_0X"+idMessage))+" AND NOT "+nameFb+".S_Bit_"+QString::number(curSignal->startBit+1)+") OR FrcVar."+curSignal->name+".v ;"
                    "\nIF NOT FrcVar."+curSignal->name+".v THEN;"
                    "\nGVL."+this->dutHeader+"."+curSignal->name+".x\t\t:= GVL."+this->dutHeader+"."+curSignal->name+".v AND "+nameFb+".S_Bit_"+QString::number(curSignal->startBit)+";"
                    "\nELSE "
@@ -2334,7 +2605,7 @@ QString DBCHandler::convTypeComtoApp(const dataContainer::signal * curSignal, QS
 
     if((curSignal->convMethod != "BOOL:BOOL") && (curSignal->convMethod!="2BOOL:BOOL")){
             ST.append("\nGVL."+this->dutHeader+"."+curSignal->name+".RangeExcd\t:= NOT (("+cont_text+" >= "+QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15)+") AND ("+cont_text+" <= "+QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15)+"));"
-                  +((!this->enableFrc)?("\nGVL."+this->dutHeader+"."+curSignal->name+".v\t\t\t:= NOT( GVL."+dutHeader+((this->m_ComType=="ETH")?(".S_Com_Flt"):(".S_TmOut_"+nameMessage+"_0X"+idMessage))+" OR GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd "+((curSignal->isJ1939 ==true)?("OR GVL."+this->dutHeader+"."+curSignal->name+".e OR GVL."+this->dutHeader+"."+curSignal->name+".na) "):(") "))+";"):("\nGVL."+this->dutHeader+"."+curSignal->name+".v				:= NOT( GVL."+dutHeader+".S_TmOut_"+nameMessage+"_0X"+idMessage+" OR GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd "+((curSignal->isJ1939 ==true)?("OR GVL."+this->dutHeader+"."+curSignal->name+".e OR GVL."+this->dutHeader+"."+curSignal->name+".na) OR "):(") OR "))+"FrcVar."+curSignal->name+".v ;"))+
+                  +((!this->enableFrc)?("\nGVL."+this->dutHeader+"."+curSignal->name+".v\t\t\t:= NOT( GVL."+dutHeader+((this->m_ComType=="ETH")?(".S_Com_Flt"):(".S_TmOut_"+nameMessage+"_0X"+idMessage))+" OR GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd "+((curSignal->isJ1939 ==true)?("OR GVL."+this->dutHeader+"."+curSignal->name+".e OR GVL."+this->dutHeader+"."+curSignal->name+".na) "):(") "))+";"):("\nGVL."+this->dutHeader+"."+curSignal->name+".v				:= NOT( GVL."+dutHeader+((this->m_ComType=="ETH")?(".S_Com_Flt"):(".S_TmOut_"+nameMessage+"_0X"+idMessage))+" OR GVL."+this->dutHeader+"."+curSignal->name+".RangeExcd "+((curSignal->isJ1939 ==true)?("OR GVL."+this->dutHeader+"."+curSignal->name+".e OR GVL."+this->dutHeader+"."+curSignal->name+".na) OR "):(") OR "))+"FrcVar."+curSignal->name+".v ;"))+
             "\n");
             if(this->enableFrc){
                 ST.append("GVL."+this->dutHeader+"."+curSignal->name+".x\t\t\t:= \n(*SELECT 1 : Is force active?*)\t\t\t\t\t\tSEL("+"FrcVar."+curSignal->name+".v"+","+"\n(*SELECT 2 : Is data valid ?*)\t\t\t\t\tSEL("+"GVL."+this->dutHeader+"."+curSignal->name+".v"+",(*DEFAULT value assignment*)\t\t\t\t\t\t"+QString::number(curSignal->defValue,'g',15)+",(*Transmission is VALID*)\t\t\t\t\t\t"+cont_text+"),(*Force is active*)\t\t\t\t\t\tFrcVar."+curSignal->name+".x);");
@@ -2574,6 +2845,22 @@ void DBCHandler::generateIOETH(QDomElement *pous, QDomDocument &doc)
     // append input variables to AND gate to check disturbance -> EXP format : GVL.IIXC.S_TmOut_Motor_Messages_3_0X512
 
 
+}
+
+void DBCHandler::createGVLINFO()
+{
+    QFile logFile(this->folderLoc+"/"+(this->dutHeader)+"_GVLETH_README.txt");
+    if (!logFile.open(QIODevice::WriteOnly| QIODevice::Truncate )){
+            setErrCode("GVL kaydı oluşturulmadı.");
+    }else{
+            QTextStream out(&logFile);
+            out<<"Aşağıdaki kodu GVL'e kopyalayabilirsiniz."<<Qt::endl;
+            out<<this->dutHeader+" : "+this->dutName+";"<<Qt::endl;
+            out<<"Datagram_"+this->dutHeader+" : DATAGRAM40_T;"<<Qt::endl;
+
+            dataContainer::setWarning("INFO","GVL önerisi çıktı dosya konumunda oluşturuldu.");
+            logFile.close();
+    }
 }
 void DBCHandler::generateIOETHST(QString * const ST)
 {       ST->append("(*\n"

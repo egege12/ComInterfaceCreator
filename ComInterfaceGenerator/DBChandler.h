@@ -122,6 +122,7 @@ private:
     QString dutObjID;
     QString pouObjID;
     QString canLine;
+    QString ethernetSocketID;
     bool  enableTest;
     bool enableFrc;
     bool enableMultiEnable;
@@ -159,13 +160,14 @@ private:
     void extracted();
     bool createXml_STG1(QFile *xmlFile);
     void generateVariables(QDomElement*strucT,QDomDocument &doc);
-    void generateETHDUT(QDomElement*strucT,QDomDocument &doc);
+    void generateETHPou(QDomElement *pous, QDomDocument &doc);
     void generateIIPous(QDomElement*pous,QDomDocument &doc);
     void generateIIETH(QDomElement*pous,QDomDocument &doc);
     void extracted(QDomDocument &doc, QDomText &text,
                    dataContainer *&curMessage);
     void generateIOPous(QDomElement *pous, QDomDocument &doc);
     void generateIOETH(QDomElement*pous,QDomDocument &doc);
+    void createGVLINFO();
     //***********************************
     //Generate XML file end
     //***********************************
