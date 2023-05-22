@@ -1114,96 +1114,22 @@ void DBCHandler::generateVariables(QDomElement * strucT, QDomDocument &doc)
                 {//initialValue
                     QDomElement initialValue = doc.createElement("initialValue");
                     QDomElement structValue = doc.createElement("structValue");
-                    /*
-                     * This part deleted after v1.000.037
-                     *
-                     */
-                    //if((curSignal->appDataType)!="BOOL"){
-                    //    QDomElement value = doc.createElement("value");
-                    //    attr = doc.createAttribute("member");
-                    //    attr.setValue("Param_Max");
-                    //    value.setAttributeNode(attr);
-                    //    QDomElement simpleValue = doc.createElement("simpleValue");
-                    //    attr = doc.createAttribute("value");
-                    //    attr.setValue(QString::number(curSignal->maxValue,'g',(curSignal->length>32)? 20:15));
-                    //    simpleValue.setAttributeNode(attr);
-                    //    value.appendChild(simpleValue);
-                    //    structValue.appendChild(value);
-                    //}
-                    //if((curSignal->appDataType)!="BOOL"){
-                    //    QDomElement value = doc.createElement("value");
-                    //    attr = doc.createAttribute("member");
-                    //    attr.setValue("Param_Min");
-                    //    value.setAttributeNode(attr);
-                    //    QDomElement simpleValue = doc.createElement("simpleValue");
-                    //    attr = doc.createAttribute("value");
-                    //    attr.setValue(QString::number(curSignal->minValue,'g',(curSignal->length>32)? 20:15));
-                    //    simpleValue.setAttributeNode(attr);
-                    //    value.appendChild(simpleValue);
-                    //    structValue.appendChild(value);
-                    //}
-                    //if(((curSignal->appDataType)=="REAL")||((curSignal->appDataType)=="LREAL")){
-                    //    QDomElement value = doc.createElement("value");
-                    //    attr = doc.createAttribute("member");
-                    //    attr.setValue("Param_Res");
-                    //    value.setAttributeNode(attr);
-                    //    QDomElement simpleValue = doc.createElement("simpleValue");
-                    //    attr = doc.createAttribute("value");
-                    //    attr.setValue(QString::number(curSignal->resolution));
-                    //    simpleValue.setAttributeNode(attr);
-                    //    value.appendChild(simpleValue);
-                    //    structValue.appendChild(value);
-                    //}
-                    //if(((curSignal->appDataType)=="REAL")||((curSignal->appDataType)=="LREAL")){
-                    //    QDomElement value = doc.createElement("value");
-                    //    attr = doc.createAttribute("member");
-                    //    attr.setValue("Param_Off");
-                    //    value.setAttributeNode(attr);
-                    //    QDomElement simpleValue = doc.createElement("simpleValue");
-                    //    attr = doc.createAttribute("value");
-                    //    attr.setValue(QString::number(curSignal->offset));
-                    //    simpleValue.setAttributeNode(attr);
-                    //    value.appendChild(simpleValue);
-                    //    structValue.appendChild(value);
-                    //}
-                    //if((curSignal->appDataType)!="BOOL"){
-                    //    QDomElement value = doc.createElement("value");
-                    //    attr = doc.createAttribute("member");
-                    //    attr.setValue("Param_Def");
-                    //    value.setAttributeNode(attr);
-                    //    QDomElement simpleValue = doc.createElement("simpleValue");
-                    //    attr = doc.createAttribute("value");
-                    //    attr.setValue(QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15));
-                    //    simpleValue.setAttributeNode(attr);
-                    //    value.appendChild(simpleValue);
-                    //    structValue.appendChild(value);
-                    //}
-                    /*{
+
+                    {
                         QDomElement value = doc.createElement("value");
                         attr = doc.createAttribute("member");
-                        attr.setValue("x");
+                        attr.setValue("v");
                         value.setAttributeNode(attr);
                         QDomElement simpleValue = doc.createElement("simpleValue");
                         attr = doc.createAttribute("value");
-                        attr.setValue(QString::number(curSignal->defValue,'g',(curSignal->length>32)? 20:15));
+                        attr.setValue("FALSE");
                         simpleValue.setAttributeNode(attr);
                         value.appendChild(simpleValue);
                         structValue.appendChild(value);
                     }
-                    if((curSignal->appDataType)!="BOOL"){
-                        QDomElement value = doc.createElement("value");
-                        attr = doc.createAttribute("member");
-                        attr.setValue("J1939");
-                        value.setAttributeNode(attr);
-                        QDomElement simpleValue = doc.createElement("simpleValue");
-                        attr = doc.createAttribute("value");
-                        attr.setValue(QString::number(curSignal->isJ1939));
-                        simpleValue.setAttributeNode(attr);
-                        value.appendChild(simpleValue);
-                        structValue.appendChild(value);
-                    }
+
                     initialValue.appendChild(structValue);
-                    variable.appendChild(initialValue);*/
+                    variable.appendChild(initialValue);
                 }
                 QDomElement documentation=doc.createElement("documentation");
                 QDomElement xhtml = doc.createElement("xhtml");
@@ -3265,9 +3191,24 @@ void DBCHandler::generateIOST(QString *const ST)
             ST->append("\n//-----------------------------------------------------------------------------------------------------------------------------");
             ST->append("\n{region \" MESSAGE AREA :"+curMessage->getName()+"- ID:"+curMessage->getID()+"\"}\n");
             QString nameFb = (curMessage->getIfBitOperation())? ("_FB_CanTx_Message_Unpack_"+curMessage->getID()) : ("_FB_CanTx_Message_"+curMessage->getID());
-
+            bool arr[64] ={false};
             for( const dataContainer::signal * curSignal : *curMessage->getSignalList()){
+
                 ST->append(convTypeApptoCom(curSignal,curMessage->getID(),curMessage->getName(),nameFb));
+                for(unsigned i=curSignal->startBit ; i<(curSignal->startBit + curSignal->length) ; i++){
+                    arr[i]=true;
+                }
+                for(unsigned i =0 ; i<8 ; i++){
+                    bool flag = false;
+                    for(unsigned k=0 ; k<8 ; k++){
+                        if(arr[(i*8)+k]==true){
+                            flag=true;
+                        }
+                    }
+                    if(!flag){
+                        ST->append("\n"+nameFb+".X_Byte_"+QString::number(i)+":=16#FF;");
+                    }
+                }
             }
             ST->append("\n"+nameFb+"("
                                      "\n     C_Enable:= "+((this->enableMultiEnable)?("GVL."+dutHeader+".C_En_"+curMessage->getName()+"_0X"+curMessage->getID()):("GVL."+dutHeader+".S_CAN_Init"))+","
