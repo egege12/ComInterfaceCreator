@@ -926,6 +926,7 @@ Rectangle {
                     "RS - Direksiyon Açı Sensörü"        ,
                     "RV - Araç Kontrol Ünitesi"          ,
                     "VC - Sürü Gösterge Paneli"          ,
+                    "VD - Hata ayıklama Hattı"           ,
                     "XB - Batarya Kontrol Ünitesi"       ,
                     "XB - 24V Batarya Şarj Ünitesi"      ,
                     "XC - Hava Kompresörü Kontrolcüsü"   ,

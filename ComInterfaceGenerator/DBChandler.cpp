@@ -44,8 +44,9 @@ DBCHandler::DBCHandler(QObject *parent)
     }
 
     this->canLine = "GVL.IC.Obj_CAN0";
-    this->enableTest=false;
-
+    enableMultiEnable = false;
+    enableFrc=false;
+    enableTest=false;
     dataContainer::setWarning("INFO","Program başlatıldı");
 }
 
@@ -143,6 +144,9 @@ void DBCHandler::clearData()
     pouObjID="null";
     dataContainer::warningMessages.clear();
     DBCHandler::selectedMessageCounter=0;
+    enableMultiEnable = false;
+    enableFrc=false;
+    enableTest=false;
 
 }
 
@@ -1743,7 +1747,7 @@ void DBCHandler::generateETHPou(QDomElement *pous, QDomDocument &doc)
     attr.setValue("http://www.w3.org/1999/xhtml");
     xhtml.setAttributeNode(attr);
     QString STcode;
-    QString container = this->dutHeader;
+    QString container = "Datagram_"+this->dutHeader;
     QString receiveADR= container.replace("IO","II");
     QString sendADR= container.replace("II","IO");
     STcode.append("// ----------------------------------------------------------------------------"
@@ -3261,8 +3265,6 @@ void DBCHandler::generateIOST(QString *const ST)
             ST->append("\n//-----------------------------------------------------------------------------------------------------------------------------");
             ST->append("\n{region \" MESSAGE AREA :"+curMessage->getName()+"- ID:"+curMessage->getID()+"\"}\n");
             QString nameFb = (curMessage->getIfBitOperation())? ("_FB_CanTx_Message_Unpack_"+curMessage->getID()) : ("_FB_CanTx_Message_"+curMessage->getID());
-
-            ST->append("\n"+nameFb+"();");
 
             for( const dataContainer::signal * curSignal : *curMessage->getSignalList()){
                 ST->append(convTypeApptoCom(curSignal,curMessage->getID(),curMessage->getName(),nameFb));
