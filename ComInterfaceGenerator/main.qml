@@ -82,7 +82,7 @@ Window {
             }
             Text{
                 id : textVersion
-                text: qsTr("v1.2.007")
+                text: qsTr("v1.2.009")
                 width :80
                 height:20
                 anchors.bottom: parent.bottom

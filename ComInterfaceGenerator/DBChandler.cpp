@@ -5,6 +5,8 @@
 #include <QRegularExpression>
 #include <QUuid>
 #include <QHostInfo>
+#include <QStandardPaths>
+#include <QDir>
 
 unsigned long long DBCHandler::selectedMessageCounter = 0;
 unsigned int DBCHandler::counterfbBYTETOWORD = 0;
@@ -24,25 +26,6 @@ DBCHandler::DBCHandler(QObject *parent)
 {
     this->isAllInserted = false;
 
-
-    if(QFile::exists(((m_ComType=="CAN")?("log.txt"):("logETH.txt")))){
-        QFile logFile(((m_ComType=="CAN")?("log.txt"):("logETH.txt")));
-        if (!logFile.open(QIODevice::ReadOnly| QIODevice::Text )){
-            dataContainer::setWarning("INFO","Kayıt defteri açılamadı");
-        }else{
-            QTextStream lines(&logFile);
-            while (!lines.atEnd()) {
-                QString curLine = lines.readLine();
-                dataContainer::infoMessages.append(curLine);
-            }
-            dataContainer::setWarning("INFO","Kayıt defteri okundu");
-            logFile.close();
-        }
-
-    }else{
-            dataContainer::setWarning("INFO","Kayıt defteri bulunamadı");
-    }
-
     this->canLine = "GVL.IC.Obj_CAN0";
     enableMultiEnable = false;
     enableFrc=false;
@@ -52,8 +35,9 @@ DBCHandler::DBCHandler(QObject *parent)
 
 DBCHandler::~DBCHandler()
 {
+        QString path= QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
         dataContainer::setWarning("INFO",dbcPath+"dosyası kapatıldı");
-        QFile logFile(((m_ComType=="CAN")?("log.txt"):("logETH.txt")));
+        QFile logFile(((m_ComType=="CAN")?(path+"/CIG_log/log.txt"):(path+"/CIG_log/logETH.txt")));
         if (!logFile.open(QIODevice::WriteOnly| QIODevice::Truncate )){
             setErrCode("Yapılan değişiklikler kayıt defterine işlenemedi");
         }else{
@@ -817,6 +801,27 @@ void DBCHandler::setComType(const QString &newComType)
         return;
     m_ComType = newComType;
     emit comTypeChanged();
+    QString path= QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+    QDir dir(path);
+    dir.mkdir("CIG_log");
+
+    if(QFile::exists(((m_ComType=="CAN")?(path+"/CIG_log/log.txt"):(path+"/CIG_log/logETH.txt")))){
+        QFile logFile(((m_ComType=="CAN")?(path+"/CIG_log/log.txt"):(path+"/CIG_log/logETH.txt")));
+        if (!logFile.open(QIODevice::ReadOnly| QIODevice::Text )){
+            dataContainer::setWarning("INFO","Kayıt defteri açılamadı");
+        }else{
+            QTextStream lines(&logFile);
+            while (!lines.atEnd()) {
+                QString curLine = lines.readLine();
+                dataContainer::infoMessages.append(curLine);
+            }
+            dataContainer::setWarning("INFO","Kayıt defteri okundu");
+            logFile.close();
+        }
+
+    }else{
+            dataContainer::setWarning("INFO","Kayıt defteri bulunamadı");
+    }
 }
 void DBCHandler::setPastCreatedMessages(QString textLine)
 {
@@ -3198,7 +3203,9 @@ void DBCHandler::generateIOST(QString *const ST)
                 for(unsigned i=curSignal->startBit ; i<(curSignal->startBit + curSignal->length) ; i++){
                     arr[i]=true;
                 }
-                for(unsigned i =0 ; i<8 ; i++){
+                
+            }
+			for(unsigned i =0 ; i<8 ; i++){
                     bool flag = false;
                     for(unsigned k=0 ; k<8 ; k++){
                         if(arr[(i*8)+k]==true){
@@ -3209,7 +3216,6 @@ void DBCHandler::generateIOST(QString *const ST)
                         ST->append("\n"+nameFb+".X_Byte_"+QString::number(i)+":=16#FF;");
                     }
                 }
-            }
             ST->append("\n"+nameFb+"("
                                      "\n     C_Enable:= "+((this->enableMultiEnable)?("GVL."+dutHeader+".C_En_"+curMessage->getName()+"_0X"+curMessage->getID()):("GVL."+dutHeader+".S_CAN_Init"))+","
                                      "\n     Obj_CAN:= ADR("+this->canLine+"),"
