@@ -75,6 +75,7 @@ public slots:
     void setTestMode(bool checkStat);
     void setFrcVar(bool checkStat);
     void setMultiEnableMode(bool checkStat);
+    void setBitTrue(bool checkStat);
     void setComType(const QString &newComType);
     //Tableview format nested vectors
     QList<QList<QString>> messagesList();
@@ -126,6 +127,7 @@ private:
     bool  enableTest;
     bool enableFrc;
     bool enableMultiEnable;
+    bool enableEmptyBitsTrue;
     //***********************************
     //Private Variables ends
     //Private methods starts

@@ -27,9 +27,11 @@ DBCHandler::DBCHandler(QObject *parent)
     this->isAllInserted = false;
 
     this->canLine = "GVL.IC.Obj_CAN0";
+    //Set Configurable Parameters to False
     enableMultiEnable = false;
     enableFrc=false;
     enableTest=false;
+    enableEmptyBitsTrue=false;
     dataContainer::setWarning("INFO","Program başlatıldı");
 }
 
@@ -128,9 +130,12 @@ void DBCHandler::clearData()
     pouObjID="null";
     dataContainer::warningMessages.clear();
     DBCHandler::selectedMessageCounter=0;
+
+    //Set Configurable Parameters to False
     enableMultiEnable = false;
     enableFrc=false;
     enableTest=false;
+    enableEmptyBitsTrue=false;
 
 }
 
@@ -267,6 +272,11 @@ void DBCHandler::setFrcVar(bool checkStat)
 void DBCHandler::setMultiEnableMode(bool checkStat)
 {
     this->enableMultiEnable =checkStat;
+}
+
+void DBCHandler::setBitTrue(bool checkStat)
+{
+    this->enableEmptyBitsTrue = checkStat;
 }
 
 
@@ -760,7 +770,7 @@ void DBCHandler::startToGenerate()
                         }
                     }
                     dataContainer::setWarning("INFO","**"+this->dutHeader+" mesajları : "+infoText);
-                    dataContainer::setWarning("INFO",this->dutHeader+",oluşturma konfigurasyonu, [çoklu enable modu]: "+((this->enableMultiEnable)?("aktif"):("pasif"))+", [force değişkenleri]: "+((this->enableFrc)?("aktif"):("pasif"))+", [test modu]: "+((this->enableTest)?("aktif"):("pasif")));
+                    dataContainer::setWarning("INFO",this->dutHeader+",oluşturma konfigurasyonu, [çoklu enable modu]: "+((this->enableMultiEnable)?("aktif"):("pasif"))+", [force değişkenleri]: "+((this->enableFrc)?("aktif"):("pasif"))+", [test modu]: "+((this->enableTest)?("aktif"):("pasif"))+", [boş bit \"TRUE\"]: "+((this->enableEmptyBitsTrue)?("aktif"):("pasif")));
                     dataContainer::setWarning("INFO",this->dutHeader+" oluşturuldu. Oluşturma süresi:"+QString::number((QDateTime::currentMSecsSinceEpoch())-startTimeMs)+"ms");
 
                     emit infoListChanged();
@@ -3205,19 +3215,22 @@ void DBCHandler::generateIOST(QString *const ST)
                 }
                 
             }
-			for(unsigned i =0 ; i<8 ; i++){
-                    bool flagUsed = false;
-                    for(unsigned k=0 ; k<8 ; k++){
-                        if(arr[(i*8)+k]==true){
-                            flagUsed=true;
-                        }
-                        if((arr[(i*8)+k]==false) && flagUsed && curMessage->getIfBitOperation()){
-                            ST->append("\n"+nameFb+".S_Bit_"+QString::number(k*i)+":=TRUE;");
-                        }
+            for(unsigned i =0 ; i<8 ; i++){
+                bool flagUsed = false;
+                for(unsigned k=0 ; k<8 ; k++){
+                    if(arr[(i*8)+k]==true){
+                        flagUsed=true;
                     }
-                    if(!flagUsed){
-                        ST->append("\n"+nameFb+".X_Byte_"+QString::number(i)+":=16#FF;");
+                }
+
+                for(unsigned k=0 ; k<8 ; k++){
+                    if((arr[(i*8)+k]==false) && flagUsed && curMessage->getIfBitOperation()){
+                        ST->append("\n"+nameFb+".S_Bit_"+QString::number((i*8)+k)+((this->enableEmptyBitsTrue)? ":=TRUE;" : ":=FALSE;"));
                     }
+                }
+                if(!flagUsed){
+                    ST->append("\n"+nameFb+".X_Byte_"+QString::number(i)+":=16#FF;");
+                }
             }
             ST->append("\n"+nameFb+"("
                                      "\n     C_Enable:= "+((this->enableMultiEnable)?("GVL."+dutHeader+".C_En_"+curMessage->getName()+"_0X"+curMessage->getID()):("GVL."+dutHeader+".S_CAN_Init"))+","

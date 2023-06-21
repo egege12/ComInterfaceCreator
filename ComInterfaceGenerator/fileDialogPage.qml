@@ -4,7 +4,7 @@ import QtQuick.Dialogs
 Item {
     id:mainItem
     Component.onCompleted: {
-        root.width= 1336;
+        root.width= 1440;
         root.height= 860;
         root.x= Screen.width / 2 - root.width / 2
         root.y= Screen.height / 2 - root.height / 2

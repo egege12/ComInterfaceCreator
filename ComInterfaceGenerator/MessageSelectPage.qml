@@ -1140,10 +1140,9 @@ Rectangle {
             Switch {
                 id: switchMultiEnable
                 text: qsTr("Çoklu CAN aktif")
-                anchors.left:textFieldPreview.right
+                anchors.left:switchFrc.right
                 anchors.leftMargin:15
-                anchors.top: switchFrc.bottom
-                anchors.topMargin : 5
+                anchors.top: switchTest.top
                 visible: (comObj.ComType === "CAN")
                 indicator: Rectangle {
                     implicitWidth: 48
@@ -1174,6 +1173,45 @@ Rectangle {
                 }
                 onCheckedChanged: {
                     comObj.setMultiEnableMode(switchMultiEnable.checked);
+                }
+
+            }
+            Switch {
+                id: switchBitTrue
+                text: qsTr("Boş bitler \"TRUE\"")
+                anchors.left:switchFrc.right
+                anchors.leftMargin:15
+                anchors.top: switchFrc.top
+                visible: (comObj.ComType === "CAN")
+                indicator: Rectangle {
+                    implicitWidth: 48
+                    implicitHeight: 26
+                    x: switchBitTrue.leftPadding
+                    y: parent.height / 2 - height / 2
+                    radius: 13
+                    color: switchBitTrue.checked ? "#17a81a" : "#ffffff"
+                    border.color: switchBitTrue.checked ? "#17a81a" : "#cccccc"
+
+                    Rectangle {
+                        x: switchBitTrue.checked ? parent.width - width : 0
+                        width: 26
+                        height: 26
+                        radius: 13
+                        color: switchBitTrue.down ? "#cccccc" : "#ffffff"
+                        border.color: switchBitTrue.checked ? (switchBitTrue.down ? "#17a81a" : "#21be2b") : "#999999"
+                    }
+                }
+
+                contentItem: Text {
+                    text: switchBitTrue.text
+                    font: switchBitTrue.font
+                    opacity: enabled ? 1.0 : 0.3
+                    color: switchBitTrue.down ? "#17a81a" : "#21be2b"
+                    verticalAlignment: Text.AlignVCenter
+                    leftPadding: switchBitTrue.indicator.width + switchBitTrue.spacing
+                }
+                onCheckedChanged: {
+                    comObj.setBitTrue(switchBitTrue.checked);
                 }
 
             }
