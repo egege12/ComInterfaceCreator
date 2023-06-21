@@ -569,7 +569,7 @@ dataContainer::~dataContainer()
 void dataContainer::signalChecker(signal *signalPtr)
 {
     if(signalPtr->resolution == 0){
-        this->setWarning(this->messageID,signalPtr->name+" sinyali ölçeği 0 girilmiş. Mesaj OpenXML formatına dönüştürlemez.");
+        this->setWarning(this->messageID,signalPtr->name+" sinyalin ölçeği 0 girilmiş. Mesaj OpenXML formatına dönüştürlemez.");
         setNotSelectable();
     }else{
         if(signalPtr->length > (dlc*8 - signalPtr->startBit)){

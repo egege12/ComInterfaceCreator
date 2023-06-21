@@ -3206,16 +3206,19 @@ void DBCHandler::generateIOST(QString *const ST)
                 
             }
 			for(unsigned i =0 ; i<8 ; i++){
-                    bool flag = false;
+                    bool flagUsed = false;
                     for(unsigned k=0 ; k<8 ; k++){
                         if(arr[(i*8)+k]==true){
-                            flag=true;
+                            flagUsed=true;
+                        }
+                        if((arr[(i*8)+k]==false) && flagUsed && curMessage->getIfBitOperation()){
+                            ST->append("\n"+nameFb+".S_Bit_"+QString::number(k*i)+":=TRUE;");
                         }
                     }
-                    if(!flag){
+                    if(!flagUsed){
                         ST->append("\n"+nameFb+".X_Byte_"+QString::number(i)+":=16#FF;");
                     }
-                }
+            }
             ST->append("\n"+nameFb+"("
                                      "\n     C_Enable:= "+((this->enableMultiEnable)?("GVL."+dutHeader+".C_En_"+curMessage->getName()+"_0X"+curMessage->getID()):("GVL."+dutHeader+".S_CAN_Init"))+","
                                      "\n     Obj_CAN:= ADR("+this->canLine+"),"
